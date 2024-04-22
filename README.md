@@ -24,17 +24,11 @@ You can publish the config file with:
 php artisan vendor:publish --tag="shopping-cart-config"
 ```
 
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="laravel-shopping-cart-views"
-```
-
 ## Usage
 
 ```php
-$shoppingCart = new MobileNowGroup\ShoppingCart();
-echo $shoppingCart->echoPhrase('Hello, MobileNowGroup!');
+// @todo
+demo
 ```
 
 ## Testing
@@ -55,11 +49,6 @@ Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
 
-## Credits
-
-- [Fayne Guo](https://github.com/Fayne)
-- [All Contributors](../../contributors)
-
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+The Proprietary License. Please see [License File](LICENSE.md) for more information.

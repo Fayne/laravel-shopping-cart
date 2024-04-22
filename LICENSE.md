@@ -1,21 +1,16 @@
-The MIT License (MIT)
+The Proprietary License
 
 Copyright (c) Mobile Now Group <fayne.guo@gmail.com>
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software is proprietary and confidential. Unauthorized copying, distribution, or use of this software, 
+in whole or in part, is strictly prohibited. Access to and use of this software is restricted to authorized individuals 
+or entities with explicit permission from the owner or the owning company.
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+By using this software, you agree to abide by the terms of this license and any additional usage restrictions 
+imposed by the owner or the owning company. Unauthorized use may result in legal action.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+For inquiries regarding licensing or permission to use this software, please contact 
+[Fayne Guo] at [fayne@mobilenowgroup.com].
+
+© [2024] [Fayne Guo/MobileNowGroup]. All rights reserved.
+
