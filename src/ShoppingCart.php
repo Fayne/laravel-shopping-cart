@@ -761,7 +761,7 @@ class ShoppingCart
             return $this->session->get($this->instance);
         }
 
-        return new Collection();
+        return new Collection;
     }
 
     /**

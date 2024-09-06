@@ -393,7 +393,7 @@ class CartItem implements Arrayable, Jsonable
         switch ($attribute) {
             case 'model':
                 if (isset($this->associatedModel)) {
-                    return with(new $this->associatedModel())->find($this->id);
+                    return with(new $this->associatedModel)->find($this->id);
                 }
                 // no break
             case 'modelFQCN':
