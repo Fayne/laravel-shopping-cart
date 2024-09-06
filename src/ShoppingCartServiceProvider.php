@@ -2,9 +2,9 @@
 
 namespace MobileNowGroup\ShoppingCart;
 
+use Illuminate\Support\Facades\File;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use MobileNowGroup\ShoppingCart\Commands\ShoppingCartCommand;
 
 class ShoppingCartServiceProvider extends PackageServiceProvider
 {
@@ -18,8 +18,76 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         $package
             ->name('shopping-cart')
             ->hasConfigFile()
-            ->hasViews()
-            ->hasMigration('create_laravel-shopping-cart_table')
-            ->hasCommand(ShoppingCartCommand::class);
+            ->hasMigration('create_shopping_cart_table');
+    }
+
+    /**
+     * Register the service provider.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $this->mergeConfigFrom(__DIR__ . '/../config/shopping-cart.php', 'shopping-cart');
+
+        $this->publishes([__DIR__ . '/../config/shopping-cart.php' => config_path('shopping-cart.php')], 'config');
+
+        //        $this->app['events']->listen(Logout::class, function () {
+        //            if ($this->app['config']->get('shopping-cart.destroy_on_logout')) {
+        //                $this->app->make(SessionManager::class)->forget('cart');
+        //            }
+        //        });
+
+        $this->publishes([
+            __DIR__ . '/Database/Migrations' => database_path('migrations'),
+        ], 'migrations');
+    }
+
+    /**
+     * @return void
+     */
+    public function boot()
+    {
+        if ($this->shouldLoadMigrations()) {
+            $this->loadMigrationsFrom(__DIR__ . '/Database/Migrations');
+        }
+
+        if (config('shopping-cart.routes.enabled', true)) {
+            $this->loadRoutesFrom(__DIR__ . '/routes.php');
+        }
+    }
+
+    /**
+     * @return void
+     */
+    public function bootingPackage()
+    {
+        $this->app->bind('shopping-cart', ShoppingCart::class);
+    }
+
+    /**
+     * @return bool
+     */
+    protected function shouldLoadMigrations(): bool
+    {
+        $publishedMigration = $this->findPublishedMigration();
+
+        return $publishedMigration === null;
+    }
+
+    /**
+     * @return string|null
+     */
+    protected function findPublishedMigration(): ?string
+    {
+        $migrationDir = database_path('migrations/');
+
+        if (! File::isDirectory($migrationDir)) {
+            return null;
+        }
+
+        $migrationFiles = File::glob($migrationDir . '*_create_shopping_cart_table.php');
+
+        return ! empty($migrationFiles) ? basename($migrationFiles[0]) : null;
     }
 }
