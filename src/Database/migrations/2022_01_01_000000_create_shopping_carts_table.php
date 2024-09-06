@@ -9,12 +9,13 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('shopping_carts', function (Blueprint $table) {
+        Schema::create(config('shopping-cart.database.table'), function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->unsignedBigInteger('user_id')->index();
             $table->string('instance', 50)->default('shopping')->comment('Available instances: shopping, wishlist');
-
+            $table->json('content')->nullable();
             $table->timestamps();
         });
     }
@@ -22,8 +23,8 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down()
+    public function down(): void
     {
-        Schema::drop('shopping_carts');
+        Schema::dropIfExists(config('shopping-cart.database.table'));
     }
 };

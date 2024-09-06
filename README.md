@@ -9,6 +9,7 @@ You can install the package via composer:
 
 ```bash
 composer require mobilenowgroup/laravel-shopping-cart
+php artisan vendor:publish --provider="MobileNowGroup\ShoppingCart\ShoppingCartServiceProvider"
 ```
 
 You can publish and run the migrations with:

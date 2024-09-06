@@ -6,8 +6,8 @@ use Carbon\Carbon;
 use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\DatabaseManager;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use MobileNowGroup\ShoppingCart\Contracts\Buyable;
 use MobileNowGroup\ShoppingCart\Contracts\InstanceIdentifier;
@@ -78,7 +78,10 @@ class ShoppingCart
             $instance = $instance->getInstanceIdentifier();
         }
 
-        $this->cart->fill(['instance' => 'cart.' . $instance]);
+        $this->cart->fill([
+            'user_id' => request()->user()?->getKey() ?? 0,
+            'instance' => 'cart.' . $instance,
+        ]);
 
         return $this;
     }
@@ -90,13 +93,13 @@ class ShoppingCart
      */
     public function currentInstance(): string|int
     {
-        return $this->cart->getKey();
+        return $this->cart->getKey() ?? (string) Str::uuid();
     }
 
     /**
      * Add an item to the cart.
      *
-     * @param  Model|string|array  $product
+     * @param  Buyable|string|array  $product
      * @param  string|null  $name
      * @param  int|float|null  $quantity
      * @param  float|null  $price
@@ -104,7 +107,7 @@ class ShoppingCart
      * @param  array|null  $options
      * @return \MobileNowGroup\ShoppingCart\CartItem|array
      */
-    public function add(Model|string|array $product,
+    public function add(Buyable|string|array $product,
         ?string $name = null,
         int|float|null $quantity = 1,
         ?float $price = null,
@@ -755,19 +758,21 @@ class ShoppingCart
      *
      * @return \Illuminate\Support\Collection
      */
-    protected function getContent()
+    protected function getContent(): Collection
     {
-        if ($this->session->has($this->instance)) {
-            return $this->session->get($this->instance);
+        $content = $this->cart->getAttribute('content');
+
+        if ($content) {
+            return collect($content);
         }
 
-        return new Collection();
+        return new Collection;
     }
 
     /**
      * Create a new CartItem from the supplied attributes.
      *
-     * @param  Model|array|string  $product
+     * @param  Buyable|array|string  $product
      * @param  string  $name
      * @param  int|float|null $quantity
      * @param  float|null  $price
@@ -776,7 +781,7 @@ class ShoppingCart
      * @return \MobileNowGroup\ShoppingCart\CartItem
      */
     protected function createCartItem(
-        Model|string|array $product,
+        Buyable|string|array $product,
         string $name,
         int|float|null $quantity = 1,
         ?float $price = null,

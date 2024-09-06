@@ -17,8 +17,7 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
          */
         $package
             ->name('shopping-cart')
-            ->hasConfigFile()
-            ->hasMigration('create_shopping_cart_table');
+            ->hasConfigFile();
     }
 
     /**
@@ -41,6 +40,8 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         $this->publishes([
             __DIR__ . '/Database/Migrations' => database_path('migrations'),
         ], 'migrations');
+
+        $this->app->bind('shopping-cart', ShoppingCart::class);
     }
 
     /**
@@ -55,14 +56,6 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         if (config('shopping-cart.routes.enabled', true)) {
             $this->loadRoutesFrom(__DIR__ . '/routes.php');
         }
-    }
-
-    /**
-     * @return void
-     */
-    public function bootingPackage()
-    {
-        $this->app->bind('shopping-cart', ShoppingCart::class);
     }
 
     /**

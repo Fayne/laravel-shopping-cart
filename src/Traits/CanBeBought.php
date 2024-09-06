@@ -47,4 +47,18 @@ trait CanBeBought
 
         return null;
     }
+
+    /**
+     * Get the weight of the Buyable item.
+     *
+     * @return float|int|null
+     */
+    public function getBuyableWeight(): float|int|null
+    {
+        if (property_exists($this, 'weight')) {
+            return $this->weight;
+        }
+
+        return null;
+    }
 }
