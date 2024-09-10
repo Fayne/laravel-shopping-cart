@@ -1,7 +1,6 @@
 {
     "name": "mobilenowgroup/shopping-cart",
     "description": "This is a custom shopping cart package for Laravel projects",
-    "version": "1.0.0",
     "keywords": [
         "Mobile Now Group",
         "laravel",
