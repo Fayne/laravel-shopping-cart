@@ -2,22 +2,23 @@
 
 namespace MobileNowGroup\ShoppingCart\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use MobileNowGroup\ShoppingCart\Database\Factories\ShoppingCartFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ShoppingCart extends Model
 {
-    use HasFactory, HasUuids;
+    protected $table = 'cart';
 
     /**
      * The attributes that aren't mass assignable.
      *
      * @var array<string>|bool
      */
-    protected $guarded = false;
+    protected $guarded = [
+        'id',
+        'created_at',
+        'updated_at',
+    ];
 
     /**
      * The attributes that should be cast.
@@ -27,10 +28,18 @@ class ShoppingCart extends Model
     protected $casts = [];
 
     /**
-     * Create a new factory instance for the model.
+     * @var string[]
      */
-    protected static function newFactory(): Factory
+    protected $with = [
+        'items',
+        'items.children',
+    ];
+
+    /**
+     * To get relevant associated items with the cart instance
+     */
+    public function items(): HasMany
     {
-        return ShoppingCartFactory::new();
+        return $this->hasMany(ShoppingCartItem::class);
     }
 }

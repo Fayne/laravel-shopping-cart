@@ -1,6 +1,7 @@
 {
     "name": "mobilenowgroup/shopping-cart",
     "description": "This is a custom shopping cart package for Laravel projects",
+    "version": "1.0.0",
     "keywords": [
         "Mobile Now Group",
         "laravel",
@@ -16,8 +17,9 @@
     ],
     "require": {
         "php": "^8.2",
-        "spatie/laravel-package-tools": "^1.16",
-        "illuminate/contracts": "^10.0||^11.0"
+        "illuminate/contracts": "^10.0||^11.0",
+        "laravel/sanctum": "^4.0||^3.0",
+        "spatie/laravel-package-tools": "^1.16"
     },
     "require-dev": {
         "laravel/pint": "^1.14",

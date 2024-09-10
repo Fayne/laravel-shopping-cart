@@ -2,25 +2,21 @@
 
 namespace MobileNowGroup\ShoppingCart;
 
-use Carbon\Carbon;
-use Closure;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Database\DatabaseManager;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
-use Illuminate\Support\Traits\Macroable;
-use MobileNowGroup\ShoppingCart\Contracts\Buyable;
-use MobileNowGroup\ShoppingCart\Contracts\InstanceIdentifier;
-use MobileNowGroup\ShoppingCart\Exceptions\CartAlreadyStoredException;
-use MobileNowGroup\ShoppingCart\Exceptions\InvalidRowIDException;
-use MobileNowGroup\ShoppingCart\Exceptions\UnknownModelException;
+use Illuminate\Support\Facades\Event;
+use MobileNowGroup\ShoppingCart\Exceptions\CartException;
+use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
+use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use MobileNowGroup\ShoppingCart\Traits\CartCoupons;
+use Modules\Product\Models\Product;
+use Modules\Product\Models\ProductSku;
 
 class ShoppingCart
 {
-    use Macroable;
+    use CartCoupons;
 
-    const DEFAULT_INSTANCE = 'shopping';
+    //const DEFAULT_INSTANCE = 'shopping';
 
     /**
      * Instance of the session manager.
@@ -32,835 +28,315 @@ class ShoppingCart
     /**
      * Instance of the event dispatcher.
      *
-     * @var \Illuminate\Contracts\Events\Dispatcher
+     * @var Dispatcher
      */
-    private $events;
+    private Dispatcher $events;
 
     /**
      * Defines the discount percentage.
      *
      * @var float
      */
-    private $discount = 0;
-
-    /**
-     * Defines the tax rate.
-     *
-     * @var float
-     */
-    private $taxRate = 0;
+    private float $discount = 0;
 
     /**
      * Cart constructor.
      */
-    public function __construct(CartModel $cart, Dispatcher $events)
-    {
-        $this->cart = $cart;
-        $this->events = $events;
-        $this->taxRate = config('shopping-cart.tax');
-
-        $this->instance(self::DEFAULT_INSTANCE);
-    }
+    public function __construct() {}
 
     /**
-     * Set the current cart instance.
+     * Returns cart.
      *
-     * @param  string|null  $instance
-     * @return $this
+     * @return CartModel|null
      */
-    public function instance(?string $instance = null): self
+    public function getCart(): ?CartModel
     {
-        $instance = $instance ?: self::DEFAULT_INSTANCE;
-
-        /** @TODO */
-        if ($instance instanceof InstanceIdentifier) {
-            $this->discount = $instance->getInstanceGlobalDiscount();
-            $instance = $instance->getInstanceIdentifier();
-        }
-
-        $this->cart->fill([
-            'user_id' => request()->user()?->getKey() ?? 0,
-            'instance' => 'cart.' . $instance,
+        $cart = CartModel::firstWhere([
+            'customer_id' => auth()->id(),
+            'is_active' => 1,
         ]);
 
-        return $this;
+        return $this->removeInactiveItems($cart);
     }
 
     /**
-     * Get the current cart instance.
+     * Remove cart items, whose product is inactive.
      *
-     * @return string|int
+     * @param CartModel|null $cart
+     * @return CartModel|null
      */
-    public function currentInstance(): string|int
+    public function removeInactiveItems(?CartModel $cart = null): ?CartModel
     {
-        return $this->cart->getKey() ?? (string) Str::uuid();
-    }
-
-    /**
-     * Add an item to the cart.
-     *
-     * @param  Buyable|string|array  $product
-     * @param  string|null  $name
-     * @param  int|float|null  $quantity
-     * @param  float|null  $price
-     * @param  float|int|null  $weight
-     * @param  array|null  $options
-     * @return \MobileNowGroup\ShoppingCart\CartItem|array
-     */
-    public function add(Buyable|string|array $product,
-        ?string $name = null,
-        int|float|null $quantity = 1,
-        ?float $price = null,
-        float|int|null $weight = null,
-        ?array $options = []
-    ): CartItem|array {
-        if ($this->isMultiple($product)) {
-            return array_map(function ($item) {
-                return $this->add($item);
-            }, $product);
+        if (! $cart) {
+            return $cart;
         }
 
-        $cartItem = $this->createCartItem($product, $name, $quantity, $price, $weight, $options);
+        foreach ($cart->items as $item) {
+            if ($this->isCartItemInactive($item)) {
 
-        return $this->addCartItem($cartItem);
-    }
+                ShoppingCartItem::destroy($item->id);
 
-    /**
-     * Add an item to the cart.
-     *
-     * @param  \MobileNowGroup\ShoppingCart\CartItem  $item  Item to add to the Cart
-     * @param  bool|null  $keepDiscount  Keep the discount rate of the Item
-     * @param  bool|null  $keepTax  Keep the Tax rate of the Item
-     * @param  bool|null  $dispatchEvent
-     * @return \MobileNowGroup\ShoppingCart\CartItem The CartItem
-     */
-    public function addCartItem(
-        CartItem $item,
-        ?bool $keepDiscount = false,
-        ?bool $keepTax = false,
-        ?bool $dispatchEvent = true
-    ): CartItem {
-        if (! $keepDiscount) {
-            $item->setDiscountRate($this->discount);
-        }
-
-        if (! $keepTax) {
-            $item->setTaxRate($this->taxRate);
-        }
-
-        $content = $this->getContent();
-
-        if ($content->has($item->rowId)) {
-            $item->quantity += $content->get($item->rowId)->qty;
-        }
-
-        $content->put($item->rowId, $item);
-
-        if ($dispatchEvent) {
-            $this->events->dispatch('cart.adding', $item);
-        }
-
-        // @todo
-        $this->cart->save();
-
-        if ($dispatchEvent) {
-            $this->events->dispatch('cart.added', $item);
-        }
-
-        return $item;
-    }
-
-    /**
-     * Update the cart item with the given rowId.
-     *
-     * @param  string  $rowId
-     * @param  int|float|Buyable|array|null  $quantity
-     * @return \MobileNowGroup\ShoppingCart\CartItem|bool
-     */
-    public function increment(string $rowId, int|float|Buyable|array|null $quantity): CartItem|bool
-    {
-        $cartItem = $this->get($rowId);
-
-        if ($quantity instanceof Buyable) {
-            $cartItem->updateFromBuyable($quantity);
-        } elseif (is_array($quantity)) {
-            $cartItem->updateFromArray($quantity);
-        } else {
-            $cartItem->quantity = $quantity;
-        }
-
-        $content = $this->getContent();
-
-        if ($rowId !== $cartItem->rowId) {
-            $itemOldIndex = $content->keys()->search($rowId);
-
-            $content->pull($rowId);
-
-            if ($content->has($cartItem->rowId)) {
-                $existingCartItem = $this->get($cartItem->rowId);
-                $cartItem->setQuantity($existingCartItem->quantity + $cartItem->quantity);
+                if ($cart->items->count() == 0) {
+                    CartModel::destroy($cart->id);
+                }
             }
         }
 
-        if ($cartItem->quantity <= 0) {
-            $this->remove($cartItem->rowId);
+        $cart->save();
 
-            return false;
-        } else {
-            if (isset($itemOldIndex)) {
-                $content = $content->slice(0, $itemOldIndex)
-                    ->merge([$cartItem->rowId => $cartItem])
-                    ->merge($content->slice($itemOldIndex));
+        return $cart;
+    }
+
+    /**
+     * Returns true, if cart item is inactive.
+     *
+     * @param ShoppingCartItem $item
+     * @return bool
+     */
+    private function isCartItemInactive(ShoppingCartItem $item): bool
+    {
+        static $loadedCartItem = [];
+
+        if (array_key_exists($item->product_id, $loadedCartItem)) {
+            return $loadedCartItem[$item->product_id];
+        }
+
+        return $loadedCartItem[$item->product_id] = $item->product->status == 0;
+    }
+
+    /**
+     * Add items in a cart with some cart and item details.
+     *
+     * @param string $productSkuId
+     * @param array|null $options
+     * @return ShoppingCart|string|array
+     *
+     * @throws CartException
+     */
+    public function add(string $productSkuId, int $qty, ?array $options = []): array|string|CartModel
+    {
+        Event::dispatch('checkout.cart.add.before', $productSkuId);
+
+        $cart = $this->getCart();
+
+        if (! $cart && ! $cart = $this->create($options)) {
+            throw new CartException(ErrorConst::ERROR_CART_NOT_CREATED);
+        }
+        $productSku = ProductSku::find($productSkuId)->load('product');
+
+        if ($productSku->product->status === 0) {
+            throw new CartException(ErrorConst::ERROR_ADD_INACTIVE_PRODUCT);
+        }
+
+        $cartProducts = $productSku->product->prepareForCart($options);
+
+        foreach ($cartProducts as $cartProduct) {
+            $cartItem = $this->getItemByProduct();
+
+            if (! $cartItem) {
+                ShoppingCartItem::create(array_merge($cartProduct, ['cart_id' => $cart->id]));
             } else {
-                $content->put($cartItem->rowId, $cartItem);
+                ShoppingCartItem::update($cartProduct, $cartItem->id);
             }
+
         }
 
-        $this->events->dispatch('cart.updating', $cartItem);
+        Event::dispatch('checkout.cart.add.after', $cart);
 
-        // @todo
-        $this->cart->save();
+        $this->collectTotals();
 
-        $this->events->dispatch('cart.updated', $cartItem);
-
-        return $cartItem;
+        return $this->getCart();
     }
 
     /**
-     * Remove the cart item with the given rowId from the cart.
+     * Get cart item by product.
      *
-     * @param  string  $rowId
-     * @return void
+     * @return mixed
      */
-    public function remove(string $rowId): void
+    public function getItemByProduct()
     {
-        $cartItem = $this->get($rowId);
-
-        $content = $this->getContent();
-
-        $content->pull($cartItem->rowId);
-
-        $this->events->dispatch('cart.removing', $cartItem);
-
-        // @todo
-        $this->cart->save();
-
-        $this->events->dispatch('cart.removed', $cartItem);
+        return $this->getCart()->allItems;
     }
 
     /**
-     * Get a cart item from the cart by its rowId.
-     *
-     * @param  string  $rowId
-     * @return \MobileNowGroup\ShoppingCart\CartItem
-     */
-    public function get(string $rowId): CartItem
-    {
-        $content = $this->getContent();
-
-        if (! $content->has($rowId)) {
-            throw new InvalidRowIDException("The cart does not contain id {$rowId}.");
-        }
-
-        return $content->get($rowId);
-    }
-
-    /**
-     * Destroy the current cart instance.
+     * Updates cart totals.
      *
      * @return void
      */
-    public function destroy(): void
+    public function collectTotals(): void
     {
-        $this->cart->forceDelete();
-    }
-
-    /**
-     * Get the content of the cart.
-     *
-     * @return \Illuminate\Support\Collection
-     */
-    public function content(): Collection
-    {
-        // @todo
-        return collect($this->cart);
-    }
-
-    /**
-     * Get the total quantity of all CartItems in the cart.
-     *
-     * @return int|float
-     */
-    public function count(): int|float
-    {
-        return $this->getContent()->sum('quantity');
-    }
-
-    /**
-     * Get the amount of CartItems in the Cart.
-     * Keep in mind that this does NOT count quantity.
-     *
-     * @return int|float
-     */
-    public function countItems(): int|float
-    {
-        return $this->getContent()->count();
-    }
-
-    /**
-     * Get the total price of the items in the cart.
-     *
-     * @return float
-     */
-    public function totalFloat(): float
-    {
-        return $this->getContent()->reduce(function ($total, CartItem $cartItem) {
-            return $total + $cartItem->total;
-        }, 0);
-    }
-
-    /**
-     * Get the total price of the items in the cart as formatted string.
-     *
-     * @param  int|null  $decimals
-     * @param  string|null  $decimalPoint
-     * @param  string|null  $thousandSeparator
-     * @return string
-     */
-    public function total(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->totalFloat(), $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Get the total tax of the items in the cart.
-     *
-     * @return float
-     */
-    public function taxFloat(): float
-    {
-        return $this->getContent()->reduce(function ($tax, CartItem $cartItem) {
-            return $tax + $cartItem->taxTotal;
-        }, 0);
-    }
-
-    /**
-     * Get the total tax of the items in the cart as formatted string.
-     *
-     * @param  int|null  $decimals
-     * @param  string|null  $decimalPoint
-     * @param  string|null  $thousandSeparator
-     * @return string
-     */
-    public function tax(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->taxFloat(), $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Get the subtotal (total - tax) of the items in the cart.
-     *
-     * @return float
-     */
-    public function subtotalFloat(): float
-    {
-        return $this->getContent()->reduce(function ($subTotal, CartItem $cartItem) {
-            return $subTotal + $cartItem->subtotal;
-        }, 0);
-    }
-
-    /**
-     * Get the subtotal (total - tax) of the items in the cart as formatted string.
-     *
-     * @param  int|null  $decimals
-     * @param  string|null  $decimalPoint
-     * @param  string|null  $thousandSeparator
-     * @return string
-     */
-    public function subtotal(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->subtotalFloat(), $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Get the discount of the items in the cart.
-     *
-     * @return float
-     */
-    public function discountFloat(): float
-    {
-        return $this->getContent()->reduce(function ($discount, CartItem $cartItem) {
-            return $discount + $cartItem->discountTotal;
-        }, 0);
-    }
-
-    /**
-     * Get the discount of the items in the cart as formatted string.
-     *
-     * @param  int|null  $decimals
-     * @param  string|null  $decimalPoint
-     * @param  string|null  $thousandSeparator
-     * @return string
-     */
-    public function discount(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->discountFloat(), $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Get the price of the items in the cart (not rounded).
-     *
-     * @return float
-     */
-    public function initialFloat(): float
-    {
-        return $this->getContent()->reduce(function ($initial, CartItem $cartItem) {
-            return $initial + ($cartItem->quantity * $cartItem->price);
-        }, 0);
-    }
-
-    /**
-     * Get the price of the items in the cart as formatted string.
-     *
-     * @param int|null $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     * @return string
-     */
-    public function initial(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->initialFloat(), $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Get the price of the items in the cart (previously rounded).
-     *
-     * @return float
-     */
-    public function priceTotalFloat(): float
-    {
-        return $this->getContent()->reduce(function ($initial, CartItem $cartItem) {
-            return $initial + $cartItem->priceTotal;
-        }, 0);
-    }
-
-    /**
-     * Get the price of the items in the cart as formatted string.
-     *
-     * @param int|null $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     * @return string
-     */
-    public function priceTotal(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->priceTotalFloat(), $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Get the total weight of the items in the cart.
-     *
-     * @return float
-     */
-    public function weightFloat(): float
-    {
-        return $this->getContent()->reduce(function ($total, CartItem $cartItem) {
-            return $total + ($cartItem->quantity * $cartItem->weight);
-        }, 0);
-    }
-
-    /**
-     * Get the total weight of the items in the cart.
-     *
-     * @param int|null $decimals
-     * @param string|null $decimalPoint
-     * @param string|null $thousandSeparator
-     * @return string
-     */
-    public function weight(?int $decimals = null, ?string $decimalPoint = null, ?string $thousandSeparator = null): string
-    {
-        return $this->numberFormat($this->weightFloat(), $decimals, $decimalPoint, $thousandSeparator);
-    }
-
-    /**
-     * Search the cart content for a cart item matching the given search closure.
-     *
-     * @param \Closure $search
-     * @return \Illuminate\Support\Collection
-     */
-    public function search(Closure $search): Collection
-    {
-        return $this->getContent()->filter($search);
-    }
-
-    /**
-     * Associate the cart item with the given rowId with the given model.
-     *
-     * @param  string  $rowId
-     * @param  string|Buyable  $model
-     * @return void
-     */
-    public function associate(string $rowId, string|Buyable $model): void
-    {
-        if (is_string($model) && ! class_exists($model)) {
-            throw new UnknownModelException("The supplied model {$model} does not exist.");
-        }
-
-        $cartItem = $this->get($rowId);
-
-        $cartItem->associate($model);
-
-        $content = $this->getContent();
-
-        $content->put($cartItem->rowId, $cartItem);
-
-        // @todo
-        $this->cart->save();
-    }
-
-    /**
-     * Set the tax rate for the cart item with the given rowId.
-     *
-     * @param  string  $rowId
-     * @param  int|float  $taxRate
-     * @return void
-     */
-    public function setTax(string $rowId, int|float $taxRate): void
-    {
-        $cartItem = $this->get($rowId);
-
-        $cartItem->setTaxRate($taxRate);
-
-        $content = $this->getContent();
-
-        $content->put($cartItem->rowId, $cartItem);
-
-        // @todo
-        $this->cart->save();
-    }
-
-    /**
-     * Set the global tax rate for the cart.
-     * This will set the tax rate for all items.
-     *
-     * @param float $taxRate
-     * @return void
-     */
-    public function setGlobalTax(float $taxRate): void
-    {
-        $this->taxRate = $taxRate;
-
-        $content = $this->getContent();
-        if ($content && $content->count()) {
-            $content->each(function ($item, $key) {
-                $item->setTaxRate($this->taxRate);
-            });
-        }
-    }
-
-    /**
-     * Set the discount rate for the cart item with the given rowId.
-     *
-     * @param  string  $rowId
-     * @param  int|float  $discount
-     * @return void
-     */
-    public function setDiscount(string $rowId, int|float $discount): void
-    {
-        $cartItem = $this->get($rowId);
-
-        $cartItem->setDiscountRate($discount);
-
-        $content = $this->getContent();
-
-        $content->put($cartItem->rowId, $cartItem);
-
-        // @todo
-        $this->cart->save();
-    }
-
-    /**
-     * Set the global discount percentage for the cart.
-     * This will set the discount for all cart items.
-     *
-     * @param  float  $discount
-     * @return void
-     */
-    public function setGlobalDiscount(float $discount): void
-    {
-        $this->discount = $discount;
-
-        $content = $this->getContent();
-        if ($content && $content->count()) {
-            $content->each(function ($item, $key) {
-                $item->setDiscountRate($this->discount);
-            });
-        }
-    }
-
-    /**
-     * @todo
-     * Store the current instance of the cart.
-     *
-     * @param  mixed  $identifier
-     * @return void
-     */
-    public function store($identifier)
-    {
-        $content = $this->getContent();
-
-        if ($identifier instanceof InstanceIdentifier) {
-            $identifier = $identifier->getInstanceIdentifier();
-        }
-
-        $instance = $this->currentInstance();
-
-        if ($this->storedCartInstanceWithIdentifierExists($instance, $identifier)) {
-            throw new CartAlreadyStoredException("A cart with identifier {$identifier} was already stored.");
-        }
-
-        $serializedContent = serialize($content);
-
-        $this->getConnection()->table($this->getTableName())->insert([
-            'identifier' => $identifier,
-            'instance' => $instance,
-            'content' => $serializedContent,
-            'created_at' => $this->createdAt ?: Carbon::now(),
-            'updated_at' => Carbon::now(),
-        ]);
-
-        $this->events->dispatch('cart.stored');
-    }
-
-    /**
-     * Restore the cart with the given identifier.
-     *
-     * @param  InstanceIdentifier|string  $identifier
-     * @return void
-     */
-    public function restore(string|InstanceIdentifier $identifier)
-    {
-        if ($identifier instanceof InstanceIdentifier) {
-            $identifier = $identifier->getInstanceIdentifier();
-        }
-
-        $currentInstance = $this->currentInstance();
-
-        if (! $this->storedCartInstanceWithIdentifierExists($currentInstance, $identifier)) {
+        if (! $this->validateItems()) {
             return;
         }
 
-        $stored = $this->getConnection()->table($this->getTableName())
-            ->where(['identifier' => $identifier, 'instance' => $currentInstance])->first();
-
-        if ($this->getConnection()->getDriverName() === 'pgsql') {
-            $storedContent = unserialize(base64_decode(data_get($stored, 'content')));
-        } else {
-            $storedContent = unserialize(data_get($stored, 'content'));
-        }
-
-        $this->instance(data_get($stored, 'instance'));
-
-        $content = $this->getContent();
-
-        foreach ($storedContent as $cartItem) {
-            $content->put($cartItem->rowId, $cartItem);
-        }
-
-        $this->events->dispatch('cart.restored');
-
-        // @todo
-        $this->cart->save();
-
-        $this->instance($currentInstance);
-
-        $this->getConnection()->table($this->getTableName())->where(['identifier' => $identifier, 'instance' => $currentInstance])->delete();
-    }
-
-    /**
-     * Erase the cart with the given identifier.
-     *
-     * @param  mixed  $identifier
-     * @return void
-     */
-    public function erase(string|InstanceIdentifier $identifier): void
-    {
-        if ($identifier instanceof InstanceIdentifier) {
-            $identifier = $identifier->getInstanceIdentifier();
-        }
-
-        $instance = $this->currentInstance();
-
-        if (! $this->storedCartInstanceWithIdentifierExists($instance, $identifier)) {
+        if (! $cart = $this->getCart()) {
             return;
         }
 
-        $this->getConnection()->table($this->getTableName())->where(['identifier' => $identifier, 'instance' => $instance])->delete();
+        Event::dispatch('checkout.cart.collect.totals.before', $cart);
 
-        $this->events->dispatch('cart.erased');
+        $cart->grand_total = $cart->base_grand_total = 0;
+        $cart->sub_total = $cart->base_sub_total = 0;
+        $cart->tax_total = $cart->base_tax_total = 0;
+        $cart->discount_amount = $cart->base_discount_amount = 0;
+
+        foreach ($cart->items as $item) {
+            $cart->discount_amount += $item->discount_amount;
+            $cart->base_discount_amount += $item->base_discount_amount;
+
+            $cart->sub_total = (float) $cart->sub_total + $item->total;
+            $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
+        }
+
+        $cart->grand_total = $cart->sub_total - $cart->discount_amount;
+        $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount_amount;
+
+        //@todo 暂不考虑快递费
+        //        if ($shipping = $cart->selected_shipping_rate) {
+        //            $cart->grand_total = (float) $cart->grand_total + $shipping->price - $shipping->discount_amount;
+        //            $cart->base_grand_total = (float) $cart->base_grand_total + $shipping->base_price - $shipping->base_discount_amount;
+        //
+        //            $cart->discount_amount += $shipping->discount_amount;
+        //            $cart->base_discount_amount += $shipping->base_discount_amount;
+        //        }
+
+        $cart = $this->finalizeCartTotals($cart);
+
+        $quantities = 0;
+
+        foreach ($cart->items as $item) {
+            $quantities = $quantities + $item->quantity;
+        }
+
+        $cart->items_count = $cart->items->count();
+
+        $cart->items_qty = $quantities;
+
+        $cart->save();
+
+        Event::dispatch('checkout.cart.collect.totals.after', $cart);
     }
 
     /**
-     * Merges the contents of another cart into this cart.
+     * Round cart totals.
      *
-     * @param  mixed  $identifier  Identifier of the Cart to merge with.
-     * @param  bool  $keepDiscount  Keep the discount of the CartItems.
-     * @param  bool  $keepTax  Keep the tax of the CartItems.
-     * @param  bool  $dispatchAdd  Flag to dispatch the add events.
+     * @param CartModel $cart
+     * @return CartModel
+     */
+    private function finalizeCartTotals(CartModel $cart): CartModel
+    {
+        $cart->discount_amount = round($cart->discount_amount, 2);
+        $cart->base_discount_amount = round($cart->base_discount_amount, 2);
+
+        $cart->sub_total = round($cart->sub_total, 2);
+        $cart->base_sub_total = round($cart->base_sub_total, 2);
+
+        $cart->grand_total = round($cart->grand_total, 2);
+        $cart->base_grand_total = round($cart->base_grand_total, 2);
+
+        return $cart;
+    }
+
+    /**
+     * To validate if the product information is changed by admin and the items have been added to the cart before it.
+     *
      * @return bool
      */
-    public function merge($identifier, $keepDiscount = false, $keepTax = false, $dispatchAdd = true, $instance = self::DEFAULT_INSTANCE)
+    public function validateItems(): bool
     {
-        if (! $this->storedCartInstanceWithIdentifierExists($instance, $identifier)) {
+        if (! $cart = $this->getCart()) {
             return false;
         }
 
-        $stored = $this->getConnection()->table($this->getTableName())
-            ->where(['identifier' => $identifier, 'instance' => $instance])->first();
+        if (count($cart->items) === 0) {
+            CartModel::destroy($cart->id);
 
-        if ($this->getConnection()->getDriverName() === 'pgsql') {
-            $storedContent = unserialize(base64_decode($stored->content));
-        } else {
-            $storedContent = unserialize($stored->content);
-        }
-
-        foreach ($storedContent as $cartItem) {
-            $this->addCartItem($cartItem, $keepDiscount, $keepTax, $dispatchAdd);
-        }
-
-        $this->events->dispatch('cart.merged');
-
-        return true;
-    }
-
-    /**
-     * Magic method to make accessing the total, tax and subtotal properties possible.
-     *
-     * @param  string  $attribute
-     * @return float|null
-     */
-    public function __get($attribute)
-    {
-        switch ($attribute) {
-            case 'total':
-                return $this->total();
-            case 'tax':
-                return $this->tax();
-            case 'subtotal':
-                return $this->subtotal();
-            default:
-                return;
-        }
-    }
-
-    /**
-     * Get the carts content, if there is no cart content set yet, return a new empty Collection.
-     *
-     * @return \Illuminate\Support\Collection
-     */
-    protected function getContent(): Collection
-    {
-        $content = $this->cart->getAttribute('content');
-
-        if ($content) {
-            return collect($content);
-        }
-
-        return new Collection;
-    }
-
-    /**
-     * Create a new CartItem from the supplied attributes.
-     *
-     * @param  Buyable|array|string  $product
-     * @param  string  $name
-     * @param  int|float|null $quantity
-     * @param  float|null  $price
-     * @param  float|int|null  $weight
-     * @param  array|null  $options
-     * @return \MobileNowGroup\ShoppingCart\CartItem
-     */
-    protected function createCartItem(
-        Buyable|string|array $product,
-        string $name,
-        int|float|null $quantity = 1,
-        ?float $price = null,
-        float|int|null $weight = null,
-        ?array $options = []
-    ): CartItem {
-        if ($product instanceof Buyable) {
-            $cartItem = CartItem::fromBuyable($product, $quantity ?: []);
-            $cartItem->setQuantity($name ?: 1);
-            $cartItem->associate($product);
-        } elseif (is_array($product)) {
-            $cartItem = CartItem::fromArray($product);
-            $cartItem->setQuantity($product['quantity']);
-        } else {
-            $cartItem = CartItem::fromAttributes($product, $name, $price, $weight, $options);
-            $cartItem->setQuantity($quantity);
-        }
-
-        $cartItem->setInstance($this->currentInstance());
-
-        return $cartItem;
-    }
-
-    /**
-     * Check if the item is a multidimensional array or an array of Buyable.
-     *
-     * @param  mixed  $item
-     * @return bool
-     */
-    private function isMultiple(mixed $item): bool
-    {
-        if (! is_array($item)) {
             return false;
         }
 
-        return is_array(head($item)) || head($item) instanceof Buyable;
+        $isInvalid = false;
+
+        foreach ($cart->items as $item) {
+            if ($item->product->status === 0) {
+                $this->removeItem($item->id);
+
+                $isInvalid = true;
+
+            }
+
+            $price = ! is_null($item->custom_price) ? $item->custom_price : $item->base_price;
+
+            ShoppingCartItem::where('id', $item->id)->update([
+                'price' => $price,
+                'base_price' => $price,
+                'total' => $price * $item->quantity,
+                'base_total' => $price * $item->quantity,
+            ]);
+
+        }
+
+        return ! $isInvalid;
     }
 
     /**
-     * @todo
+     * Remove the item from the cart.
      *
+     * @param int $itemId
      * @return bool
      */
-    private function storedCartInstanceWithIdentifierExists($instance, $identifier)
+    public function removeItem(int $itemId): bool
     {
-        return $this->getConnection()->table($this->getTableName())->where(['identifier' => $identifier, 'instance' => $instance])->exists();
+        Event::dispatch('checkout.cart.delete.before', $itemId);
+
+        if (! $cart = $this->getCart()) {
+            return false;
+        }
+
+        if ($cartItem = ShoppingCartItem::find($itemId)) {
+            $cartItem->delete();
+
+            if ($cart->items->count() == 0) {
+                CartModel::destroy($cart->id);
+            }
+
+            Event::dispatch('checkout.cart.delete.after', $itemId);
+
+            $this->collectTotals();
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
-     * @todo
-     * Get the database connection.
+     * Create new cart instance.
      *
-     * @return \Illuminate\Database\Connection
-     */
-    private function getConnection()
-    {
-        return app(DatabaseManager::class)->connection($this->getConnectionName());
-    }
-
-    /**
-     * Get the database table name.
+     * @param $qty
+     * @param $data
+     * @return mixed
      *
-     * @return string
+     * @throws CartException
      */
-    private function getTableName()
+    public function create($qty, $data): mixed
     {
-        return config('shopping-cart.database.table', 'shopping_carts');
-    }
+        $cartData = [
+            'items_count' => 1,
+            'customer_id' => auth()->id(),
+            // 'is_guest' => 0,
+            'customer_first_name' => auth()->user()->first_name,
+            'customer_last_name' => auth()->user()->last_name,
+            'customer_email' => auth()->user()->email,
+        ] + $data;
 
-    /**
-     * Get the database connection name.
-     *
-     * @return string
-     */
-    private function getConnectionName()
-    {
-        $connection = config('cart.database.connection');
+        $cart = CartModel::create($cartData);
 
-        return is_null($connection) ? config('database.default') : $connection;
+        if (! $cart) {
+
+            throw new CartException(ErrorConst::ERROR_CREATE_CART_INSTANCE);
+        }
+
+        return $cart;
     }
 
     /**
@@ -888,5 +364,54 @@ class ShoppingCart
         }
 
         return number_format($value, $decimals, $decimalPoint, $thousandSeparator);
+    }
+
+    /**
+     * Update cart items information.
+     *
+     * @param int $cartItemId
+     * @param int $qty
+     * @return bool
+     *
+     * @throws CartException
+     */
+    public function updateItems(int $itemId, int $quantity): bool
+    {
+        $item = ShoppingCartItem::find($itemId)->load('productSku');
+
+        if (! $item) {
+            throw new CartException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
+        }
+
+        if ($item->product && $item->product->status === 0) {
+            throw new CartException(ErrorConst::ERROR_PRODUCT_NOT_AVAILABLE);
+        }
+
+        if ($quantity <= 0) {
+            //$this->removeItem($itemId);
+            throw new CartException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE);
+        }
+
+        $item->quantity = $quantity;
+
+        if ($quantity < $item->productSku->stock) {
+            throw new CartException(ErrorConst::ERROR_REQUESTED_QUANTITY_NOT_AVAILABLE);
+        }
+
+        Event::dispatch('checkout.cart.update.before', $item);
+
+        ShoppingCartItem::where('id', $itemId)->update([
+            'quantity' => $quantity,
+            'total' => $item->price * $quantity,
+            'base_total' => $item->price * $quantity,
+            'total_weight' => $item->weight * $quantity,
+            'base_total_weight' => $item->weight * $quantity,
+        ], $itemId);
+
+        Event::dispatch('checkout.cart.update.after', $item);
+
+        $this->collectTotals();
+
+        return true;
     }
 }
