@@ -1,12 +1,12 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Requests\Cart;
+namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Event;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Resources\CartResource;
+use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
 
 class StoreRequest extends FormRequest
 {

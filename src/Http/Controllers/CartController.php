@@ -1,15 +1,15 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Controllers;
+namespace MobileNowGroup\ShoppingCart\Http\Controllers;
 
-use MobileNowGroup\ShoppingCart\Requests\Cart\ApplyCouponRequest;
-use MobileNowGroup\ShoppingCart\Requests\Cart\StoreRequest;
-use MobileNowGroup\ShoppingCart\Requests\Cart\UpdateRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\ApplyCouponRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\StoreRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\UpdateRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Event;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Resources\CartResource;
+use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
 
 class CartController extends Controller
 {
