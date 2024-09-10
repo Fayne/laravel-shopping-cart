@@ -13,6 +13,7 @@ trait CartCoupons
 {
     /**
      * Set coupon code to the cart.
+     *
      * @param string $code
      * @return $this
      */
@@ -29,6 +30,7 @@ trait CartCoupons
 
     /**
      * Remove coupon code from the cart.
+     *
      * @return $this
      */
     public function removeCouponCode(): static
