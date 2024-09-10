@@ -1,6 +1,6 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Database\factories;
+namespace MobileNowGroup\ShoppingCart\database\factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;

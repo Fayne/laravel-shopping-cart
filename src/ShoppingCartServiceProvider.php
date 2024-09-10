@@ -38,7 +38,7 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         //        });
 
         $this->publishes([
-            __DIR__ . '/Database/Migrations' => database_path('migrations'),
+            __DIR__ . '/../database/migrations' => database_path('migrations'),
         ], 'migrations');
 
         $this->app->bind('shopping-cart', ShoppingCart::class);
@@ -50,7 +50,7 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
     public function boot()
     {
         if ($this->shouldLoadMigrations()) {
-            $this->loadMigrationsFrom(__DIR__ . '/Database/Migrations');
+            $this->loadMigrationsFrom(__DIR__ . '/../database/Migrations');
         }
 
         if (config('shopping-cart.routes.enabled', true)) {
