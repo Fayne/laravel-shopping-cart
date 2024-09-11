@@ -32,7 +32,6 @@ class ShoppingCart extends Model
      */
     protected $with = [
         'items',
-        'items.children',
     ];
 
     /**
@@ -40,6 +39,6 @@ class ShoppingCart extends Model
      */
     public function items(): HasMany
     {
-        return $this->hasMany(ShoppingCartItem::class);
+        return $this->hasMany(ShoppingCartItem::class, 'cart_id');
     }
 }

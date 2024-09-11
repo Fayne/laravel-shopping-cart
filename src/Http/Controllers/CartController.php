@@ -3,6 +3,7 @@
 namespace MobileNowGroup\ShoppingCart\Http\Controllers;
 
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\ApplyCouponRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\RemoveRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\StoreRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\UpdateRequest;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +11,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Event;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
+use Modules\Product\Models\Product;
 
 class CartController extends Controller
 {
@@ -52,13 +54,13 @@ class CartController extends Controller
      * @param $id
      * @return JsonResponse
      */
-    public function destroy($id): JsonResponse
+    public function destroy(RemoveRequest $request): JsonResponse
     {
-        Event::dispatch('checkout.cart.item.delete.before', $id);
+        Event::dispatch('checkout.cart.item.delete.before', $request->validated('cart_item_id'));
 
-        ShoppingCart::removeItem($id);
+        ShoppingCart::removeItem($request->validated('id'));
 
-        Event::dispatch('checkout.cart.item.delete.after', $id);
+        Event::dispatch('checkout.cart.item.delete.after', $request->validated('cart_item_id'));
 
         ShoppingCart::collectTotals();
 

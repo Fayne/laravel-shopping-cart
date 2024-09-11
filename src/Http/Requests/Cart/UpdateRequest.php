@@ -26,23 +26,20 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cart_item_id' => 'required|integer|exists:shopping_cart_items,id',
-            'qty' => 'required|integer|min:1',
+            'cart_item_id' => 'required|integer|exists:cart_items,id',
+            'quantity' => 'required|integer|min:1',
         ];
     }
 
     public function handle()
     {
-        $requestedQuantity = $this->validated('qty');
+        $requestedQuantity = $this->validated('quantity');
 
         $item = ShoppingCartItem::find($this->validated('cart_item_id'));
 
         Event::dispatch('checkout.cart.item.update.before', $this->validated('cart_item_id'));
 
-        ShoppingCart::updateItems([
-            'cart_item_id' => $this->validated('cart_item_id'),
-            'qty' => $requestedQuantity,
-        ]);
+        ShoppingCart::updateItems($this->validated('cart_item_id'), $requestedQuantity);
 
         Event::dispatch('checkout.cart.item.update.after', $item);
 

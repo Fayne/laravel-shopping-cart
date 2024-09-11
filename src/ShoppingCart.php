@@ -9,8 +9,8 @@ use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 use MobileNowGroup\ShoppingCart\Traits\CartCoupons;
-use Modules\Product\Models\Product;
-use Modules\Product\Models\ProductSku;
+use MobileNowGroup\ShoppingCart\Models\ProductSku;
+
 
 class ShoppingCart
 {
@@ -128,15 +128,15 @@ class ShoppingCart
             throw new CartException(ErrorConst::ERROR_ADD_INACTIVE_PRODUCT);
         }
 
-        $cartProducts = $productSku->product->prepareForCart($options);
+        $cartProducts = $productSku->prepareForCart($qty, $options);
 
         foreach ($cartProducts as $cartProduct) {
             $cartItem = $this->getItemByProduct();
 
-            if (! $cartItem) {
+            if ($cartItem->isEmpty()) {
                 ShoppingCartItem::create(array_merge($cartProduct, ['cart_id' => $cart->id]));
             } else {
-                ShoppingCartItem::update($cartProduct, $cartItem->id);
+                ShoppingCartItem::where('id',$cartItem->id)->update($cartProduct, $cartItem->id);
             }
 
         }
@@ -155,7 +155,7 @@ class ShoppingCart
      */
     public function getItemByProduct()
     {
-        return $this->getCart()->allItems;
+        return $this->getCart()->items;
     }
 
     /**
@@ -177,19 +177,19 @@ class ShoppingCart
 
         $cart->grand_total = $cart->base_grand_total = 0;
         $cart->sub_total = $cart->base_sub_total = 0;
-        $cart->tax_total = $cart->base_tax_total = 0;
-        $cart->discount_amount = $cart->base_discount_amount = 0;
+       // $cart->tax_total = $cart->base_tax_total = 0;
+        $cart->discount = $cart->base_discount = 0;
 
         foreach ($cart->items as $item) {
-            $cart->discount_amount += $item->discount_amount;
-            $cart->base_discount_amount += $item->base_discount_amount;
+            $cart->discount += $item->discount_amount;
+            $cart->base_discount += $item->base_discount_amount;
 
             $cart->sub_total = (float) $cart->sub_total + $item->total;
             $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
         }
 
-        $cart->grand_total = $cart->sub_total - $cart->discount_amount;
-        $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount_amount;
+        $cart->grand_total = $cart->sub_total - $cart->discount;
+        $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount;
 
         //@todo 暂不考虑快递费
         //        if ($shipping = $cart->selected_shipping_rate) {
@@ -225,8 +225,8 @@ class ShoppingCart
      */
     private function finalizeCartTotals(CartModel $cart): CartModel
     {
-        $cart->discount_amount = round($cart->discount_amount, 2);
-        $cart->base_discount_amount = round($cart->base_discount_amount, 2);
+        $cart->discount = round($cart->discount, 2);
+        $cart->base_discount = round($cart->base_discount, 2);
 
         $cart->sub_total = round($cart->sub_total, 2);
         $cart->base_sub_total = round($cart->base_sub_total, 2);
@@ -312,21 +312,20 @@ class ShoppingCart
     /**
      * Create new cart instance.
      *
-     * @param $qty
      * @param $data
      * @return mixed
      *
      * @throws CartException
      */
-    public function create($qty, $data): mixed
+    public function create(?array $data= []): mixed
     {
         $cartData = [
             'items_count' => 1,
             'customer_id' => auth()->id(),
             // 'is_guest' => 0,
-            'customer_first_name' => auth()->user()->first_name,
-            'customer_last_name' => auth()->user()->last_name,
-            'customer_email' => auth()->user()->email,
+            'customer_first_name' => auth()->user()->name ?? '',
+            'customer_last_name' => auth()->user()->name ?? '',
+            'customer_email' => auth()->user()->email ?? '',
         ] + $data;
 
         $cart = CartModel::create($cartData);

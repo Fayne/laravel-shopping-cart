@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use MobileNowGroup\ShoppingCart\Controllers\CartController;
+use MobileNowGroup\ShoppingCart\Http\Controllers\CartController;
 
 /*
 |--------------------------------------------------------------------------
@@ -9,11 +9,11 @@ use MobileNowGroup\ShoppingCart\Controllers\CartController;
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('modules/shopping-cart')
+Route::prefix('api/cart')
     ->middleware(['api', 'auth:sanctum'])
     ->name('modules.shopping-cart.')
     ->group(function () {
-        Route::apiResource('cart', CartController::class)->except(['index']);
+        Route::apiSingleton('', CartController::class)->creatable();
         Route::post('apply-coupon', [CartController::class, 'applyCoupon']);
         Route::delete('remove-coupon', [CartController::class, 'removeCoupon']);
     });

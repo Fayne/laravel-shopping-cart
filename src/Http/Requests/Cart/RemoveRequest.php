@@ -11,7 +11,8 @@ class RemoveRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        $user = auth()->user()->load(['cart.items']);
+        return $user->cart && $user->cart->items && $user->cart->items->contains('id', $this->input('cart_item_id'));
     }
 
     /**
@@ -22,7 +23,7 @@ class RemoveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'cart_item_id' => 'required|exists:cart_items,id'
         ];
     }
 }

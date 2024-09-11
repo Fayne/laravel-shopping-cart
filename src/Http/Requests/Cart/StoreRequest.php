@@ -28,7 +28,7 @@ class StoreRequest extends FormRequest
         return [
             'is_buy_now' => 'required|boolean',
             'product_sku_id' => 'required|integer|exists:product_skus,id',
-            'quantity' => 'required|integer',
+            'quantity' => 'required|integer|min:1',
         ];
     }
 
@@ -41,7 +41,7 @@ class StoreRequest extends FormRequest
         Event::dispatch('checkout.cart.item.add.before', $this->validated('product_sku_id'));
 
         try {
-            $result = ShoppingCart::add($this->validated('product_sku_id'), $this->except('product_sku_id'));
+            $result = ShoppingCart::add($this->validated('product_sku_id'), $this->validated('quantity'));
 
             Event::dispatch('checkout.cart.item.add.after', $result);
 

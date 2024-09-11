@@ -30,18 +30,19 @@ class ProductSku extends Model
     }
 
     /**
-     * @param $data
+     * @param int $quantity
+     * @param array|null $data
      * @return array
      *
      * @throws CartException
      */
-    public function prepareForCart($data): array
+    public function prepareForCart(int $quantity, ?array $data = []): array
     {
-        $data['quantity'] = (int) $data['quantity'] ?? 1;
+        $data['quantity'] = (int) $quantity ?? 1;
 
         $data = $this->getQtyRequest($data);
 
-        if ($data['quantity'] > $this->qty) {
+        if ($data['quantity'] > $quantity) {
             throw new CartException(ErrorConst::ERROR_REQUESTED_QUANTITY_NOT_AVAILABLE);
         }
 
@@ -53,7 +54,7 @@ class ProductSku extends Model
                 'product_sku_id' => $this->id,
                 'sku' => $this->sku,
                 'quantity' => $data['quantity'],
-                'name' => $this->product->name,
+                'name' => $this->sku_name,
                 'price' => $price,
                 'base_price' => $price,
                 'total' => $price * $data['quantity'],
@@ -73,10 +74,10 @@ class ProductSku extends Model
      */
     public function getQtyRequest($data): array
     {
-        if ($item = ShoppingCart::getItemByProduct()) {
+        $item = ShoppingCart::getItemByProduct();
+        if ($item->isNotEmpty()) {
             $data['quantity'] += $item->quantity;
         }
-
         return $data;
     }
 }
