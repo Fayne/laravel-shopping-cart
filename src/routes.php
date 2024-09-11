@@ -9,7 +9,12 @@ use MobileNowGroup\ShoppingCart\Http\Controllers\CartController;
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('api/cart')
+/*
+|--------------------------------------------------------------------------
+| Auth API Routes -- need token
+|--------------------------------------------------------------------------
+*/
+Route::prefix('modules/shopping-cart')
     ->middleware(['api', 'auth:sanctum'])
     ->name('modules.shopping-cart.')
     ->group(function () {
