@@ -78,6 +78,7 @@ class ProductSku extends Model
         if ($item->isNotEmpty()) {
             $data['quantity'] += $item->quantity;
         }
+
         return $data;
     }
 }

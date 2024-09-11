@@ -11,7 +11,6 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 use MobileNowGroup\ShoppingCart\Traits\CartCoupons;
 use MobileNowGroup\ShoppingCart\Models\ProductSku;
 
-
 class ShoppingCart
 {
     use CartCoupons;
@@ -136,7 +135,7 @@ class ShoppingCart
             if ($cartItem->isEmpty()) {
                 ShoppingCartItem::create(array_merge($cartProduct, ['cart_id' => $cart->id]));
             } else {
-                ShoppingCartItem::where('id',$cartItem->id)->update($cartProduct, $cartItem->id);
+                ShoppingCartItem::where('id', $cartItem->id)->update($cartProduct, $cartItem->id);
             }
 
         }
@@ -177,7 +176,7 @@ class ShoppingCart
 
         $cart->grand_total = $cart->base_grand_total = 0;
         $cart->sub_total = $cart->base_sub_total = 0;
-       // $cart->tax_total = $cart->base_tax_total = 0;
+        // $cart->tax_total = $cart->base_tax_total = 0;
         $cart->discount = $cart->base_discount = 0;
 
         foreach ($cart->items as $item) {
@@ -317,7 +316,7 @@ class ShoppingCart
      *
      * @throws CartException
      */
-    public function create(?array $data= []): mixed
+    public function create(?array $data = []): mixed
     {
         $cartData = [
             'items_count' => 1,

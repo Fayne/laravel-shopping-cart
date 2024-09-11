@@ -11,7 +11,6 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Event;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
-use Modules\Product\Models\Product;
 
 class CartController extends Controller
 {
