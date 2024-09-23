@@ -2,16 +2,23 @@
 
 namespace MobileNowGroup\ShoppingCart\Http\Controllers;
 
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartDeleteAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartDeleteBefore;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveBefore;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponBefore;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowBefore;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\ApplyCouponRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\DeleteRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\RemoveRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\StoreRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\UpdateRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Event;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
-use Modules\Product\Models\Product;
 
 class CartController extends Controller
 {
@@ -30,7 +37,11 @@ class CartController extends Controller
      */
     public function show()
     {
+        CartShowBefore::dispatch();
+
         $cart = ShoppingCart::getCart();
+
+        CartShowAfter::dispatch();
 
         return response()->json([
             'code' => 0,
@@ -51,27 +62,50 @@ class CartController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param $id
+     * @param DeleteRequest $request
      * @return JsonResponse
      */
-    public function destroy(RemoveRequest $request): JsonResponse
+    public function destroy(DeleteRequest $request): JsonResponse
     {
-        Event::dispatch('checkout.cart.item.delete.before', $request->validated('cart_item_id'));
+        CartDeleteBefore::dispatch();
 
-        ShoppingCart::removeItem($request->validated('id'));
+        ShoppingCart::emptyCart();
 
-        Event::dispatch('checkout.cart.item.delete.after', $request->validated('cart_item_id'));
+        CartDeleteAfter::dispatch();
+
+        $cart = ShoppingCart::getCart();
+
+        return response()->json([
+            'code' => 0,
+            'message' => '删除购物车商品成功',
+            'data' => $cart ? new CartResource($cart) : null,
+        ]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param RemoveRequest $request
+     * @return JsonResponse
+     */
+    public function removeItem(RemoveRequest $request): JsonResponse
+    {
+        CartItemRemoveBefore::dispatch($request->validated('cart_item_id'));
+
+        ShoppingCart::removeItem($request->validated('cart_item_id'));
+
+        CartItemRemoveAfter::dispatch();
 
         ShoppingCart::collectTotals();
 
         $cart = ShoppingCart::getCart();
 
         return response()->json([
+            'code' => 0,
             'message' => '移除商品成功',
             'data' => $cart ? new CartResource($cart) : null,
         ]);
     }
-
     /**
      * Apply coupon code.
      *
@@ -91,7 +125,11 @@ class CartController extends Controller
      */
     public function removeCoupon()
     {
+        CartRemoveCouponBefore::dispatch();
+
         ShoppingCart::removeCouponCode()->collectTotals();
+
+        CartRemoveCouponAfter::dispatch();
 
         return response()->json([
             'code' => 0,

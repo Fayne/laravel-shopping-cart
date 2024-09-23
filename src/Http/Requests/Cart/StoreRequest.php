@@ -4,9 +4,13 @@ namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Event;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemAddAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemAddBefore;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemIsBuyNow;
+use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
+use Modules\Product\Models\ProductSku;
 
 class StoreRequest extends FormRequest
 {
@@ -21,12 +25,12 @@ class StoreRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array
      */
     public function rules(): array
     {
         return [
-            'is_buy_now' => 'required|boolean',
+            'is_buy_now' => 'nullable|boolean',
             'product_sku_id' => 'required|integer|exists:product_skus,id',
             'quantity' => 'required|integer|min:1',
         ];
@@ -34,16 +38,25 @@ class StoreRequest extends FormRequest
 
     public function handle(): JsonResponse
     {
-        if ($this->validated('is_buy_now')) {
-            Event::dispatch('shop.item.buy-now', $this->validated('product_sku_id'));
+        if ($this->validated('is_buy_now', false)) {
+            ShoppingCart::deactivateCurrentCartIfBuyNowIsActive();
+            CartItemIsBuyNow::dispatch(
+                $this->validated('is_buy_now'),
+                $this->validated('product_sku_id'),
+                $this->validated('quantity'),
+            );
         }
 
-        Event::dispatch('checkout.cart.item.add.before', $this->validated('product_sku_id'));
+        CartItemAddBefore::dispatch($this->validated('product_sku_id'));
 
         try {
-            $result = ShoppingCart::add($this->validated('product_sku_id'), $this->validated('quantity'));
+            $product = ProductSku::find($this->validated('product_sku_id'));
+            $result = ShoppingCart::addProduct(
+                $product,
+                $this->validated('quantity'),
+                $this->validated('is_buy_now'));
 
-            Event::dispatch('checkout.cart.item.add.after', $result);
+            CartItemAddAfter::dispatch($result);
 
             ShoppingCart::collectTotals();
 
@@ -56,10 +69,9 @@ class StoreRequest extends FormRequest
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                ],
+                'data' => null,
+                'message' => $e->getMessage(),
+                'code' => ErrorConst::CODE_ERROR,
             ]);
         }
     }

@@ -3,6 +3,9 @@
 namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\JsonResponse;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartApplyCouponAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartApplyCouponBefore;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 
@@ -19,7 +22,7 @@ class ApplyCouponRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array
      */
     public function rules(): array
     {
@@ -28,13 +31,16 @@ class ApplyCouponRequest extends FormRequest
         ];
     }
 
-    public function handle()
+    public function handle(): JsonResponse
     {
         $couponCode = $this->validated('code');
-
         try {
             if (strlen($couponCode)) {
+                CartApplyCouponBefore::dispatch($couponCode);
+
                 ShoppingCart::setCouponCode($couponCode)->collectTotals();
+
+                CartApplyCouponAfter::dispatch();
 
                 if (ShoppingCart::getCart()->coupon_code == $couponCode) {
                     return response()->json([

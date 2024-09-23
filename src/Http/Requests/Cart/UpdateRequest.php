@@ -3,7 +3,8 @@
 namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Event;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemUpdateAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemUpdateBefore;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
@@ -15,7 +16,10 @@ class UpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        //@todo 可自行优化
+        $cartItem = ShoppingCartItem::with('cart')->find($this->input('cart_item_id'));
+
+        return $cartItem->cart->customer_id === auth()->id();
     }
 
     /**
@@ -35,13 +39,13 @@ class UpdateRequest extends FormRequest
     {
         $requestedQuantity = $this->validated('quantity');
 
-        $item = ShoppingCartItem::find($this->validated('cart_item_id'));
+        CartItemUpdateBefore::dispatch($this->validated('cart_item_id'), $this->validated('quantity'));
 
-        Event::dispatch('checkout.cart.item.update.before', $this->validated('cart_item_id'));
+        $item = ShoppingCartItem::find($this->validated('cart_item_id'));
 
         ShoppingCart::updateItems($this->validated('cart_item_id'), $requestedQuantity);
 
-        Event::dispatch('checkout.cart.item.update.after', $item);
+        CartItemUpdateAfter::dispatch();
 
         ShoppingCart::collectTotals();
 

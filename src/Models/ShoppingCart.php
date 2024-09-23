@@ -4,11 +4,12 @@ namespace MobileNowGroup\ShoppingCart\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use MobileNowGroup\ShoppingCart\Cartable;
+use MobileNowGroup\ShoppingCart\Exceptions\CartException;
+use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 
 class ShoppingCart extends Model
 {
-    protected $table = 'cart';
-
     /**
      * The attributes that aren't mass assignable.
      *
@@ -35,10 +36,92 @@ class ShoppingCart extends Model
     ];
 
     /**
+     * Create a new instance of the model.
+     */
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        $this->table = config('shopping-cart.models.carts.table');
+    }
+
+    /**
      * To get relevant associated items with the cart instance
      */
     public function items(): HasMany
     {
         return $this->hasMany(ShoppingCartItem::class, 'cart_id');
     }
+
+    /**
+     * Calculate price by quantity of items.
+     */
+    public function calculatedPriceByQuantity(): int
+    {
+        $totalPrice = 0;
+        foreach ($this->items()->get() as $item) {
+            $totalPrice += (int) $item->quantity * (int) $item->itemable->getPrice();
+        }
+
+        return $totalPrice;
+    }
+
+    /**
+     * Store multiple items in cart.
+     *
+     * @throws CartException
+     */
+    public function storeItems(array $items): static
+    {
+        foreach ($items as $item) {
+            $this->storeItem($item);
+        }
+
+        return $this;
+    }
+    /**
+     * Store cart item in cart.
+     */
+    public function storeItem(Model|array $item): static
+    {
+        if (is_array($item)) {
+            $cartItemData = [
+                'quantity' => (int) $item['quantity'],
+                'itemable_id' => $item['itemable']->getKey(),
+                'itemable_type' => get_class($item['itemable']),
+                'price' => $item['itemable']->getPrice(),
+                'sku' => $item['sku'] ?? $item['itemable']->getSku(),
+                'name' => $item['itemable']->getName(),
+                'base_price' => $item['itemable']->getPrice(),
+                'total' => $item['itemable']->getPrice() * (int) $item['quantity'],
+                'base_total' => $item['itemable']->getPrice() * (int) $item['quantity'],
+                'weight' => $item['itemable']->getWeight() ?? 0,
+                'total_weight' => ($item['itemable']->getWeight() ?? 0) * (int) $item['quantity'],
+                'base_total_weight' => ($item['itemable']->getWeight() ?? 0) * (int) $item['quantity'],
+            ];
+            if ($item['itemable'] instanceof Cartable) {
+                $this->items()->create($cartItemData);
+            } else {
+                throw new CartException(ErrorConst::ERROR_NOT_INSTANCE_CARTABLE);
+            }
+        } else {
+            $this->items()->create([
+                'itemable_id' => $item->getKey(),
+                'itemable_type' => get_class($item),
+                'quantity' => $item->quantity,
+                'price' => $item->getPrice(),
+                'sku' => $item->getSku(),
+                'name' => $item->getName(),
+                'base_price' => $item->getPrice(),
+                'total' => $item->getPrice() * $item->quantity,
+                'base_total' => $item->getPrice() * (int) $item->quantity,
+                'weight' => $item->getWeight() ?? 0,
+                'total_weight' => ($item->getWeight() ?? 0) * $item->quantity,
+                'base_total_weight' => ($item->getWeight() ?? 0) * $item->quantity,
+            ]);
+        }
+
+        return $this;
+    }
+
 }

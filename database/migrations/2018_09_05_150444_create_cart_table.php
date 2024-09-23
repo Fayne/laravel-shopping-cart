@@ -13,24 +13,20 @@ class CreateCartTable extends Migration
      */
     public function up()
     {
-        Schema::create('cart', function (Blueprint $table) {
+        $userTableName = config('shopping-cart.models.users.table');
+        $table = config('shopping-cart.models.carts.table');
+
+        Schema::create($table, function (Blueprint $table) use ($userTableName) {
             $table->increments('id');
 
-            $table->string('customer_email')->nullable();
-            $table->string('customer_first_name')->nullable();
-            $table->string('customer_last_name')->nullable();
+            $table->string('customer_name')->nullable();
 
             $table->string('shipping_method')->nullable();
             $table->string('coupon_code')->nullable();
             $table->boolean('is_gift')->default(0);
+            $table->boolean('is_temp')->default(false);
             $table->integer('items_count')->nullable();
             $table->decimal('items_qty', 12)->nullable();
-            // $table->decimal('exchange_rate', 12, 4)->nullable();
-
-            //            $table->string('global_currency_code')->nullable();
-            //            $table->string('base_currency_code')->nullable();
-            //            $table->string('channel_currency_code')->nullable();
-            //            $table->string('cart_currency_code')->nullable();
 
             $table->decimal('grand_total', 12)->default(0)->nullable();
             $table->decimal('base_grand_total', 12)->default(0)->nullable();
@@ -38,21 +34,16 @@ class CreateCartTable extends Migration
             $table->decimal('sub_total', 12)->default(0)->nullable();
             $table->decimal('base_sub_total', 12)->default(0)->nullable();
 
-            //            $table->decimal('tax_total', 12, 4)->default(0)->nullable();
-            //            $table->decimal('base_tax_total', 12, 4)->default(0)->nullable();
-
             $table->decimal('discount', 12)->default(0)->nullable();
             $table->decimal('base_discount', 12)->default(0)->nullable();
 
             $table->string('checkout_method')->nullable();
-            //            $table->boolean('is_guest')->nullable();
             $table->boolean('is_active')->nullable()->default(1);
             $table->dateTime('conversion_time')->nullable();
 
             $table->ulid('customer_id')->nullable();
-            $table->foreign('customer_id')->references('id')->on('users')->onDelete('cascade');
-            //            $table->integer('channel_id')->unsigned();
-            //            $table->foreign('channel_id')->references('id')->on('channels')->onDelete('cascade');
+            $table->foreign('customer_id')->references('id')->on($userTableName)->onDelete('cascade');
+
             $table->timestamps();
         });
     }
@@ -64,6 +55,6 @@ class CreateCartTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('cart');
+        Schema::dropIfExists(config('shopping-cart.models.carts.table', 'carts'));
     }
 }

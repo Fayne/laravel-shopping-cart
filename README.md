@@ -26,10 +26,49 @@ php artisan vendor:publish --tag="shopping-cart-config"
 ```
 
 ## Usage
-
+``` text
+关于立即购买、购物车页面、部分商品结算的说明：
+1. 点击立即购买时:
+    将购物车的状态修改为未激活状态，其他正常操作：添加商品到购物车（此时会创建一个为“立即购买”服务的购物车），跳过购物车页面，订单确认等等
+    保存订单之后，当前购物车改为未激活状态，将购物车状态改为激活状态
+   （可选）监控还未下单就从结算页返回时，将立即结算的购物车状态改为未激活状态，购物车状态改为激活状态
+2. 购物车界面时:
+    购物车状态为已激活状态
+3. 部分商品结算时:
+    购物车状态为已激活状态，同时部分商品为选中状态，结算页的商品只展示选中商品，下单成功之后，将购物车中的选中的部分商品删除
+```
 ```php
-// @todo
-demo
+    //查询购物车信息
+    ShoppingCart::getCart();
+    
+    //添加购物车
+    $product = ProductSku::find($productSkuId);
+    ShoppingCart::addProduct(
+        $product,
+        $quantity,
+        $is_buy_now
+    );
+    
+    //更新数量；商品条目ID，数量
+    ShoppingCart::updateItems($cartItemId, $requestedQuantity);
+    
+    //计算总价
+    ShoppingCart::collectTotals();
+    
+    //清空购物车，购物车仍为激活状态
+    ShoppingCart::emptyCart();
+    
+    //移除商品条目
+    ShoppingCart::removeItem($cartItemId);
+        
+    //应用优惠券code
+    ShoppingCart::setCouponCode($couponCode);
+    
+    //移除优惠券code
+    ShoppingCart::removeCouponCode();
+    
+    ShoppingCart::toggleBuy('single', true, $cartItemId);
+
 ```
 
 ## Testing

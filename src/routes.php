@@ -2,12 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use MobileNowGroup\ShoppingCart\Http\Controllers\CartController;
-
-/*
-|--------------------------------------------------------------------------
-| Auth API Routes -- don't need middleware token
-|--------------------------------------------------------------------------
-*/
+use MobileNowGroup\ShoppingCart\Http\Controllers\CheckoutController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,4 +16,12 @@ Route::prefix('modules/shopping-cart')
         Route::apiSingleton('', CartController::class)->creatable();
         Route::post('apply-coupon', [CartController::class, 'applyCoupon']);
         Route::delete('remove-coupon', [CartController::class, 'removeCoupon']);
+        Route::delete('remove-item', [CartController::class, 'removeItem']);
+        Route::prefix('checkout')
+            ->group(function () {
+                Route::post('toggle-buy', [CheckoutController::class, 'toggleBuy']);
+                Route::get('', [CheckoutController::class, 'show']);
+                Route::get('one-page', [CheckoutController::class, 'onePage']);
+                Route::get('back-from-one-page', [CheckoutController::class, 'backFromOnePage']);
+            });
     });

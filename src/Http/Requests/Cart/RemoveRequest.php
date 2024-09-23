@@ -3,6 +3,7 @@
 namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
+use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 
 class RemoveRequest extends FormRequest
 {
@@ -11,8 +12,10 @@ class RemoveRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $user = auth()->user()->load(['cart.items']);
-        return $user->cart && $user->cart->items && $user->cart->items->contains('id', $this->input('cart_item_id'));
+        //@todo 自行优化
+        $cartItem = ShoppingCartItem::with('cart')->find($this->input('cart_item_id'));
+
+        return $cartItem->cart->customer_id === auth()->id() && (bool) $cartItem->cart->is_temp === false;
     }
 
     /**
@@ -23,7 +26,7 @@ class RemoveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cart_item_id' => 'required|exists:cart_items,id'
+            'cart_item_id' => 'required|exists:cart_items,id',
         ];
     }
 }

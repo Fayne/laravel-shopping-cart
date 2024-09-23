@@ -13,8 +13,10 @@ class CreateCartItemsTable extends Migration
      */
     public function up()
     {
-        Schema::create('cart_items', function (Blueprint $table) {
-            $table->increments('id');
+        $table = config('shopping-cart.models.cart_items.table');
+        $cartTableName = config('laravel-cart.carts.table');
+        Schema::create($table, function (Blueprint $table) use ($cartTableName) {
+            $table->id();
             $table->integer('quantity')->unsigned()->default(0);
             $table->string('sku')->nullable();
             $table->string('type')->nullable();
@@ -31,31 +33,18 @@ class CreateCartItemsTable extends Migration
             $table->decimal('total', 12)->default(0);
             $table->decimal('base_total', 12)->default(0);
 
-            //            $table->decimal('tax_percent', 12, 4)->default(0)->nullable();
-            //            $table->decimal('tax_amount', 12, 4)->default(0)->nullable();
-            //            $table->decimal('base_tax_amount', 12, 4)->default(0)->nullable();
-
             $table->decimal('discount_percent', 12)->default(0);
             $table->decimal('discount_amount', 12)->default(0);
             $table->decimal('base_discount_amount', 12)->default(0);
 
             $table->json('additional')->nullable();
 
-            //            $table->integer('parent_id')->unsigned()->nullable();
-            $table->bigInteger('product_id')->unsigned();
-            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
-            $table->bigInteger('product_sku_id')->unsigned();
-            $table->foreign('product_sku_id')->references('id')->on('product_skus')->onDelete('cascade');
+            $table->morphs('itemable');
+            $table->boolean('selected')->default(false);
             $table->integer('cart_id')->unsigned();
-            $table->foreign('cart_id')->references('id')->on('cart')->onDelete('cascade');
-            //            $table->integer('tax_category_id')->unsigned()->nullable();
-            //            $table->foreign('tax_category_id')->references('id')->on('tax_categories');
+            $table->foreign('cart_id')->references('id')->on($cartTableName)->onDelete('cascade');
             $table->timestamps();
         });
-
-        //        Schema::table('cart_items', function (Blueprint $table) {
-        //            $table->foreign('parent_id')->references('id')->on('cart_items')->onDelete('cascade');
-        //        });
     }
 
     /**
@@ -65,6 +54,6 @@ class CreateCartItemsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('cart_items');
+        Schema::dropIfExists(config('shopping-cart.models.cart_items.table', 'cart_items'));
     }
 }

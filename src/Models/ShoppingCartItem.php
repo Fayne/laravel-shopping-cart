@@ -4,12 +4,9 @@ namespace MobileNowGroup\ShoppingCart\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Modules\Product\Models\Product;
 
 class ShoppingCartItem extends Model
 {
-    protected $table = 'cart_items';
-
     protected $casts = [
         'additional' => 'array',
     ];
@@ -19,16 +16,23 @@ class ShoppingCartItem extends Model
         'created_at',
         'updated_at',
     ];
-
-    public function product(): HasOne
+    /**
+     * Create a new instance of the model.
+     */
+    public function __construct(array $attributes = [])
     {
-        return $this->hasOne(Product::class, 'id', 'product_id');
-    }
-    public function productSku(): HasOne
-    {
-        return $this->hasOne(ProductSku::class, 'id', 'product_sku_id');
+        parent::__construct($attributes);
+
+        $this->table = config('shopping-cart.models.cart_items.table');
     }
 
+    /**
+     * Relation polymorphic, inverse one-to-one or many relationship.
+     */
+    public function itemable(): \Illuminate\Database\Eloquent\Relations\MorphTo
+    {
+        return $this->morphTo();
+    }
     /**
      * @return HasOne
      */
