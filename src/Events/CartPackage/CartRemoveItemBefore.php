@@ -13,7 +13,5 @@ class CartRemoveItemBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(public int $itemId)
-    {
-    }
+    public function __construct(public int $itemId) {}
 }

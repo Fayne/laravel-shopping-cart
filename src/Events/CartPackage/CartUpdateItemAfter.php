@@ -14,7 +14,5 @@ class CartUpdateItemAfter
     /**
      * Create a new event instance.
      */
-    public function __construct(public ShoppingCartItem $item)
-    {
-    }
+    public function __construct(public ShoppingCartItem $item) {}
 }

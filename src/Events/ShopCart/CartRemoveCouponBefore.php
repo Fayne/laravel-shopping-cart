@@ -14,9 +14,7 @@ class CartRemoveCouponBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(string $couponCode)
-    {
-    }
+    public function __construct(string $couponCode) {}
 
     /**
      * Get the channels the event should broadcast on.

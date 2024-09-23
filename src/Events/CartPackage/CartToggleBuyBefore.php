@@ -13,7 +13,5 @@ class CartToggleBuyBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(public string $type, public bool $selected, public ?int $itemId)
-    {
-    }
+    public function __construct(public string $type, public bool $selected, public ?int $itemId) {}
 }

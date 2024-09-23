@@ -15,7 +15,5 @@ class CartAddProductAfter
     /**
      * Create a new event instance.
      */
-    public function __construct(public ShoppingCart $cart, public Cartable $item)
-    {
-    }
+    public function __construct(public ShoppingCart $cart, public Cartable $item) {}
 }

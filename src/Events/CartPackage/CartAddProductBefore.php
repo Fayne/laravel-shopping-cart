@@ -14,7 +14,5 @@ class CartAddProductBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(public Cartable $item, public int $quantity)
-    {
-    }
+    public function __construct(public Cartable $item, public int $quantity) {}
 }

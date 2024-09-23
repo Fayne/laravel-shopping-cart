@@ -56,9 +56,7 @@ class ShoppingCart
     /**
      * Cart constructor.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Returns cart.

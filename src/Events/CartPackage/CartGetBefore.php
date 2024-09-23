@@ -13,7 +13,5 @@ class CartGetBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(public bool $isCheckout = false)
-    {
-    }
+    public function __construct(public bool $isCheckout = false) {}
 }
