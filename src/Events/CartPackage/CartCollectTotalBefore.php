@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 class CartCollectTotalBefore
 {
