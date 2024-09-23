@@ -4,7 +4,7 @@ namespace MobileNowGroup\ShoppingCart\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use MobileNowGroup\ShoppingCart\Cartable;
+use MobileNowGroup\ShoppingCart\Contracts\Cartable;
 use MobileNowGroup\ShoppingCart\Exceptions\CartException;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 
@@ -79,10 +79,11 @@ class ShoppingCart extends Model
 
         return $this;
     }
+
     /**
      * Store cart item in cart.
      */
-    public function storeItem(Model|array $item): static
+    public function storeItem(Cartable|array $item): static
     {
         if (is_array($item)) {
             $cartItemData = [

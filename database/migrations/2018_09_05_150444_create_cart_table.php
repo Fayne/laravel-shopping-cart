@@ -19,7 +19,7 @@ class CreateCartTable extends Migration
         Schema::create($table, function (Blueprint $table) use ($userTableName) {
             $table->increments('id');
 
-            $table->string('customer_name')->nullable();
+            $table->text('customer_name')->nullable();
 
             $table->string('shipping_method')->nullable();
             $table->string('coupon_code')->nullable();

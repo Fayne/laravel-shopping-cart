@@ -3,36 +3,18 @@
 namespace MobileNowGroup\ShoppingCart\Events\CartPackage;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use MobileNowGroup\ShoppingCart\Contracts\Cartable;
 
 class CartAddProductBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public Model $item;
-    public int $quantity;
-
     /**
      * Create a new event instance.
      */
-    public function __construct(Model $item, int $quantity)
+    public function __construct(public Cartable $item, public int $quantity)
     {
-        $this->item = $item;
-        $this->quantity = $quantity;
-    }
-
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
-     */
-    public function broadcastOn(): array
-    {
-        return [
-            new PrivateChannel('channel-name'),
-        ];
     }
 }

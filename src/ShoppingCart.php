@@ -6,6 +6,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use MobileNowGroup\ShoppingCart\Contracts\Cartable;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductBefore;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartCollectTotalAfter;
@@ -55,7 +56,9 @@ class ShoppingCart
     /**
      * Cart constructor.
      */
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Returns cart.
@@ -112,7 +115,7 @@ class ShoppingCart
      *
      * @throws CartException
      */
-    public function addProduct(Model $item, int $quantity, bool $isBuyNow = false): Builder|Model|null
+    public function addProduct(Cartable $item, int $quantity, bool $isBuyNow = false): Builder|Model|null
     {
         CartAddProductBefore::dispatch($item, $quantity);
         $cart = $this->getCart();
@@ -127,7 +130,7 @@ class ShoppingCart
         $item->quantity = $quantity;
         $cart->storeItem($item);
 
-        CartAddProductAfter::dispatch($cart);
+        CartAddProductAfter::dispatch($cart, $item);
 
         $this->collectTotals();
 
@@ -288,11 +291,11 @@ class ShoppingCart
      */
     public function emptyCart(): static
     {
+        $cart = $this->getCart() ?? null;
+
         CartEmptyBefore::dispatch();
-        if ($cart = $this->getCart()) {
-            $cart->items()->delete();
-        }
-        CartEmptyAfter::dispatch();
+        $cart?->items()->delete();
+        CartEmptyAfter::dispatch($cart);
 
         return $this;
     }
@@ -332,7 +335,7 @@ class ShoppingCart
             ShoppingCartItem::where('cart_id', $cart->id)->update(['selected' => $selected]);
         });
 
-        CartToggleBuyAfter::dispatch();
+        CartToggleBuyAfter::dispatch($cart);
 
         $this->collectTotals();
     }
