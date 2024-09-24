@@ -41,8 +41,6 @@ class UpdateRequest extends FormRequest
 
         CartItemUpdateBefore::dispatch($this->validated('cart_item_id'), $this->validated('quantity'));
 
-        $item = ShoppingCartItem::find($this->validated('cart_item_id'));
-
         ShoppingCart::updateItems($this->validated('cart_item_id'), $requestedQuantity);
 
         CartItemUpdateAfter::dispatch();

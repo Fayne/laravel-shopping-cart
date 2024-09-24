@@ -10,7 +10,6 @@ use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemIsBuyNow;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
-use Modules\Product\Models\ProductSku;
 
 class StoreRequest extends FormRequest
 {
@@ -51,7 +50,8 @@ class StoreRequest extends FormRequest
         CartItemAddBefore::dispatch($cart, $this->validated('product_sku_id'));
 
         try {
-            $product = ProductSku::find($this->validated('product_sku_id'));
+            $productSkuModel = config('shopping-cart.models.skus.model');
+            $product = $productSkuModel::find($this->validated('product_sku_id'));
             $result = ShoppingCart::addProduct(
                 $product,
                 $this->validated('quantity'),

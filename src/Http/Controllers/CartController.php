@@ -69,11 +69,9 @@ class CartController extends Controller
     {
         CartEmptyBefore::dispatch();
 
-        ShoppingCart::emptyCart();
+        $cart = ShoppingCart::emptyCart()->getCart();
 
         CartEmptyAfter::dispatch();
-
-        $cart = ShoppingCart::getCart();
 
         return response()->json([
             'code' => 0,
