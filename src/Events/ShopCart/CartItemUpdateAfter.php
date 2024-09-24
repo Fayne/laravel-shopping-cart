@@ -5,6 +5,7 @@ namespace MobileNowGroup\ShoppingCart\Events\ShopCart;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 class CartItemUpdateAfter
 {
@@ -13,5 +14,5 @@ class CartItemUpdateAfter
     /**
      * Create a new event instance.
      */
-    public function __construct() {}
+    public function __construct(public int $cartItemId, public int $quantity, public ?ShoppingCart $cart) {}
 }

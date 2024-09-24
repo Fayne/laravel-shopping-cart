@@ -5,6 +5,7 @@ namespace MobileNowGroup\ShoppingCart\Events\ShopCart;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 class CartItemIsBuyNow
 {
@@ -13,5 +14,10 @@ class CartItemIsBuyNow
     /**
      * Create a new event instance.
      */
-    public function __construct(public bool $is_buy_now, public int $product_sku_id, public int $quantity) {}
+    public function __construct(
+        public bool $isBuyNow,
+        public int $productSkuId,
+        public int $quantity,
+        public ?ShoppingCart $cart
+    ) {}
 }

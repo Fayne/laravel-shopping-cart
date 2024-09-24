@@ -7,7 +7,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
-class CartDeleteBefore
+class CartEmptyBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

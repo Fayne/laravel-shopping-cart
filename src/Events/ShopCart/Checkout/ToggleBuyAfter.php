@@ -14,5 +14,10 @@ class ToggleBuyAfter
     /**
      * Create a new event instance.
      */
-    public function __construct(public ShoppingCart $cart) {}
+    public function __construct(
+        public ShoppingCart $cart,
+        public string $type,
+        public bool $selected,
+        public int $itemId
+    ) {}
 }

@@ -14,5 +14,5 @@ class CartItemAddBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(public ShoppingCart $cart) {}
+    public function __construct(public array $data, public ?ShoppingCart $cart) {}
 }

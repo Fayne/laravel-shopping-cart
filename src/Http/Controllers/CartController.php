@@ -2,8 +2,8 @@
 
 namespace MobileNowGroup\ShoppingCart\Http\Controllers;
 
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartDeleteAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartDeleteBefore;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartEmptyAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartEmptyBefore;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveBefore;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponAfter;
@@ -67,11 +67,11 @@ class CartController extends Controller
      */
     public function destroy(DeleteRequest $request): JsonResponse
     {
-        CartDeleteBefore::dispatch();
+        CartEmptyBefore::dispatch();
 
         ShoppingCart::emptyCart();
 
-        CartDeleteAfter::dispatch();
+        CartEmptyAfter::dispatch();
 
         $cart = ShoppingCart::getCart();
 

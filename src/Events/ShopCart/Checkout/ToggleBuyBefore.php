@@ -5,6 +5,7 @@ namespace MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 class ToggleBuyBefore
 {
@@ -13,5 +14,10 @@ class ToggleBuyBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(public string $type, public bool $selected, public int $itemId) {}
+    public function __construct(
+        public ShoppingCart $cart,
+        public string $type,
+        public bool $selected,
+        public int $itemId
+    ) {}
 }
