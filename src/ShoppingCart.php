@@ -81,7 +81,7 @@ class ShoppingCart
 
         event(new CartAddProductAfter($cart, $item));
 
-       // $this->collectTotals();
+        // $this->collectTotals();
 
         return $this->getCart();
     }
@@ -165,7 +165,7 @@ class ShoppingCart
 
             event(new CartRemoveItemAfter($itemId));
 
-           // $this->collectTotals();
+            // $this->collectTotals();
 
             return true;
         }
@@ -289,7 +289,7 @@ class ShoppingCart
 
         event(new CartToggleBuyAfter($cart));
 
-       // $this->collectTotals();
-        return;
+        // $this->collectTotals();
+
     }
 }
