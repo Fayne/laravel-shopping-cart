@@ -14,7 +14,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
  * Class CartRemoveItemBefore
  * remove item from cart before
  */
-class CartRemoveItemBefore implements CollectTotalEvent
+class CartRemoveItemBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

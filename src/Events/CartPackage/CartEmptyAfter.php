@@ -13,7 +13,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 /**
  * empty cart after
  */
-class CartEmptyAfter implements CollectTotalEvent
+class CartEmptyAfter
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

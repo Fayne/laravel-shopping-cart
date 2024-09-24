@@ -14,7 +14,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
  * Class CartCollectTotalAfter
  * collect total after for cart
  */
-class CartCollectTotalAfter implements CollectTotalEvent
+class CartCollectTotalAfter
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

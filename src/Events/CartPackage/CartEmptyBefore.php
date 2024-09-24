@@ -13,7 +13,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 /**
  * empty cart before
  */
-class CartEmptyBefore implements CollectTotalEvent
+class CartEmptyBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

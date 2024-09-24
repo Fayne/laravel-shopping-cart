@@ -13,7 +13,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 /**
  * Update item in cart before
  */
-class CartUpdateItemBefore implements CollectTotalEvent
+class CartUpdateItemBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

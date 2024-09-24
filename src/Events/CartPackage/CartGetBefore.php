@@ -13,7 +13,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 /**
  * get cart info before for cartPackage
  */
-class CartGetBefore implements CollectTotalEvent
+class CartGetBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

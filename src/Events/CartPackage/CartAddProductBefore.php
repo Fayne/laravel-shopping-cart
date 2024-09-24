@@ -14,7 +14,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 /**
  * add product to cart before
  */
-class CartAddProductBefore implements CollectTotalEvent
+class CartAddProductBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

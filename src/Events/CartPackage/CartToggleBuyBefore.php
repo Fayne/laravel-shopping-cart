@@ -13,7 +13,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 /**
  * Select some items for checkout before
  */
-class CartToggleBuyBefore implements CollectTotalEvent
+class CartToggleBuyBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
