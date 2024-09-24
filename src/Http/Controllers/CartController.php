@@ -69,9 +69,7 @@ class CartController extends Controller
     {
         event(new CartEmptyBefore);
 
-        ShoppingCart::emptyCart();
-
-        $cart = ShoppingCart::getCart();
+        $cart = ShoppingCart::emptyCart()->getCart();
 
         event(new CartEmptyAfter($cart));
 

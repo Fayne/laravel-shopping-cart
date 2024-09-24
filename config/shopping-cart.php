@@ -83,7 +83,7 @@ return [
         'products' => [
             'model' => 'Modules\Product\Models\Product',
         ],
-        'product_skus' => [
+        'skus' => [
             'model' => 'Modules\Product\Models\ProductSku',
         ],
     ],
