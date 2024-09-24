@@ -10,9 +10,6 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
 
 class OnePageRequest extends FormRequest
 {
-    /**
-     * @var Builder|Model|mixed|null
-     */
     public ?CartModel $cart;
 
     /**

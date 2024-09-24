@@ -3,10 +3,15 @@
 namespace MobileNowGroup\ShoppingCart\Events\CartPackage;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
+/**
+ * empty cart before
+ */
 class CartEmptyBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
@@ -14,8 +19,8 @@ class CartEmptyBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(public ?ShoppingCart $cart)
-    {
-        //
+    public function __construct(public ?ShoppingCart $cart = null, public ?Authenticatable $user = null) {
+        $this->cart = $cart ?? CartPackage::getCart();
+        $this->user = $user ?? auth()->user();
     }
 }

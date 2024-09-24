@@ -3,8 +3,10 @@
 namespace MobileNowGroup\ShoppingCart\Events\ShopCart;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 class CartItemUpdateAfter
@@ -14,5 +16,13 @@ class CartItemUpdateAfter
     /**
      * Create a new event instance.
      */
-    public function __construct(public int $cartItemId, public int $quantity, public ?ShoppingCart $cart) {}
+    public function __construct(
+        public int $cartItemId,
+        public int $quantity,
+        public ?ShoppingCart $cart = null,
+        public ?Authenticatable $user = null
+    ) {
+        $this->cart = $cart ?? CartPackage::getCart();
+        $this->user = $user ?? auth()->user();
+    }
 }

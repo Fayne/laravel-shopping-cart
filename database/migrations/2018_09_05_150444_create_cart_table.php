@@ -11,7 +11,7 @@ class CreateCartTable extends Migration
      *
      * @return void
      */
-    public function up()
+    public function up(): void
     {
         $userTableName = config('shopping-cart.models.users.table');
         $table = config('shopping-cart.models.carts.table');

@@ -40,24 +40,36 @@ class StoreRequest extends FormRequest
     {
         if ($this->validated('is_buy_now', false)) {
             ShoppingCart::deactivateCurrentCartIfBuyNowIsActive();
-            CartItemIsBuyNow::dispatch(
-                $this->validated('is_buy_now'),
-                $this->validated('product_sku_id'),
-                $this->validated('quantity'),
-            );
+            event(new CartItemIsBuyNow(
+                isBuyNow: $this->validated('is_buy_now'),
+                productSkuId: $this->validated('product_sku_id'),
+                quantity: $this->validated('quantity')
+            ));
         }
 
         $cart = ShoppingCart::getCart();
-        CartItemAddBefore::dispatch($cart, $this->validated('product_sku_id'));
+        event(new CartItemAddBefore(
+            isBuyNow: $this->validated('is_buy_now'),
+            productSkuId: $this->validated('product_sku_id'),
+            quantity: $this->validated('quantity'),
+            cart: $cart
+        ));
 
         try {
-            $product = ProductSku::find($this->validated('product_sku_id'));
+            $productModel = config('shopping-cart.models.product_skus');
+            $product = $productModel::find($this->validated('product_sku_id'));
+
             $result = ShoppingCart::addProduct(
                 $product,
                 $this->validated('quantity'),
                 $this->validated('is_buy_now'));
 
-            event(new CartItemAddAfter(data: $result, cart: $cart));
+            event(new CartItemAddAfter(
+                isBuyNow: $this->validated('is_buy_now'),
+                productSkuId: $this->validated('product_sku_id'),
+                quantity: $this->validated('quantity'),
+                cart: $cart
+            ));
 
             ShoppingCart::collectTotals();
 

@@ -13,14 +13,14 @@ class CartException extends Exception
     protected $message = '';
 
     /**
-     * @var string|int|null
+     * @var int|null
      */
-    protected string|int|null $customCode;
+    protected ?int $customCode;
 
     /**
-     * @var string|int|null
+     * @var int|null
      */
-    protected string|int|null $httpCode;
+    protected ?int $httpCode;
 
     /**
      * @var array|null
@@ -28,12 +28,12 @@ class CartException extends Exception
     protected ?array $data;
 
     /**
-     * @param string $customCode
+     * @param int $customCode
      * @param array|null $data
      * @param string|null $message
      * @param int $httpCode
      */
-    public function __construct(string $customCode, ?array $data = [], ?string $message = null, int $httpCode = 200)
+    public function __construct(int $customCode, ?array $data = [], ?string $message = null, int $httpCode = 200)
     {
         $message = $message ?: ErrorConst::ERROR_MESSAGE[$customCode];
         parent::__construct($message);

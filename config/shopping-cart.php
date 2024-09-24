@@ -80,5 +80,11 @@ return [
         'cart_items' => [
             'table' => 'cart_items',
         ],
+        'products' => [
+            'model' => 'Modules\Product\Models\Product',
+        ],
+        'product_skus' => [
+            'model' => 'Modules\Product\Models\ProductSku',
+        ],
     ],
 ];

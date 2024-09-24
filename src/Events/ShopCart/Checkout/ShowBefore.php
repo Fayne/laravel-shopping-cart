@@ -3,10 +3,16 @@
 namespace MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
+
+/**
+ * get the checkout page for cart before
+ */
 class ShowBefore
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
@@ -14,5 +20,8 @@ class ShowBefore
     /**
      * Create a new event instance.
      */
-    public function __construct(public ShoppingCart $cart) {}
+    public function __construct(public ?ShoppingCart $cart = null, public ?Authenticatable $user = null) {
+        $this->cart = $cart ?? CartPackage::getCart();
+        $this->user = $user ?? auth()->user();
+    }
 }

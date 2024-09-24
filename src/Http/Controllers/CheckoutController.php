@@ -38,11 +38,11 @@ class CheckoutController extends Controller
      */
     public function show(ShowRequest $request): JsonResponse
     {
-        ShowBefore::dispatch();
+        event(new ShowBefore);
 
         $cart = $request->cart;
 
-        ShowAfter::dispatch($cart);
+        event(new ShowAfter($cart));
 
         return response()->json([
             'code' => 0,
@@ -58,11 +58,11 @@ class CheckoutController extends Controller
      */
     public function onePage(OnePageRequest $request): JsonResponse
     {
-        OnePageBefore::dispatch();
+        event(new OnePageBefore);
 
         $cart = $request->cart;
 
-        OnePageAfter::dispatch($cart);
+        event(new OnePageAfter($cart));
 
         return response()->json([
             'code' => 0,
@@ -77,12 +77,14 @@ class CheckoutController extends Controller
      */
     public function backFromOnePage(): JsonResponse
     {
-        BackFromOnePageBefore::dispatch();
+        event(new BackFromOnePageBefore);
 
         ShoppingCart::deActivateCart();
-        $cart = ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
+        ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
 
-        BackFromOnePageAfter::dispatch($cart);
+        $cart = ShoppingCart::getCart();
+
+        event(new BackFromOnePageAfter($cart));
 
         return response()->json([
             'code' => 0,

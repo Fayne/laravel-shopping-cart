@@ -36,13 +36,15 @@ class ApplyCouponRequest extends FormRequest
         $couponCode = $this->validated('code');
         try {
             if (strlen($couponCode)) {
-                CartApplyCouponBefore::dispatch($couponCode);
+                event(new CartApplyCouponBefore($couponCode));
 
                 ShoppingCart::setCouponCode($couponCode)->collectTotals();
 
-                CartApplyCouponAfter::dispatch();
+                $cart = ShoppingCart::getCart();
 
-                if (ShoppingCart::getCart()->coupon_code == $couponCode) {
+                if ($cart->coupon_code == $couponCode) {
+                    event(new CartApplyCouponAfter($cart, $couponCode));
+
                     return response()->json([
                         'code' => 0,
                         'message' => '应用优惠券成功',

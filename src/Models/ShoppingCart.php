@@ -82,23 +82,28 @@ class ShoppingCart extends Model
 
     /**
      * Store cart item in cart.
+     *
+     * @param Cartable|array $item
+     * @param int $quantity
+     * @return $this
+     * @throws CartException
      */
-    public function storeItem(Cartable|array $item): static
+    public function storeItem(Cartable|array $item, int $quantity): static
     {
         if (is_array($item)) {
             $cartItemData = [
-                'quantity' => (int) $item['quantity'],
+                'quantity' => $quantity,
                 'itemable_id' => $item['itemable']->getKey(),
                 'itemable_type' => get_class($item['itemable']),
                 'price' => $item['itemable']->getPrice(),
                 'sku' => $item['sku'] ?? $item['itemable']->getSku(),
                 'name' => $item['itemable']->getName(),
                 'base_price' => $item['itemable']->getPrice(),
-                'total' => $item['itemable']->getPrice() * (int) $item['quantity'],
-                'base_total' => $item['itemable']->getPrice() * (int) $item['quantity'],
+                'total' => $item['itemable']->getPrice() * $quantity,
+                'base_total' => $item['itemable']->getPrice() * $quantity,
                 'weight' => $item['itemable']->getWeight() ?? 0,
-                'total_weight' => ($item['itemable']->getWeight() ?? 0) * (int) $item['quantity'],
-                'base_total_weight' => ($item['itemable']->getWeight() ?? 0) * (int) $item['quantity'],
+                'total_weight' => ($item['itemable']->getWeight() ?? 0) * $quantity,
+                'base_total_weight' => ($item['itemable']->getWeight() ?? 0) * $quantity,
             ];
             if ($item['itemable'] instanceof Cartable) {
                 $this->items()->create($cartItemData);
@@ -109,16 +114,16 @@ class ShoppingCart extends Model
             $this->items()->create([
                 'itemable_id' => $item->getKey(),
                 'itemable_type' => get_class($item),
-                'quantity' => $item->quantity,
+                'quantity' => $quantity,
                 'price' => $item->getPrice(),
                 'sku' => $item->getSku(),
                 'name' => $item->getName(),
                 'base_price' => $item->getPrice(),
-                'total' => $item->getPrice() * $item->quantity,
-                'base_total' => $item->getPrice() * (int) $item->quantity,
+                'total' => $item->getPrice() * $quantity,
+                'base_total' => $item->getPrice() * $quantity,
                 'weight' => $item->getWeight() ?? 0,
-                'total_weight' => ($item->getWeight() ?? 0) * $item->quantity,
-                'base_total_weight' => ($item->getWeight() ?? 0) * $item->quantity,
+                'total_weight' => ($item->getWeight() ?? 0) * $quantity,
+                'base_total_weight' => ($item->getWeight() ?? 0) * $quantity,
             ]);
         }
 
