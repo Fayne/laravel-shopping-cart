@@ -7,6 +7,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use MobileNowGroup\ShoppingCart\Contracts\Cartable;
+use MobileNowGroup\ShoppingCart\Contracts\CollectTotalEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
 
@@ -14,7 +15,7 @@ use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
  * Class CartAddProductAfter for cartPackage
  * add product to cart after
  */
-class CartAddProductAfter
+class CartAddProductAfter implements CollectTotalEvent
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

@@ -57,7 +57,7 @@ class StoreRequest extends FormRequest
         try {
             $productSkuModel = config('shopping-cart.models.skus.model');
             $product = $productSkuModel::find($this->validated('product_sku_id'));
-            $result = ShoppingCart::addProduct(
+            $cart = ShoppingCart::addProduct(
                 $product,
                 $this->validated('quantity'),
                 $this->validated('is_buy_now'));
@@ -69,7 +69,7 @@ class StoreRequest extends FormRequest
                 cart: $cart
             ));
 
-            ShoppingCart::collectTotals();
+            //ShoppingCart::collectTotals();
 
             return response()->json([
                 'code' => 0,

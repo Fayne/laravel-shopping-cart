@@ -6,13 +6,14 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use MobileNowGroup\ShoppingCart\Contracts\CollectTotalEvent;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
  * get cart info before for cartPackage
  */
-class CartGetBefore
+class CartGetBefore implements CollectTotalEvent
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
