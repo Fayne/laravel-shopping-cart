@@ -2,8 +2,6 @@
 
 namespace MobileNowGroup\ShoppingCart\Http\Requests\Checkout;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
