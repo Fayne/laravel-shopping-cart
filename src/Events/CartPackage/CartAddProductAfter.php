@@ -8,8 +8,8 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use MobileNowGroup\ShoppingCart\Contracts\Cartable;
 use MobileNowGroup\ShoppingCart\Contracts\CollectTotalEvent;
+use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
 
 /**
  * Class CartAddProductAfter for cartPackage
@@ -17,7 +17,7 @@ use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
  */
 class CartAddProductAfter implements CollectTotalEvent
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use CartEvent, Dispatchable, InteractsWithSockets,SerializesModels;
 
     /**
      * Create a new event instance.
@@ -26,9 +26,6 @@ class CartAddProductAfter implements CollectTotalEvent
         public Cartable $item,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null
-    ) {
-        $this->cart = $cart ?? CartPackage::getCart();
-        $this->user = $user ?? auth()->user();
-    }
+    ) {}
 
 }

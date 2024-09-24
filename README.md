@@ -71,6 +71,20 @@ php artisan vendor:publish --tag="shopping-cart-config"
     ShoppingCart::toggleBuy('single', true, $cartItemId);
 
 ```
+### tips
+```text
+多个购物车操作执行时，记得加上事务DB::transaction;
+```
+```php
+# 监听器需要监听多个事件中，所以需要如下配置：
+# 在文件App\Providers\EventServiceProvider中，加上：
+    protected $listen = [
+        # ...
+        CollectTotalEvent::class => [
+            CollectTotalsListener::class
+        ]
+    ];
+```
 
 ## Testing
 

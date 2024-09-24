@@ -6,18 +6,15 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
+use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 class CartEmptyAfter
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(public ?ShoppingCart $cart = null, public ?Authenticatable $user = null) {
-        $this->cart = $cart ?? CartPackage::getCart();
-        $this->user = $user ?? auth()->user();
-    }
+    public function __construct(public ?ShoppingCart $cart = null, public ?Authenticatable $user = null) {}
 }
