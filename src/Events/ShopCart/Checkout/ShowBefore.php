@@ -9,7 +9,6 @@ use Illuminate\Queue\SerializesModels;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
-
 /**
  * get the checkout page for cart before
  */

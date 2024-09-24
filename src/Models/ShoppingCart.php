@@ -86,6 +86,7 @@ class ShoppingCart extends Model
      * @param Cartable|array $item
      * @param int $quantity
      * @return $this
+     *
      * @throws CartException
      */
     public function storeItem(Cartable|array $item, int $quantity): static

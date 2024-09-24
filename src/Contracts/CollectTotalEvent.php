@@ -2,6 +2,4 @@
 
 namespace MobileNowGroup\ShoppingCart\Contracts;
 
-interface CollectTotalEvent
-{
-}
+interface CollectTotalEvent {}

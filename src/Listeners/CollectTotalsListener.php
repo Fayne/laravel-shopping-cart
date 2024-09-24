@@ -2,9 +2,6 @@
 
 namespace MobileNowGroup\ShoppingCart\Listeners;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
-
 class CollectTotalsListener
 {
     /**
