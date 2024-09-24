@@ -11,7 +11,6 @@ class OnePageAfter
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-
     /**
      * Create a new event instance.
      */

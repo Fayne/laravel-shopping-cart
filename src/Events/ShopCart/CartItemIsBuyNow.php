@@ -13,7 +13,5 @@ class CartItemIsBuyNow
     /**
      * Create a new event instance.
      */
-    public function __construct(public bool $is_buy_now, public int $product_sku_id, public int $quantity)
-    {
-    }
+    public function __construct(public bool $is_buy_now, public int $product_sku_id, public int $quantity) {}
 }
