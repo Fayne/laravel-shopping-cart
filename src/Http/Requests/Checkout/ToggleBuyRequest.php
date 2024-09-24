@@ -50,10 +50,10 @@ class ToggleBuyRequest extends FormRequest
         $cart = ShoppingCart::getCart();
 
         event(new ToggleBuyAfter(
-            cart: $cart,
             type: $this->validated('type'),
             selected: $this->validated('selected'),
-            itemId: $this->validated('item_id')));
+            itemId: $this->validated('item_id'),
+            cart: $cart));
 
         return response()->json([
             'code' => 0,

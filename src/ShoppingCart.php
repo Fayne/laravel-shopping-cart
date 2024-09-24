@@ -203,11 +203,11 @@ class ShoppingCart
      *
      * @param int $itemId
      * @param int $quantity
-     * @return bool
+     * @return ShoppingCart
      *
      * @throws CartException
      */
-    public function updateItems(int $itemId, int $quantity): bool
+    public function updateItems(int $itemId, int $quantity)
     {
         event(new CartUpdateItemBefore($itemId, $quantity));
 
@@ -232,7 +232,7 @@ class ShoppingCart
 
         //$this->collectTotals();
 
-        return true;
+        return $this;
     }
 
     /**
@@ -290,5 +290,6 @@ class ShoppingCart
         event(new CartToggleBuyAfter($cart));
 
        // $this->collectTotals();
+        return;
     }
 }
