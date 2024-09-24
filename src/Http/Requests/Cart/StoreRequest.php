@@ -57,7 +57,6 @@ class StoreRequest extends FormRequest
                 $this->validated('quantity'),
                 $this->validated('is_buy_now'));
 
-
             event(new CartItemAddAfter(data: $result, cart: $cart));
 
             ShoppingCart::collectTotals();
