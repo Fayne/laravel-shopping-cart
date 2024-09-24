@@ -5,6 +5,7 @@
         "ordered_imports": false,
         "not_operator_with_successor_space": false,
         "unary_operator_spaces": false,
+        "braces_position": false,
         "phpdoc_align": false,
         "concat_space": {
             "spacing": "one"

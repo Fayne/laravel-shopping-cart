@@ -15,6 +15,7 @@ class CreateCartItemsTable extends Migration
     {
         $table = config('shopping-cart.models.cart_items.table');
         $cartTableName = config('laravel-cart.carts.table');
+
         Schema::create($table, function (Blueprint $table) use ($cartTableName) {
             $table->id();
             $table->integer('quantity')->unsigned()->default(0);

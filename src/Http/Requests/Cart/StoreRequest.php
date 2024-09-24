@@ -47,7 +47,8 @@ class StoreRequest extends FormRequest
             );
         }
 
-        CartItemAddBefore::dispatch($this->validated('product_sku_id'));
+        $cart = ShoppingCart::getCart();
+        CartItemAddBefore::dispatch($cart, $this->validated('product_sku_id'));
 
         try {
             $product = ProductSku::find($this->validated('product_sku_id'));
@@ -56,11 +57,9 @@ class StoreRequest extends FormRequest
                 $this->validated('quantity'),
                 $this->validated('is_buy_now'));
 
-            CartItemAddAfter::dispatch($result);
+            CartItemAddAfter::dispatch($cart, $result);
 
             ShoppingCart::collectTotals();
-
-            $cart = ShoppingCart::getCart();
 
             return response()->json([
                 'code' => 0,

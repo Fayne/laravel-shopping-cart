@@ -8,6 +8,7 @@
 You can install the package via composer:
 
 ```bash
+composer config repositories.mobilenowgroup/laravel-shopping-cart git git@github.com:MobileNowGroup/laravel-shopping-cart.git
 composer require mobilenowgroup/laravel-shopping-cart
 php artisan vendor:publish --provider="MobileNowGroup\ShoppingCart\ShoppingCartServiceProvider"
 ```
@@ -46,7 +47,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
     ShoppingCart::addProduct(
         $product,
         $quantity,
-        $is_buy_now
+        $isBuyNow
     );
     
     //更新数量；商品条目ID，数量
