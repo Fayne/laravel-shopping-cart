@@ -38,9 +38,9 @@ class ShoppingCart
      * Returns cart.
      *
      * @param bool $isCheckout
-     * @return CartModel
+     * @return ?CartModel
      */
-    public function getCart(bool $isCheckout = false): CartModel
+    public function getCart(bool $isCheckout = false): ?CartModel
     {
         event(new CartGetBefore($isCheckout));
 
@@ -79,7 +79,7 @@ class ShoppingCart
         }
         $cart->storeItem($item, $quantity);
 
-        event(new CartAddProductAfter($cart, $item));
+        event(new CartAddProductAfter(item: $item, cart: $cart));
 
         // $this->collectTotals();
 

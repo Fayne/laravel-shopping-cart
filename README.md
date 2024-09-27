@@ -74,6 +74,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
 ### tips
 ```text
 多个购物车操作执行时，记得加上事务DB::transaction;
+
 ```
 ```php
 # 监听器需要监听多个事件中，所以需要如下配置：
@@ -84,6 +85,15 @@ php artisan vendor:publish --tag="shopping-cart-config"
             CollectTotalsListener::class
         ]
     ];
+```
+```php
+# 产品model需要继承Cartable
+use MobileNowGroup\ShoppingCart\Contracts\Cartable;
+class Product extends Model implements Cartable
+{
+    #...
+}
+
 ```
 
 ## Testing
