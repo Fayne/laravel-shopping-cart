@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use MobileNowGroup\ShoppingCart\Contracts\Cartable;
 use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
 use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
-use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 
 class ShoppingCart extends Model
 {
@@ -70,50 +69,35 @@ class ShoppingCart extends Model
     /**
      * Store cart item in cart.
      *
-     * @param Cartable|array $item
+     * @param Cartable $item
      * @param int $quantity
      * @return $this
      *
      * @throws CartClientException|CartServerException
      */
-    public function storeItem(Cartable|array $item, int $quantity): static
+    public function storeItem(Cartable $item, int $quantity): static
     {
-        if (is_array($item)) {
-            $cartItemData = [
-                'quantity' => $quantity,
-                'itemable_id' => $item['itemable']->getKey(),
-                'itemable_type' => get_class($item['itemable']),
-                'price' => $item['itemable']->getPrice(),
-                'sku' => $item['sku'] ?? $item['itemable']->getSku(),
-                'name' => $item['itemable']->getName(),
-                'base_price' => $item['itemable']->getPrice(),
-                'total' => $item['itemable']->getPrice() * $quantity,
-                'base_total' => $item['itemable']->getPrice() * $quantity,
-                'weight' => $item['itemable']->getWeight() ?? 0,
-                'total_weight' => ($item['itemable']->getWeight() ?? 0) * $quantity,
-                'base_total_weight' => ($item['itemable']->getWeight() ?? 0) * $quantity,
-            ];
-            if ($item['itemable'] instanceof Cartable) {
-                $this->items()->create($cartItemData);
-            } else {
-                throw new CartServerException(ErrorConst::ERROR_NOT_INSTANCE_CARTABLE);
-            }
-        } else {
-            $this->items()->create([
-                'itemable_id' => $item->getKey(),
-                'itemable_type' => get_class($item),
-                'quantity' => $quantity,
-                'price' => $item->getPrice(),
-                'sku' => $item->getSku(),
-                'name' => $item->getName(),
-                'base_price' => $item->getPrice(),
-                'total' => $item->getPrice() * $quantity,
-                'base_total' => $item->getPrice() * $quantity,
-                'weight' => $item->getWeight() ?? 0,
-                'total_weight' => ($item->getWeight() ?? 0) * $quantity,
-                'base_total_weight' => ($item->getWeight() ?? 0) * $quantity,
-            ]);
+        $cartItem = $this->items()->firstWhere('itemable_id', $item->getKey());
+        if ($cartItem) {
+            $cartItem->quantity += $quantity;
+            $cartItem->save();
+
+            return $this;
         }
+        $this->items()->create([
+            'itemable_id' => $item->getKey(),
+            'itemable_type' => get_class($item),
+            'quantity' => $quantity,
+            'price' => $item->getPrice(),
+            'sku' => $item->getSku(),
+            'name' => $item->getName(),
+            'base_price' => $item->getPrice(),
+            'total' => $item->getPrice() * $quantity,
+            'base_total' => $item->getPrice() * $quantity,
+            'weight' => $item->getWeight() ?? 0,
+            'total_weight' => ($item->getWeight() ?? 0) * $quantity,
+            'base_total_weight' => ($item->getWeight() ?? 0) * $quantity,
+        ]);
 
         return $this;
     }

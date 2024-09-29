@@ -100,9 +100,9 @@ class ShoppingCart
         }
         event(new CartCollectTotalBefore($cart));
 
-        //        $cart->grand_total = $cart->base_grand_total = 0;
-        //        $cart->sub_total = $cart->base_sub_total = 0;
-        //        $cart->discount = $cart->base_discount = 0;
+        $cart->grand_total = $cart->base_grand_total = 0;
+        $cart->sub_total = $cart->base_sub_total = 0;
+        $cart->discount = $cart->base_discount = 0;
 
         foreach ($cart->items as $item) {
             if (((bool) $cart->is_temp === false && (bool) $item->selected === true) || (bool) $cart->is_temp === true) {
@@ -288,7 +288,7 @@ class ShoppingCart
             ShoppingCartItem::where('cart_id', $cart->id)->update(['selected' => $selected]);
         });
 
-        event(new CartToggleBuyAfter($cart));
+        event(new CartToggleBuyAfter(type: $type, selected: $selected, itemId: $itemId, cart: $cart));
 
         // $this->collectTotals();
 

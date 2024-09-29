@@ -37,7 +37,8 @@ class StoreRequest extends FormRequest
 
     public function handle(): JsonResponse
     {
-        if ($this->validated('is_buy_now', false)) {
+        $isBuyNow = $this->validated('is_buy_now', false);
+        if ($isBuyNow) {
             ShoppingCart::deactivateCurrentCartIfBuyNowIsActive();
             event(new CartItemIsBuyNow(
                 isBuyNow: $this->validated('is_buy_now'),
@@ -47,7 +48,7 @@ class StoreRequest extends FormRequest
         }
 
         event(new CartItemAddBefore(
-            isBuyNow: $this->validated('is_buy_now'),
+            isBuyNow: $isBuyNow,
             productSkuId: $this->validated('product_sku_id'),
             quantity: $this->validated('quantity')
         ));
@@ -58,16 +59,15 @@ class StoreRequest extends FormRequest
             $cart = ShoppingCart::addProduct(
                 $product,
                 $this->validated('quantity'),
-                $this->validated('is_buy_now'));
+                $isBuyNow
+            );
 
             event(new CartItemAddAfter(
-                isBuyNow: $this->validated('is_buy_now'),
+                isBuyNow: $isBuyNow,
                 productSkuId: $this->validated('product_sku_id'),
                 quantity: $this->validated('quantity'),
                 cart: $cart
             ));
-
-            //ShoppingCart::collectTotals();
 
             return response()->json([
                 'code' => 0,

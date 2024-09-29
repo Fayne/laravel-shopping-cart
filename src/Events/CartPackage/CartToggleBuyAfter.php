@@ -20,5 +20,11 @@ class CartToggleBuyAfter implements CollectTotalEvent
     /**
      * Create a new event instance.
      */
-    public function __construct(public ?ShoppingCart $cart = null, public ?Authenticatable $user = null) {}
+    public function __construct(
+        public string $type,
+        public bool $selected,
+        public ?int $itemId = null,
+        public ?ShoppingCart $cart = null,
+        public ?Authenticatable $user = null
+    ) {}
 }

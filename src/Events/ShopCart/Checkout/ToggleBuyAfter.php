@@ -22,7 +22,7 @@ class ToggleBuyAfter
     public function __construct(
         public string $type,
         public bool $selected,
-        public int $itemId,
+        public ?int $itemId = null,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null
     ) {}
