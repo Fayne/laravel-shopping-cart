@@ -5,7 +5,8 @@ namespace MobileNowGroup\ShoppingCart\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use MobileNowGroup\ShoppingCart\Contracts\Cartable;
-use MobileNowGroup\ShoppingCart\Exceptions\CartException;
+use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
+use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 
 class ShoppingCart extends Model
@@ -67,27 +68,13 @@ class ShoppingCart extends Model
     }
 
     /**
-     * Store multiple items in cart.
-     *
-     * @throws CartException
-     */
-    public function storeItems(array $items): static
-    {
-        foreach ($items as $item) {
-            $this->storeItem($item);
-        }
-
-        return $this;
-    }
-
-    /**
      * Store cart item in cart.
      *
      * @param Cartable|array $item
      * @param int $quantity
      * @return $this
      *
-     * @throws CartException
+     * @throws CartClientException|CartServerException
      */
     public function storeItem(Cartable|array $item, int $quantity): static
     {
@@ -109,7 +96,7 @@ class ShoppingCart extends Model
             if ($item['itemable'] instanceof Cartable) {
                 $this->items()->create($cartItemData);
             } else {
-                throw new CartException(ErrorConst::ERROR_NOT_INSTANCE_CARTABLE);
+                throw new CartServerException(ErrorConst::ERROR_NOT_INSTANCE_CARTABLE);
             }
         } else {
             $this->items()->create([

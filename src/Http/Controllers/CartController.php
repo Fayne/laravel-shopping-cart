@@ -69,7 +69,7 @@ class CartController extends Controller
     {
         event(new CartEmptyBefore);
 
-        $cart = ShoppingCart::emptyCart()->getCart();
+        $cart = ShoppingCart::emptyCart();
 
         event(new CartEmptyAfter($cart));
 
@@ -111,7 +111,6 @@ class CartController extends Controller
     public function applyCoupon(ApplyCouponRequest $request): JsonResponse
     {
         return $request->handle();
-
     }
 
     /**

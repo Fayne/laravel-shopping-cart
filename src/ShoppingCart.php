@@ -18,7 +18,8 @@ use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyBefore;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
-use MobileNowGroup\ShoppingCart\Exceptions\CartException;
+use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
+use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
@@ -66,7 +67,7 @@ class ShoppingCart
      * @param bool $isBuyNow
      * @return CartModel
      *
-     * @throws CartException
+     * @throws CartServerException|CartClientException
      */
     public function addProduct(Cartable $item, int $quantity, bool $isBuyNow = false): CartModel
     {
@@ -75,7 +76,7 @@ class ShoppingCart
         $cart = $this->getCart();
 
         if (! $cart && ! $cart = $this->create(['is_temp' => $isBuyNow])) {
-            throw new CartException(ErrorConst::ERROR_CART_NOT_CREATED);
+            throw new CartServerException(ErrorConst::ERROR_CART_NOT_CREATED);
         }
         $cart->storeItem($item, $quantity);
 
@@ -165,8 +166,6 @@ class ShoppingCart
 
             event(new CartRemoveItemAfter($itemId));
 
-            // $this->collectTotals();
-
             return true;
         }
 
@@ -179,7 +178,7 @@ class ShoppingCart
      * @param array|null $data
      * @return mixed
      *
-     * @throws CartException
+     * @throws CartServerException
      */
     public function create(?array $data = []): mixed
     {
@@ -192,7 +191,7 @@ class ShoppingCart
         $cart = CartModel::create($cartData);
 
         if (! $cart) {
-            throw new CartException(ErrorConst::ERROR_CREATE_CART_INSTANCE);
+            throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE);
         }
 
         return $cart;
@@ -203,22 +202,22 @@ class ShoppingCart
      *
      * @param int $itemId
      * @param int $quantity
-     * @return ShoppingCart
+     * @return CartModel|null
      *
-     * @throws CartException
+     * @throws CartClientException
      */
-    public function updateItems(int $itemId, int $quantity)
+    public function updateItems(int $itemId, int $quantity): ?CartModel
     {
         event(new CartUpdateItemBefore($itemId, $quantity));
 
         $item = ShoppingCartItem::find($itemId);
 
         if (! $item) {
-            throw new CartException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
+            throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
         }
 
         if ($quantity <= 0) {
-            throw new CartException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE);
+            throw new CartClientException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE);
         }
 
         $item->quantity = $quantity;
@@ -232,13 +231,13 @@ class ShoppingCart
 
         //$this->collectTotals();
 
-        return $this;
+        return $this->getCart();
     }
 
     /**
      * Remove every item from the cart
      */
-    public function emptyCart(): static
+    public function emptyCart(): CartModel
     {
         $cart = $this->getCart() ?? null;
 
@@ -248,7 +247,7 @@ class ShoppingCart
 
         event(new CartEmptyAfter($cart));
 
-        return $this;
+        return $this->getCart();
     }
 
     /**
@@ -257,7 +256,7 @@ class ShoppingCart
      * @param int|null $itemId
      * @return void
      *
-     * @throws CartException
+     * @throws CartClientException
      * @throws \Throwable
      */
     public function toggleBuy(string $type, bool $selected, ?int $itemId)
@@ -265,17 +264,17 @@ class ShoppingCart
         event(new CartToggleBuyBefore(type: $type, selected: $selected, itemId: $itemId));
 
         if (!in_array($type, ['single', 'all'])) {
-            throw new CartException(ErrorConst::CODE_ERROR);
+            throw new CartClientException(ErrorConst::CODE_ERROR);
         }
         if (! $cart = $this->getCart()) {
-            throw new CartException(ErrorConst::ERROR_CART_NOT_EXIST);
+            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST);
         }
 
         if ($type === 'single') {
             $item = ShoppingCartItem::find($itemId);
 
             if (! $item) {
-                throw new CartException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
+                throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
             }
             $item->selected = $selected;
             $item->save();

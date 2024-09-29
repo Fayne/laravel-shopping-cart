@@ -46,12 +46,10 @@ class StoreRequest extends FormRequest
             ));
         }
 
-        $cart = ShoppingCart::getCart();
         event(new CartItemAddBefore(
             isBuyNow: $this->validated('is_buy_now'),
             productSkuId: $this->validated('product_sku_id'),
-            quantity: $this->validated('quantity'),
-            cart: $cart
+            quantity: $this->validated('quantity')
         ));
 
         try {

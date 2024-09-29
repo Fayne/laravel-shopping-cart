@@ -44,11 +44,9 @@ class UpdateRequest extends FormRequest
             quantity: $this->validated('quantity')
         ));
 
-        ShoppingCart::updateItems($this->validated('cart_item_id'), $requestedQuantity);
+        $cart = ShoppingCart::updateItems($this->validated('cart_item_id'), $requestedQuantity);
 
         // ShoppingCart::collectTotals();
-
-        $cart = ShoppingCart::getCart();
 
         event(new CartItemUpdateAfter(
             cartItemId: $this->validated('cart_item_id'),

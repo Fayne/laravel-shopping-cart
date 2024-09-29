@@ -5,7 +5,7 @@ namespace MobileNowGroup\ShoppingCart\Exceptions;
 use Exception;
 use Illuminate\Http\JsonResponse;
 
-class CartException extends Exception
+class CartClientException extends Exception
 {
     /**
      * @var string

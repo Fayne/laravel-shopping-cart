@@ -3,6 +3,7 @@
 namespace MobileNowGroup\ShoppingCart\Traits;
 
 use Illuminate\Support\Facades\Cache;
+use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -21,6 +22,8 @@ trait CartTools
      * from the checkout after click the buy now button.
      *
      * @return void
+     *
+     * @throws CartClientException
      */
     public function mergeDeactivatedCart(): void
     {

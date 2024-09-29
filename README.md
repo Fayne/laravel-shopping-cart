@@ -68,6 +68,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
     //移除优惠券code
     ShoppingCart::removeCouponCode();
     
+    //购物车中选中部分商品进行结算
     ShoppingCart::toggleBuy('single', true, $cartItemId);
 
 ```
