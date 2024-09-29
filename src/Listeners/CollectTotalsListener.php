@@ -2,6 +2,8 @@
 
 namespace MobileNowGroup\ShoppingCart\Listeners;
 
+use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
+
 class CollectTotalsListener
 {
     /**
