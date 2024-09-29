@@ -11,7 +11,7 @@ use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponBefore;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowBefore;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\ApplyCouponRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Cart\DeleteRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\EmptyCartRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\RemoveRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\StoreRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\UpdateRequest;
@@ -62,10 +62,10 @@ class CartController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param DeleteRequest $request
+     * @param EmptyCartRequest $request
      * @return JsonResponse
      */
-    public function destroy(DeleteRequest $request): JsonResponse
+    public function destroy(EmptyCartRequest $request): JsonResponse
     {
         event(new CartEmptyBefore);
 
