@@ -8,6 +8,7 @@ use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageBefore;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowBefore;
+use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\BackFromOnePageRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\OnePageRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\ShowRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\ToggleBuyRequest;
@@ -73,9 +74,10 @@ class CheckoutController extends Controller
     /**
      * Get customer cart for buy now .
      *
+     * @param BackFromOnePageRequest $request
      * @return JsonResponse
      */
-    public function backFromOnePage(): JsonResponse
+    public function backFromOnePage(BackFromOnePageRequest $request): JsonResponse
     {
         event(new BackFromOnePageBefore);
 

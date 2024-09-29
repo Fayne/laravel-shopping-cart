@@ -17,6 +17,8 @@ class ErrorConst
     const ERROR_CANNOT_APPLY_COUPON = 10009;
     const ERROR_NOT_INSTANCE_CARTABLE = 10010;
     const ERROR_CART_NOT_EXIST = 10011;
+    const ERROR_COUPON_INVALID = 10012;
+    const ERROR_REMOVE_COUPON = 10013;
     const ERROR_MESSAGE = [
         self::CODE_ERROR => 'error',
         self::ERROR_CART_NOT_CREATED => '商品无法添加到购物车，请稍后再试。',
@@ -30,5 +32,7 @@ class ErrorConst
         self::ERROR_CANNOT_APPLY_COUPON => '优惠券无法使用。',
         self::ERROR_NOT_INSTANCE_CARTABLE => '必须是Cartable的一个实例',
         self::ERROR_CART_NOT_EXIST => '购物车不存在',
+        self::ERROR_COUPON_INVALID => '优惠券code无效',
+        self::ERROR_REMOVE_COUPON => '无法删除优惠券',
     ];
 }

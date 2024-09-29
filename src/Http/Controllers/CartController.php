@@ -102,6 +102,7 @@ class CartController extends Controller
             'data' => $cart ? new CartResource($cart) : null,
         ]);
     }
+
     /**
      * Apply coupon code.
      *

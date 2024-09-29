@@ -82,8 +82,6 @@ class ShoppingCart
 
         event(new CartAddProductAfter(item: $item, cart: $cart));
 
-        // $this->collectTotals();
-
         return $this->getCart();
     }
 
@@ -166,8 +164,6 @@ class ShoppingCart
 
             event(new CartRemoveItemAfter($itemId));
 
-            // $this->collectTotals();
-
             return true;
         }
 
@@ -214,7 +210,7 @@ class ShoppingCart
 
         $item = ShoppingCartItem::find($itemId);
 
-        if (! $item) {
+        if (!$item) {
             throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
         }
 
@@ -231,15 +227,15 @@ class ShoppingCart
 
         event(new CartUpdateItemAfter($item));
 
-        //$this->collectTotals();
-
         return $this->getCart();
     }
 
     /**
      * Remove every item from the cart
+     *
+     * @return CartModel|null
      */
-    public function emptyCart(): CartModel
+    public function emptyCart(): ?CartModel
     {
         $cart = $this->getCart() ?? null;
 
@@ -289,8 +285,6 @@ class ShoppingCart
         });
 
         event(new CartToggleBuyAfter(type: $type, selected: $selected, itemId: $itemId, cart: $cart));
-
-        // $this->collectTotals();
 
     }
 }

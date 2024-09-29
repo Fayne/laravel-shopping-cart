@@ -43,7 +43,7 @@ class ApplyCouponRequest extends FormRequest
                 $cart = ShoppingCart::getCart();
 
                 if ($cart->coupon_code == $couponCode) {
-                    event(new CartApplyCouponAfter($cart, $couponCode));
+                    event(new CartApplyCouponAfter(couponCode: $couponCode, cart: $cart));
 
                     return response()->json([
                         'code' => 0,
