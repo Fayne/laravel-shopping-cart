@@ -17,6 +17,6 @@ class CollectTotalsListener
      */
     public function handle(object $event): void
     {
-        $event->cart->collectTotals();
+        ShoppingCart::collectTotals();
     }
 }

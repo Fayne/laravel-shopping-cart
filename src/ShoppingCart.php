@@ -166,6 +166,8 @@ class ShoppingCart
 
             event(new CartRemoveItemAfter($itemId));
 
+            // $this->collectTotals();
+
             return true;
         }
 
