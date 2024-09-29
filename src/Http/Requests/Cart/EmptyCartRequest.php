@@ -5,7 +5,7 @@ namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
 use Illuminate\Foundation\Http\FormRequest;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 
-class DeleteRequest extends FormRequest
+class EmptyCartRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.

@@ -4,6 +4,7 @@ namespace MobileNowGroup\ShoppingCart\Traits;
 
 use Illuminate\Support\Facades\Cache;
 use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
+use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -23,7 +24,7 @@ trait CartTools
      *
      * @return void
      *
-     * @throws CartClientException
+     * @throws CartClientException|CartServerException
      */
     public function mergeDeactivatedCart(): void
     {
@@ -118,7 +119,10 @@ trait CartTools
      */
     public function activateCart($cartId): void
     {
-        ShoppingCart::where('id', $cartId)->update(['is_active' => true]);
+        ShoppingCart::where([
+            'id' => $cartId,
+            'is_temp' => false,
+        ])->update(['is_active' => true]);
     }
 
     /**
