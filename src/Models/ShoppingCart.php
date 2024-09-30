@@ -8,6 +8,19 @@ use MobileNowGroup\ShoppingCart\Contracts\Cartable;
 use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
 use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 
+/**
+ * ShoppingCart
+ *
+ * @property float $discount
+ * @property float $base_discount
+ * @property float $sub_total
+ * @property float $base_sub_total
+ * @property float $grand_total
+ * @property float $base_grand_total
+ * @property int $items_count
+ * @property int $items_qty
+ * @property bool $is_temp
+ */
 class ShoppingCart extends Model
 {
     /**
@@ -20,13 +33,6 @@ class ShoppingCart extends Model
         'created_at',
         'updated_at',
     ];
-
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
-    protected $casts = [];
 
     /**
      * @var string[]
@@ -69,8 +75,8 @@ class ShoppingCart extends Model
     /**
      * Store cart item in cart.
      *
-     * @param Cartable $item
-     * @param int $quantity
+     * @param  Cartable $item
+     * @param  int      $quantity
      * @return $this
      *
      * @throws CartClientException|CartServerException

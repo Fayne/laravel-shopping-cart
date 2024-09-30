@@ -98,12 +98,11 @@ class ShoppingCart
         }
         event(new CartCollectTotalBefore($cart));
 
-        $cart->grand_total = $cart->base_grand_total = 0;
         $cart->sub_total = $cart->base_sub_total = 0;
         $cart->discount = $cart->base_discount = 0;
 
         foreach ($cart->items as $item) {
-            if (((bool) $cart->is_temp === false && (bool) $item->selected === true) || (bool) $cart->is_temp === true) {
+            if (($cart->is_temp === false && (bool) $item->selected === true) || $cart->is_temp === true) {
                 $cart->discount += $item->discount_amount;
                 $cart->base_discount += $item->base_discount_amount;
 
@@ -180,15 +179,15 @@ class ShoppingCart
      */
     public function create(?array $data = []): mixed
     {
-        $cartData = [
-            'items_count' => 0,
-            'customer_id' => auth()->id(),
-            'customer_name' => auth()->user()->name ?? '',
-        ] + $data;
+        try {
+            $cartData = [
+                'items_count' => 0,
+                'customer_id' => auth()->id(),
+                'customer_name' => auth()->user()->name ?? '',
+            ] + $data;
 
-        $cart = CartModel::create($cartData);
-
-        if (! $cart) {
+            $cart = CartModel::create($cartData);
+        } catch (\Exception $e){
             throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE);
         }
 
@@ -257,7 +256,7 @@ class ShoppingCart
      * @throws CartClientException
      * @throws \Throwable
      */
-    public function toggleBuy(string $type, bool $selected, ?int $itemId)
+    public function toggleBuy(string $type, bool $selected, ?int $itemId): void
     {
         event(new CartToggleBuyBefore(type: $type, selected: $selected, itemId: $itemId));
 
@@ -286,5 +285,33 @@ class ShoppingCart
 
         event(new CartToggleBuyAfter(type: $type, selected: $selected, itemId: $itemId, cart: $cart));
 
+    }
+
+    /**
+     * 类别量
+     *
+     * @return int
+     */
+    public function itemsCount(): int
+    {
+        if (! $cart = $this->getCart()) {
+            return 0;
+        }
+
+        return $cart->items_count = $cart->items->count();
+    }
+
+    /**
+     * 总数量
+     *
+     * @return int
+     */
+    public function itemsQty(): int
+    {
+        if (! $cart = $this->getCart()) {
+            return 0;
+        }
+
+        return $cart->items_qty = $cart->items->sum('quantity');
     }
 }

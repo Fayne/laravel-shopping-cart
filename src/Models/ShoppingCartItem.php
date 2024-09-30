@@ -4,7 +4,23 @@ namespace MobileNowGroup\ShoppingCart\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * @property bool $selected
+ * @property int $quantity
+ * @property float $price
+ * @property float $total
+ * @property float $discount_amount
+ * @property float $base_discount_amount
+ * @property float $weight
+ * @property float $total_weight
+ * @property float $base_total_weight
+ * @property float $base_total
+ * @property int $cart_id
+ * @property int $itemable_id
+ * @property string $itemable_type
+ */
 class ShoppingCartItem extends Model
 {
     protected $casts = [
@@ -29,7 +45,7 @@ class ShoppingCartItem extends Model
     /**
      * Relation polymorphic, inverse one-to-one or many relationship.
      */
-    public function itemable(): \Illuminate\Database\Eloquent\Relations\MorphTo
+    public function itemable(): MorphTo
     {
         return $this->morphTo();
     }
