@@ -37,6 +37,13 @@ class ShoppingCart extends Model
     /**
      * @var string[]
      */
+    protected $casts = [
+        'is_temp' => 'bool',
+    ];
+
+    /**
+     * @var string[]
+     */
     protected $with = [
         'items',
     ];

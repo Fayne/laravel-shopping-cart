@@ -56,4 +56,44 @@ class ShoppingCartItem extends Model
     {
         return $this->hasOne(ShoppingCart::class, 'id', 'cart_id');
     }
+
+    /**
+     * 获取加入购物车时的价格
+     *
+     * @return float
+     */
+    public function getOriginalPriceAttribute(): float
+    {
+        return $this->price;
+    }
+
+    /**
+     * 获取商品的最新价格
+     *
+     * @return float
+     */
+    public function getLatestPriceAttribute(): float
+    {
+        return $this->itemable->getPrice(); // 假设 product 关联了最新的价格
+    }
+
+    /**
+     * 计算当前商品的总价（基于最新价格）
+     *
+     * @return float|int
+     */
+    public function getTotalPriceAttribute(): float|int
+    {
+        return $this->quantity * $this->latest_price;
+    }
+
+    /**
+     * 计算加入购物车时的总价
+     *
+     * @return float|int
+     */
+    public function getOriginalTotalPriceAttribute(): float|int
+    {
+        return $this->quantity * $this->original_price;
+    }
 }

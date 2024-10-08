@@ -39,6 +39,8 @@ class CartController extends Controller
     {
         event(new CartShowBefore);
 
+        ShoppingCart::collectTotals();
+
         $cart = ShoppingCart::getCart();
 
         event(new CartShowAfter($cart));

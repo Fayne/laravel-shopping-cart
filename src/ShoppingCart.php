@@ -49,7 +49,7 @@ class ShoppingCart
             if ($isCheckout) {
                 $query->where('selected', true);
             }
-        })->firstWhere([
+        })->with('items.itemable')->firstWhere([
             'customer_id' => auth()->id(),
             'is_active' => true,
         ]);
@@ -96,6 +96,7 @@ class ShoppingCart
         if (! $cart = $this->getCart()) {
             return;
         }
+
         event(new CartCollectTotalBefore($cart));
 
         $cart->sub_total = $cart->base_sub_total = 0;
@@ -103,8 +104,13 @@ class ShoppingCart
 
         foreach ($cart->items as $item) {
             if (($cart->is_temp === false && (bool) $item->selected === true) || $cart->is_temp === true) {
+
                 $cart->discount += $item->discount_amount;
                 $cart->base_discount += $item->base_discount_amount;
+
+                $item->total = $item->latest_price * $item->quantity;
+                $item->base_total = $item->latest_price * $item->quantity;
+                $item->save();
 
                 $cart->sub_total = (float) $cart->sub_total + $item->total;
                 $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
@@ -218,8 +224,8 @@ class ShoppingCart
         }
 
         $item->quantity = $quantity;
-        $item->total = $item->price * $quantity;
-        $item->base_total = $item->price * $quantity;
+        $item->total = $item->latest_price * $quantity;
+        $item->base_total = $item->latest_price * $quantity;
         $item->total_weight = $item->weight * $quantity;
         $item->base_total_weight = $item->weight * $quantity;
         $item->save();
