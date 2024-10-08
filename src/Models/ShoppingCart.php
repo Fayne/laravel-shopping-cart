@@ -93,6 +93,12 @@ class ShoppingCart extends Model
         $cartItem = $this->items()->firstWhere('itemable_id', $item->getKey());
         if ($cartItem) {
             $cartItem->quantity += $quantity;
+
+            $cartItem->total = $cartItem->latest_price * $cartItem->quantity;
+            $cartItem->base_total = $cartItem->latest_price * $cartItem->quantity;
+            $cartItem->total_weight = $cartItem->weight * $cartItem->quantity;
+            $cartItem->base_total_weight = $cartItem->weight * $cartItem->quantity;
+
             $cartItem->save();
 
             return $this;
@@ -108,6 +114,7 @@ class ShoppingCart extends Model
             'total' => $item->getPrice() * $quantity,
             'base_total' => $item->getPrice() * $quantity,
             'weight' => $item->getWeight() ?? 0,
+            'selected' => true,
             'total_weight' => ($item->getWeight() ?? 0) * $quantity,
             'base_total_weight' => ($item->getWeight() ?? 0) * $quantity,
         ]);

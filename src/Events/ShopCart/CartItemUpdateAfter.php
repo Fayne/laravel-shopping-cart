@@ -17,7 +17,7 @@ class CartItemUpdateAfter
      * Create a new event instance.
      */
     public function __construct(
-        public int $cartItemId,
+        public int $itemId,
         public int $quantity,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null

@@ -17,7 +17,7 @@ class CartItemRemoveBefore
      * Create a new event instance.
      */
     public function __construct(
-        public int $cartItemId,
+        public int $itemId,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null
     ) {}

@@ -90,13 +90,13 @@ class CartController extends Controller
      */
     public function removeItem(RemoveRequest $request): JsonResponse
     {
-        event(new CartItemRemoveBefore($request->validated('cart_item_id')));
+        event(new CartItemRemoveBefore($request->validated('item_id')));
 
-        ShoppingCart::removeItem($request->validated('cart_item_id'));
+        ShoppingCart::removeItem($request->validated('item_id'));
 
         $cart = ShoppingCart::getCart();
 
-        event(new CartItemRemoveAfter($request->validated('cart_item_id'), $cart));
+        event(new CartItemRemoveAfter($request->validated('item_id'), $cart));
 
         return response()->json([
             'code' => 0,

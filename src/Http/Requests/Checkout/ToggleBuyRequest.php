@@ -41,13 +41,11 @@ class ToggleBuyRequest extends FormRequest
             itemId: $this->validated('item_id')
         ));
 
-        ShoppingCart::toggleBuy(
+        $cart = ShoppingCart::toggleBuy(
             $this->validated('type'),
             $this->validated('selected'),
             $this->validated('item_id')
         );
-
-        $cart = ShoppingCart::getCart();
 
         event(new ToggleBuyAfter(
             type: $this->validated('type'),

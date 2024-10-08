@@ -13,7 +13,7 @@ class RemoveRequest extends FormRequest
     public function authorize(): bool
     {
         //@todo 自行优化
-        $cartItem = ShoppingCartItem::with('cart')->find($this->input('cart_item_id'));
+        $cartItem = ShoppingCartItem::with('cart')->find($this->input('item_id'));
 
         return $cartItem->cart->customer_id === auth()->id() && (bool) $cartItem->cart->is_temp === false;
     }
@@ -26,7 +26,7 @@ class RemoveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cart_item_id' => 'required|exists:cart_items,id',
+            'item_id' => 'required|exists:cart_items,id',
         ];
     }
 }

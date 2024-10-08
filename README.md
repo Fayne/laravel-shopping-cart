@@ -51,7 +51,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
     );
     
     //更新数量；商品条目ID，数量
-    ShoppingCart::updateItems($cartItemId, $requestedQuantity);
+    ShoppingCart::updateItems($itemId, $requestedQuantity);
     
     //计算总价
     ShoppingCart::collectTotals();
@@ -60,7 +60,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
     ShoppingCart::emptyCart();
     
     //移除商品条目
-    ShoppingCart::removeItem($cartItemId);
+    ShoppingCart::removeItem($itemId);
         
     //应用优惠券code
     ShoppingCart::setCouponCode($couponCode);
@@ -69,7 +69,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
     ShoppingCart::removeCouponCode();
     
     //购物车中选中部分商品进行结算
-    ShoppingCart::toggleBuy('single', true, $cartItemId);
+    ShoppingCart::toggleBuy('single', true, $itemId);
 
 ```
 ### tips

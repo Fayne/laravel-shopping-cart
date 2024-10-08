@@ -25,6 +25,7 @@ class ShoppingCartItem extends Model
 {
     protected $casts = [
         'additional' => 'array',
+        'selected' => 'bool',
     ];
 
     protected $guarded = [

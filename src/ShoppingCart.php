@@ -47,9 +47,9 @@ class ShoppingCart
 
         $cart = CartModel::withWhereHas('items', function ($query) use ($isCheckout) {
             if ($isCheckout) {
-                $query->where('selected', true);
+                $query->where('selected', true)->with('itemable');
             }
-        })->with('items.itemable')->firstWhere([
+        })->firstWhere([
             'customer_id' => auth()->id(),
             'is_active' => true,
         ]);
@@ -98,35 +98,36 @@ class ShoppingCart
         }
 
         event(new CartCollectTotalBefore($cart));
+        DB::transaction(function () use ($cart) {
+            $cart->sub_total = $cart->base_sub_total = 0;
+            $cart->discount = $cart->base_discount = 0;
 
-        $cart->sub_total = $cart->base_sub_total = 0;
-        $cart->discount = $cart->base_discount = 0;
+            foreach ($cart->items as $item) {
+                if (($cart->is_temp === false && $item->selected === true) || $cart->is_temp === true) {
 
-        foreach ($cart->items as $item) {
-            if (($cart->is_temp === false && (bool) $item->selected === true) || $cart->is_temp === true) {
+                    $cart->discount += $item->discount_amount;
+                    $cart->base_discount += $item->base_discount_amount;
 
-                $cart->discount += $item->discount_amount;
-                $cart->base_discount += $item->base_discount_amount;
+                    $item->total = $item->latest_price * $item->quantity;
+                    $item->base_total = $item->latest_price * $item->quantity;
+                    $item->save();
 
-                $item->total = $item->latest_price * $item->quantity;
-                $item->base_total = $item->latest_price * $item->quantity;
-                $item->save();
-
-                $cart->sub_total = (float) $cart->sub_total + $item->total;
-                $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
+                    $cart->sub_total = (float) $cart->sub_total + $item->total;
+                    $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
+                }
             }
-        }
 
-        $cart->grand_total = $cart->sub_total - $cart->discount;
-        $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount;
+            $cart->grand_total = $cart->sub_total - $cart->discount;
+            $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount;
 
-        $cart = $this->finalizeCartTotals($cart);
+            $cart = $this->finalizeCartTotals($cart);
 
-        $cart->items_count = $cart->items->count();
+            $cart->items_count = $cart->items->count();
 
-        $cart->items_qty = $cart->items->sum('quantity');
+            $cart->items_qty = $cart->items->sum('quantity');
 
-        $cart->save();
+            $cart->save();
+        });
 
         event(new CartCollectTotalAfter($cart));
     }
@@ -257,12 +258,12 @@ class ShoppingCart
      * @param string $type
      * @param bool $selected
      * @param int|null $itemId
-     * @return void
+     * @return CartModel|null
      *
      * @throws CartClientException
      * @throws \Throwable
      */
-    public function toggleBuy(string $type, bool $selected, ?int $itemId): void
+    public function toggleBuy(string $type, bool $selected, ?int $itemId)
     {
         event(new CartToggleBuyBefore(type: $type, selected: $selected, itemId: $itemId));
 
@@ -279,17 +280,19 @@ class ShoppingCart
             if (! $item) {
                 throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
             }
+
             $item->selected = $selected;
             $item->save();
 
-            return;
+        } else {
+            DB::transaction(function () use ($selected, $cart) {
+                ShoppingCartItem::where('cart_id', $cart->id)->update(['selected' => $selected]);
+            });
         }
 
-        DB::transaction(function () use ($selected, $cart) {
-            ShoppingCartItem::where('cart_id', $cart->id)->update(['selected' => $selected]);
-        });
-
         event(new CartToggleBuyAfter(type: $type, selected: $selected, itemId: $itemId, cart: $cart));
+
+        return $this->getCart();
 
     }
 
