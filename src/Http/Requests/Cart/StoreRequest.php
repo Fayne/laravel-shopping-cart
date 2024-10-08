@@ -72,7 +72,7 @@ class StoreRequest extends FormRequest
             return response()->json([
                 'code' => 0,
                 'message' => '商品已成功添加到购物车。',
-                'data' => $cart ? new CartResource($cart) : null,
+                'data' => new CartResource($cart),
             ]);
         } catch (\Exception $e) {
             return response()->json([

@@ -19,6 +19,8 @@ use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
  * @property float $base_grand_total
  * @property int $items_count
  * @property int $items_qty
+ * @property string $coupon_code
+ * @property string $customer_id
  * @property bool $is_temp
  */
 class ShoppingCart extends Model
@@ -35,14 +37,14 @@ class ShoppingCart extends Model
     ];
 
     /**
-     * @var string[]
+     * @var array<string, string>
      */
     protected $casts = [
         'is_temp' => 'bool',
     ];
 
     /**
-     * @var string[]
+     * @var array<int, string>
      */
     protected $with = [
         'items',
