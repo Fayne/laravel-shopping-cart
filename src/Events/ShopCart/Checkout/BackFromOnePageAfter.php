@@ -10,8 +10,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * After entering the checkout page from Buy Now, listen for the return operation of the checkout page
- * after data processing
+ * controller(结算): 从Buy Now进入结帐页面后，监听结帐页面的返回操作，处理数据之后的事件
  */
 class BackFromOnePageAfter
 {

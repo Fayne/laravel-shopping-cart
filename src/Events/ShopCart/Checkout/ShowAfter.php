@@ -10,7 +10,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * get the checkout page for cart after
+ * controller(结算):获取结算页数据之后的事件
  */
 class ShowAfter
 {

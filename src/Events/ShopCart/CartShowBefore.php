@@ -9,6 +9,8 @@ use Illuminate\Queue\SerializesModels;
 use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
+//controller:获取购物车信息之前的事件
+
 class CartShowBefore
 {
     use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;

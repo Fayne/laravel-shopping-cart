@@ -10,7 +10,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * Select some items for checkout in controller
+ * controller(结算):选中部分商品进行结算之前的事件
  */
 class ToggleBuyBefore
 {

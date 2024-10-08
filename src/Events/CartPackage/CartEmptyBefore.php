@@ -10,7 +10,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * empty cart before
+ * 清空购物车之前的事件
  */
 class CartEmptyBefore
 {

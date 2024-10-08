@@ -10,7 +10,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * Update item in cart before
+ * 更新购物车商品数量之前的事件
  */
 class CartUpdateItemBefore
 {

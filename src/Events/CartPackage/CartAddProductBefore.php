@@ -11,7 +11,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * add product to cart before
+ * 将产品添加进购物车之前的事件
  */
 class CartAddProductBefore
 {

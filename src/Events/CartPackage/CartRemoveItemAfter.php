@@ -11,7 +11,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * remove item after for cart
+ * 移除购物车某商品之后的事件
  */
 class CartRemoveItemAfter implements CollectTotalEvent
 {

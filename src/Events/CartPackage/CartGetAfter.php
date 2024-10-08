@@ -10,7 +10,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * get cart info after for cartPackage
+ * 获取购物车信息之后的事件
  */
 class CartGetAfter
 {

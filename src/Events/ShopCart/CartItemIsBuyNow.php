@@ -9,6 +9,7 @@ use Illuminate\Queue\SerializesModels;
 use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
+//controller: 添加商品操作是立即购买的事件
 class CartItemIsBuyNow
 {
     use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;

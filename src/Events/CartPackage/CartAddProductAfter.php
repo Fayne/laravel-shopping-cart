@@ -13,7 +13,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
  * Class CartAddProductAfter for cartPackage
- * add product to cart after
+ * 将产品添加进购物车之后的事件
  */
 class CartAddProductAfter implements CollectTotalEvent
 {

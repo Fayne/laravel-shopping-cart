@@ -12,7 +12,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 
 /**
- * Update item in cart after
+ * 更新购物车商品数量之后的事件
  */
 class CartUpdateItemAfter implements CollectTotalEvent
 {

@@ -11,7 +11,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * Select some items for checkout after
+ * 选中部分商品进行结算之后的事件
  */
 class CartToggleBuyAfter implements CollectTotalEvent
 {

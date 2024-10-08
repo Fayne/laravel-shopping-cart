@@ -11,7 +11,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
  * Class CartRemoveItemBefore
- * remove item from cart before
+ * 移除购物车某商品之前的事件
  */
 class CartRemoveItemBefore
 {

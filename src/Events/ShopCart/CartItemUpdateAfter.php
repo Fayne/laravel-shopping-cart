@@ -9,6 +9,8 @@ use Illuminate\Queue\SerializesModels;
 use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
+//controller:更新购物车商品数量之后的事件
+
 class CartItemUpdateAfter
 {
     use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;

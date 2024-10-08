@@ -10,7 +10,7 @@ use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
- * collect total before for cart
+ * 计算购物车总价之前的事件
  */
 class CartCollectTotalBefore
 {

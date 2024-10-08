@@ -9,6 +9,7 @@ use Illuminate\Queue\SerializesModels;
 use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
+//controller:购物车应用优惠券之后的事件
 class CartApplyCouponAfter
 {
     use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;

@@ -11,7 +11,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 
 /**
  * Class CartCollectTotalAfter
- * collect total after for cart
+ * 计算购物车总价之后的事件
  */
 class CartCollectTotalAfter
 {
