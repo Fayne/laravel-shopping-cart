@@ -15,7 +15,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
  */
 class CartRemoveItemAfter implements CollectTotalEvent
 {
-    use CartEvent,Dispatchable, InteractsWithSockets, SerializesModels;
+    use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
      * Create a new event instance.

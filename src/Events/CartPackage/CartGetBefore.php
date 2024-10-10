@@ -14,7 +14,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
  */
 class CartGetBefore
 {
-    use CartEvent,Dispatchable, InteractsWithSockets, SerializesModels;
+    use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
      * Create a new event instance.

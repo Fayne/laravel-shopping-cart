@@ -10,7 +10,7 @@ enum ErrorConst: int
 
     case ERROR_CART_NOT_CREATED = 1000;
 
-    case ERROR_ADD_INACTIVE_PRODUCT = 1002;
+    case ERROR_ADD_PRODUCT = 1002;
 
     case ERROR_PRODUCT_NOT_AVAILABLE = 1003;
 
@@ -53,7 +53,7 @@ enum ErrorConst: int
             self::CODE_ERROR->value => 'error',
             self::SUCCESS_CODE->value => 'success',
             self::ERROR_CART_NOT_CREATED->value => '商品无法添加到购物车，请稍后再试。',
-            self::ERROR_ADD_INACTIVE_PRODUCT->value => '未发布的商品不能添加到购物车中。',
+            self::ERROR_ADD_PRODUCT->value => '添加商品失败。',
             self::ERROR_PRODUCT_NOT_AVAILABLE->value => '商品处于未发布状态并已从购物车中删除。',
             self::ERROR_QUANTITY_NOT_AVAILABLE->value => '数量不能小于1。',
             self::ERROR_REQUESTED_QUANTITY_NOT_AVAILABLE->value => '所要求的数量不足，请稍后再试。',

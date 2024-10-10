@@ -78,7 +78,7 @@ class StoreRequest extends FormRequest
             return response()->json([
                 'data' => null,
                 'message' => $e->getMessage(),
-                'code' => ErrorConst::CODE_ERROR->value,
+                'code' => ErrorConst::ERROR_ADD_PRODUCT->value,
             ]);
         }
     }

@@ -47,8 +47,9 @@ class ShoppingCart
 
         $cart = CartModel::withWhereHas('items', function ($query) use ($isCheckout) {
             if ($isCheckout) {
-                $query->where('selected', true)->with('itemable');
+                $query->where('selected', true);
             }
+            $query->with('itemable');
         })->firstWhere([
             'customer_id' => auth()->id(),
             'is_active' => true,
