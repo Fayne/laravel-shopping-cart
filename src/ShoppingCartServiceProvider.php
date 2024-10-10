@@ -79,7 +79,7 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             return null;
         }
 
-        $migrationFiles = File::glob($migrationDir . '*_create_shopping_cart_table.php');
+        $migrationFiles = File::glob($migrationDir . '*_create_cart_table.php');
 
         return ! empty($migrationFiles) ? basename($migrationFiles[0]) : null;
     }

@@ -36,13 +36,15 @@ class ApplyCouponRequest extends FormRequest
         $couponCode = $this->validated('code');
         try {
             if (strlen($couponCode)) {
-                CartApplyCouponBefore::dispatch($couponCode);
+                event(new CartApplyCouponBefore($couponCode));
 
                 ShoppingCart::setCouponCode($couponCode)->collectTotals();
 
-                CartApplyCouponAfter::dispatch();
+                $cart = ShoppingCart::getCart();
 
-                if (ShoppingCart::getCart()->coupon_code == $couponCode) {
+                if ($cart->coupon_code == $couponCode) {
+                    event(new CartApplyCouponAfter(couponCode: $couponCode, cart: $cart));
+
                     return response()->json([
                         'code' => 0,
                         'message' => '应用优惠券成功',
@@ -51,12 +53,12 @@ class ApplyCouponRequest extends FormRequest
             }
 
             return response()->json([
-                'code' => ErrorConst::ERROR_INVALID_COUPON_CODE,
-                'message' => ErrorConst::ERROR_MESSAGE[ErrorConst::ERROR_INVALID_COUPON_CODE],
+                'code' => ErrorConst::ERROR_INVALID_COUPON_CODE->value,
+                'message' => ErrorConst::errorMessage(ErrorConst::ERROR_INVALID_COUPON_CODE->value),
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'code' => ErrorConst::ERROR_CANNOT_APPLY_COUPON,
+                'code' => ErrorConst::ERROR_CANNOT_APPLY_COUPON->value,
                 'message' => $e->getMessage(),
             ]);
         }

@@ -2,17 +2,12 @@
 
 namespace MobileNowGroup\ShoppingCart\Http\Requests\Checkout;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
 
 class OnePageRequest extends FormRequest
 {
-    /**
-     * @var Builder|Model|mixed|null
-     */
     public ?CartModel $cart;
 
     /**

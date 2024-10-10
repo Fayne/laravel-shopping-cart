@@ -5,7 +5,7 @@ namespace MobileNowGroup\ShoppingCart\Exceptions;
 use Exception;
 use Illuminate\Http\JsonResponse;
 
-class CartException extends Exception
+class CartServerException extends Exception
 {
     /**
      * @var string
@@ -13,14 +13,14 @@ class CartException extends Exception
     protected $message = '';
 
     /**
-     * @var string|int|null
+     * @var int|null
      */
-    protected string|int|null $customCode;
+    protected ?int $customCode;
 
     /**
-     * @var string|int|null
+     * @var int|null
      */
-    protected string|int|null $httpCode;
+    protected ?int $httpCode;
 
     /**
      * @var array|null
@@ -28,14 +28,14 @@ class CartException extends Exception
     protected ?array $data;
 
     /**
-     * @param string $customCode
+     * @param int $customCode
      * @param array|null $data
      * @param string|null $message
      * @param int $httpCode
      */
-    public function __construct(string $customCode, ?array $data = [], ?string $message = null, int $httpCode = 200)
+    public function __construct(int $customCode, ?array $data = [], ?string $message = null, int $httpCode = 500)
     {
-        $message = $message ?: ErrorConst::ERROR_MESSAGE[$customCode];
+        $message = $message ?: ErrorConst::errorMessage($customCode);
         parent::__construct($message);
 
         $this->message = $message;

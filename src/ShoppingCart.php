@@ -2,9 +2,6 @@
 
 namespace MobileNowGroup\ShoppingCart;
 
-use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use MobileNowGroup\ShoppingCart\Contracts\Cartable;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductAfter;
@@ -21,7 +18,8 @@ use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyBefore;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
-use MobileNowGroup\ShoppingCart\Exceptions\CartException;
+use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
+use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
@@ -33,27 +31,6 @@ class ShoppingCart
     use CartCoupons,CartTools;
 
     /**
-     * Instance of the session manager.
-     *
-     * @var CartModel
-     */
-    private CartModel $cart;
-
-    /**
-     * Instance of the event dispatcher.
-     *
-     * @var Dispatcher
-     */
-    private Dispatcher $events;
-
-    /**
-     * Defines the discount percentage.
-     *
-     * @var float
-     */
-    private float $discount = 0;
-
-    /**
      * Cart constructor.
      */
     public function __construct() {}
@@ -62,43 +39,23 @@ class ShoppingCart
      * Returns cart.
      *
      * @param bool $isCheckout
-     * @return Builder|Model|null
+     * @return ?CartModel
      */
-    public function getCart(bool $isCheckout = false): Builder|Model|null
+    public function getCart(bool $isCheckout = false): ?CartModel
     {
-        CartGetBefore::dispatch($isCheckout);
+        event(new CartGetBefore($isCheckout));
 
         $cart = CartModel::withWhereHas('items', function ($query) use ($isCheckout) {
             if ($isCheckout) {
                 $query->where('selected', true);
             }
+            $query->with('itemable');
         })->firstWhere([
             'customer_id' => auth()->id(),
             'is_active' => true,
         ]);
-        CartGetAfter::dispatch($cart);
 
-        return $cart;
-    }
-
-    /**
-     * Remove cart items, whose product is inactive.
-     *
-     * @param CartModel|null $cart
-     * @return CartModel|null
-     */
-    public function removeInactiveItems(?CartModel $cart = null): ?CartModel
-    {
-        if (! $cart) {
-            return $cart;
-        }
-        foreach ($cart->items as $item) {
-            if ($item->product->isCartItemInactive()) {
-                ShoppingCartItem::destroy($item->id);
-            }
-        }
-
-        $cart->save();
+        event(new CartGetAfter($cart));
 
         return $cart;
     }
@@ -106,31 +63,25 @@ class ShoppingCart
     /**
      * Add items in a cart with some cart and item details.
      *
-     * @param Model $item
+     * @param Cartable $item
      * @param int $quantity
      * @param bool $isBuyNow
-     * @return Builder|Model|null
+     * @return CartModel
      *
-     * @throws CartException
+     * @throws CartServerException|CartClientException
      */
-    public function addProduct(Cartable $item, int $quantity, bool $isBuyNow = false): Builder|Model|null
+    public function addProduct(Cartable $item, int $quantity, bool $isBuyNow = false): CartModel
     {
-        CartAddProductBefore::dispatch($item, $quantity);
+        event(new CartAddProductBefore(item: $item, quantity: $quantity, isBuyNow: $isBuyNow));
+
         $cart = $this->getCart();
 
-        if (! $item instanceof Cartable) {
-            throw new CartException(ErrorConst::ERROR_NOT_INSTANCE_CARTABLE);
-        }
-
         if (! $cart && ! $cart = $this->create(['is_temp' => $isBuyNow])) {
-            throw new CartException(ErrorConst::ERROR_CART_NOT_CREATED);
+            throw new CartServerException(ErrorConst::ERROR_CART_NOT_CREATED->value);
         }
-        $item->quantity = $quantity;
-        $cart->storeItem($item);
+        $cart->storeItem($item, $quantity);
 
-        CartAddProductAfter::dispatch($cart, $item);
-
-        $this->collectTotals();
+        event(new CartAddProductAfter(item: $item, cart: $cart));
 
         return $this->getCart();
     }
@@ -146,43 +97,49 @@ class ShoppingCart
         if (! $cart = $this->getCart()) {
             return;
         }
-        CartCollectTotalBefore::dispatch($cart);
 
-        $cart->grand_total = $cart->base_grand_total = 0;
-        $cart->sub_total = $cart->base_sub_total = 0;
-        $cart->discount = $cart->base_discount = 0;
+        event(new CartCollectTotalBefore($cart));
+        DB::transaction(function () use ($cart) {
+            $cart->sub_total = $cart->base_sub_total = 0;
+            $cart->discount = $cart->base_discount = 0;
 
-        foreach ($cart->items as $item) {
-            if (((bool) $cart->is_temp === false && (bool) $item->selected === true) || (bool) $cart->is_temp === true) {
-                $cart->discount += $item->discount_amount;
-                $cart->base_discount += $item->base_discount_amount;
+            foreach ($cart->items as $item) {
+                if (($cart->is_temp === false && $item->selected === true) || $cart->is_temp === true) {
 
-                $cart->sub_total = (float) $cart->sub_total + $item->total;
-                $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
+                    $cart->discount += $item->discount_amount;
+                    $cart->base_discount += $item->base_discount_amount;
+
+                    $item->total = $item->latest_price * $item->quantity;
+                    $item->base_total = $item->latest_price * $item->quantity;
+                    $item->save();
+
+                    $cart->sub_total = (float) $cart->sub_total + $item->total;
+                    $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
+                }
             }
-        }
 
-        $cart->grand_total = $cart->sub_total - $cart->discount;
-        $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount;
+            $cart->grand_total = $cart->sub_total - $cart->discount;
+            $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount;
 
-        $cart = $this->finalizeCartTotals($cart);
+            $cart = $this->finalizeCartTotals($cart);
 
-        $cart->items_count = $cart->items->count();
+            $cart->items_count = $cart->items->count();
 
-        $cart->items_qty = $cart->items->sum('quantity');
+            $cart->items_qty = $cart->items->sum('quantity');
 
-        $cart->save();
+            $cart->save();
+        });
 
-        CartCollectTotalAfter::dispatch($cart);
+        event(new CartCollectTotalAfter($cart));
     }
 
     /**
      * Round cart totals.
      *
-     * @param CartModel|Model $cart
+     * @param CartModel $cart
      * @return CartModel
      */
-    private function finalizeCartTotals(CartModel|Model $cart): CartModel
+    private function finalizeCartTotals(CartModel $cart): CartModel
     {
         $cart->discount = round($cart->discount, 2);
         $cart->base_discount = round($cart->base_discount, 2);
@@ -204,7 +161,7 @@ class ShoppingCart
      */
     public function removeItem(int $itemId): bool
     {
-        CartRemoveItemBefore::dispatch($itemId);
+        event(new CartRemoveItemBefore($itemId));
         if (! $cart = $this->getCart()) {
             return false;
         }
@@ -212,9 +169,7 @@ class ShoppingCart
         if ($cartItem = ShoppingCartItem::find($itemId)) {
             $cartItem->delete();
 
-            CartRemoveItemAfter::dispatch($itemId);
-
-            $this->collectTotals();
+            event(new CartRemoveItemAfter($itemId));
 
             return true;
         }
@@ -228,20 +183,20 @@ class ShoppingCart
      * @param array|null $data
      * @return mixed
      *
-     * @throws CartException
+     * @throws CartServerException
      */
     public function create(?array $data = []): mixed
     {
-        $cartData = [
-            'items_count' => 0,
-            'customer_id' => auth()->id(),
-            'customer_name' => auth()->user()->name ?? '',
-        ] + $data;
+        try {
+            $cartData = [
+                'items_count' => 0,
+                'customer_id' => auth()->id(),
+                'customer_name' => auth()->user()->name ?? '',
+            ] + $data;
 
-        $cart = CartModel::create($cartData);
-
-        if (! $cart) {
-            throw new CartException(ErrorConst::ERROR_CREATE_CART_INSTANCE);
+            $cart = CartModel::create($cartData);
+        } catch (\Exception $e){
+            throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE->value);
         }
 
         return $cart;
@@ -252,89 +207,121 @@ class ShoppingCart
      *
      * @param int $itemId
      * @param int $quantity
-     * @return bool
+     * @return CartModel|null
      *
-     * @throws CartException
+     * @throws CartClientException
      */
-    public function updateItems(int $itemId, int $quantity): bool
+    public function updateItems(int $itemId, int $quantity): ?CartModel
     {
-        CartUpdateItemBefore::dispatch($itemId, $quantity);
+        event(new CartUpdateItemBefore($itemId, $quantity));
 
         $item = ShoppingCartItem::find($itemId);
 
-        if (! $item) {
-            throw new CartException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
+        if (!$item) {
+            throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
         }
 
         if ($quantity <= 0) {
-            throw new CartException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE);
+            throw new CartClientException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE->value);
         }
 
         $item->quantity = $quantity;
-        $item->total = $item->price * $quantity;
-        $item->base_total = $item->price * $quantity;
+        $item->total = $item->latest_price * $quantity;
+        $item->base_total = $item->latest_price * $quantity;
         $item->total_weight = $item->weight * $quantity;
         $item->base_total_weight = $item->weight * $quantity;
         $item->save();
 
-        CartUpdateItemAfter::dispatch($item);
+        event(new CartUpdateItemAfter($item));
 
-        $this->collectTotals();
-
-        return true;
+        return $this->getCart();
     }
 
     /**
      * Remove every item from the cart
+     *
+     * @return CartModel|null
      */
-    public function emptyCart(): static
+    public function emptyCart(): ?CartModel
     {
         $cart = $this->getCart() ?? null;
 
-        CartEmptyBefore::dispatch();
-        $cart?->items()->delete();
-        CartEmptyAfter::dispatch($cart);
+        event(new CartEmptyBefore($cart));
 
-        return $this;
+        $cart?->items()->delete();
+
+        event(new CartEmptyAfter($cart));
+
+        return $this->getCart();
     }
 
     /**
      * @param string $type
      * @param bool $selected
      * @param int|null $itemId
-     * @return void
+     * @return CartModel|null
      *
-     * @throws CartException
+     * @throws CartClientException
      * @throws \Throwable
      */
     public function toggleBuy(string $type, bool $selected, ?int $itemId)
     {
-        CartToggleBuyBefore::dispatch($type, $selected, $itemId);
+        event(new CartToggleBuyBefore(type: $type, selected: $selected, itemId: $itemId));
+
         if (!in_array($type, ['single', 'all'])) {
-            throw new CartException(ErrorConst::CODE_ERROR);
+            throw new CartClientException(ErrorConst::CODE_ERROR->value);
         }
         if (! $cart = $this->getCart()) {
-            throw new CartException(ErrorConst::ERROR_CART_NOT_EXIST);
+            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value);
         }
 
         if ($type === 'single') {
             $item = ShoppingCartItem::find($itemId);
 
             if (! $item) {
-                throw new CartException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
+                throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
             }
+
             $item->selected = $selected;
             $item->save();
 
-            return;
+        } else {
+            DB::transaction(function () use ($selected, $cart) {
+                ShoppingCartItem::where('cart_id', $cart->id)->update(['selected' => $selected]);
+            });
         }
 
-        DB::transaction(function () use ($selected, $cart) {
-            ShoppingCartItem::where('cart_id', $cart->id)->update(['selected' => $selected]);
-        });
+        event(new CartToggleBuyAfter(type: $type, selected: $selected, itemId: $itemId, cart: $cart));
 
-        CartToggleBuyAfter::dispatch($cart);
+        return $this->getCart();
 
-        $this->collectTotals();
+    }
+
+    /**
+     * 类别量
+     *
+     * @return int
+     */
+    public function itemsCount(): int
+    {
+        if (! $cart = $this->getCart()) {
+            return 0;
+        }
+
+        return $cart->items_count = $cart->items->count();
+    }
+
+    /**
+     * 总数量
+     *
+     * @return int
+     */
+    public function itemsQty(): int
+    {
+        if (! $cart = $this->getCart()) {
+            return 0;
+        }
+
+        return $cart->items_qty = $cart->items->sum('quantity');
     }
 }

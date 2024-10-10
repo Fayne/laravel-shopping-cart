@@ -3,6 +3,7 @@
 namespace MobileNowGroup\ShoppingCart\Http\Requests\Checkout;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\JsonResponse;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ToggleBuyAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ToggleBuyBefore;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
@@ -32,23 +33,25 @@ class ToggleBuyRequest extends FormRequest
         ];
     }
 
-    public function handle()
+    public function handle(): JsonResponse
     {
-        ToggleBuyBefore::dispatch(
+        event(new ToggleBuyBefore(
+            type: $this->validated('type'),
+            selected: $this->validated('selected'),
+            itemId: $this->validated('item_id')
+        ));
+
+        $cart = ShoppingCart::toggleBuy(
             $this->validated('type'),
             $this->validated('selected'),
             $this->validated('item_id')
         );
 
-        ShoppingCart::toggleBuy(
-            $this->validated('type'),
-            $this->validated('selected'),
-            $this->validated('item_id')
-        );
-
-        $cart = ShoppingCart::getCart();
-
-        ToggleBuyAfter::dispatch($cart);
+        event(new ToggleBuyAfter(
+            type: $this->validated('type'),
+            selected: $this->validated('selected'),
+            itemId: $this->validated('item_id'),
+            cart: $cart));
 
         return response()->json([
             'code' => 0,

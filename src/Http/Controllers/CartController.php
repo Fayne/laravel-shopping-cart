@@ -2,8 +2,8 @@
 
 namespace MobileNowGroup\ShoppingCart\Http\Controllers;
 
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartDeleteAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartDeleteBefore;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartEmptyAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartEmptyBefore;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveBefore;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponAfter;
@@ -11,7 +11,7 @@ use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponBefore;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowBefore;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\ApplyCouponRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Cart\DeleteRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\EmptyCartRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\RemoveRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\StoreRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\UpdateRequest;
@@ -37,11 +37,13 @@ class CartController extends Controller
      */
     public function show()
     {
-        CartShowBefore::dispatch();
+        event(new CartShowBefore);
+
+        ShoppingCart::collectTotals();
 
         $cart = ShoppingCart::getCart();
 
-        CartShowAfter::dispatch();
+        event(new CartShowAfter($cart));
 
         return response()->json([
             'code' => 0,
@@ -62,18 +64,16 @@ class CartController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param DeleteRequest $request
+     * @param EmptyCartRequest $request
      * @return JsonResponse
      */
-    public function destroy(DeleteRequest $request): JsonResponse
+    public function destroy(EmptyCartRequest $request): JsonResponse
     {
-        CartDeleteBefore::dispatch();
+        event(new CartEmptyBefore);
 
-        ShoppingCart::emptyCart();
+        $cart = ShoppingCart::emptyCart();
 
-        CartDeleteAfter::dispatch();
-
-        $cart = ShoppingCart::getCart();
+        event(new CartEmptyAfter($cart));
 
         return response()->json([
             'code' => 0,
@@ -90,15 +90,13 @@ class CartController extends Controller
      */
     public function removeItem(RemoveRequest $request): JsonResponse
     {
-        CartItemRemoveBefore::dispatch($request->validated('cart_item_id'));
+        event(new CartItemRemoveBefore($request->validated('item_id')));
 
-        ShoppingCart::removeItem($request->validated('cart_item_id'));
-
-        CartItemRemoveAfter::dispatch();
-
-        ShoppingCart::collectTotals();
+        ShoppingCart::removeItem($request->validated('item_id'));
 
         $cart = ShoppingCart::getCart();
+
+        event(new CartItemRemoveAfter($request->validated('item_id'), $cart));
 
         return response()->json([
             'code' => 0,
@@ -106,6 +104,7 @@ class CartController extends Controller
             'data' => $cart ? new CartResource($cart) : null,
         ]);
     }
+
     /**
      * Apply coupon code.
      *
@@ -115,7 +114,6 @@ class CartController extends Controller
     public function applyCoupon(ApplyCouponRequest $request): JsonResponse
     {
         return $request->handle();
-
     }
 
     /**
@@ -125,11 +123,11 @@ class CartController extends Controller
      */
     public function removeCoupon()
     {
-        CartRemoveCouponBefore::dispatch();
+        event(new CartRemoveCouponBefore);
 
         ShoppingCart::removeCouponCode()->collectTotals();
 
-        CartRemoveCouponAfter::dispatch();
+        event(new CartRemoveCouponAfter);
 
         return response()->json([
             'code' => 0,

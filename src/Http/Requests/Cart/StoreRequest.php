@@ -10,7 +10,6 @@ use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemIsBuyNow;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
-use Modules\Product\Models\ProductSku;
 
 class StoreRequest extends FormRequest
 {
@@ -38,39 +37,48 @@ class StoreRequest extends FormRequest
 
     public function handle(): JsonResponse
     {
-        if ($this->validated('is_buy_now', false)) {
+        $isBuyNow = $this->validated('is_buy_now', false);
+        if ($isBuyNow) {
             ShoppingCart::deactivateCurrentCartIfBuyNowIsActive();
-            CartItemIsBuyNow::dispatch(
-                $this->validated('is_buy_now'),
-                $this->validated('product_sku_id'),
-                $this->validated('quantity'),
-            );
+            event(new CartItemIsBuyNow(
+                isBuyNow: $this->validated('is_buy_now'),
+                productSkuId: $this->validated('product_sku_id'),
+                quantity: $this->validated('quantity')
+            ));
         }
 
-        $cart = ShoppingCart::getCart();
-        CartItemAddBefore::dispatch($cart, $this->validated('product_sku_id'));
+        event(new CartItemAddBefore(
+            isBuyNow: $isBuyNow,
+            productSkuId: $this->validated('product_sku_id'),
+            quantity: $this->validated('quantity')
+        ));
 
         try {
-            $product = ProductSku::find($this->validated('product_sku_id'));
-            $result = ShoppingCart::addProduct(
+            $productSkuModel = config('shopping-cart.models.skus.model');
+            $product = $productSkuModel::find($this->validated('product_sku_id'));
+            $cart = ShoppingCart::addProduct(
                 $product,
                 $this->validated('quantity'),
-                $this->validated('is_buy_now'));
+                $isBuyNow
+            );
 
-            CartItemAddAfter::dispatch($cart, $result);
-
-            ShoppingCart::collectTotals();
+            event(new CartItemAddAfter(
+                isBuyNow: $isBuyNow,
+                productSkuId: $this->validated('product_sku_id'),
+                quantity: $this->validated('quantity'),
+                cart: $cart
+            ));
 
             return response()->json([
                 'code' => 0,
                 'message' => '商品已成功添加到购物车。',
-                'data' => $cart ? new CartResource($cart) : null,
+                'data' => new CartResource($cart),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'data' => null,
                 'message' => $e->getMessage(),
-                'code' => ErrorConst::CODE_ERROR,
+                'code' => ErrorConst::ERROR_ADD_PRODUCT->value,
             ]);
         }
     }

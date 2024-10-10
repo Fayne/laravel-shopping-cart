@@ -8,6 +8,7 @@ use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageBefore;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowAfter;
 use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowBefore;
+use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\BackFromOnePageRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\OnePageRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\ShowRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\ToggleBuyRequest;
@@ -38,11 +39,11 @@ class CheckoutController extends Controller
      */
     public function show(ShowRequest $request): JsonResponse
     {
-        ShowBefore::dispatch();
+        event(new ShowBefore);
 
         $cart = $request->cart;
 
-        ShowAfter::dispatch($cart);
+        event(new ShowAfter($cart));
 
         return response()->json([
             'code' => 0,
@@ -58,11 +59,11 @@ class CheckoutController extends Controller
      */
     public function onePage(OnePageRequest $request): JsonResponse
     {
-        OnePageBefore::dispatch();
+        event(new OnePageBefore);
 
         $cart = $request->cart;
 
-        OnePageAfter::dispatch($cart);
+        event(new OnePageAfter($cart));
 
         return response()->json([
             'code' => 0,
@@ -73,16 +74,19 @@ class CheckoutController extends Controller
     /**
      * Get customer cart for buy now .
      *
+     * @param BackFromOnePageRequest $request
      * @return JsonResponse
      */
-    public function backFromOnePage(): JsonResponse
+    public function backFromOnePage(BackFromOnePageRequest $request): JsonResponse
     {
-        BackFromOnePageBefore::dispatch();
+        event(new BackFromOnePageBefore);
 
         ShoppingCart::deActivateCart();
-        $cart = ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
+        ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
 
-        BackFromOnePageAfter::dispatch($cart);
+        $cart = ShoppingCart::getCart();
+
+        event(new BackFromOnePageAfter($cart));
 
         return response()->json([
             'code' => 0,

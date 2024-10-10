@@ -20,7 +20,7 @@ interface Cartable
     public function getName(): string;
 
     /**
-     * @return float|int
+     * @return float|int|null
      */
-    public function getWeight(): float|int;
+    public function getWeight(): float|int|null;
 }

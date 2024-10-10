@@ -51,7 +51,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
     );
     
     //更新数量；商品条目ID，数量
-    ShoppingCart::updateItems($cartItemId, $requestedQuantity);
+    ShoppingCart::updateItems($itemId, $requestedQuantity);
     
     //计算总价
     ShoppingCart::collectTotals();
@@ -60,7 +60,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
     ShoppingCart::emptyCart();
     
     //移除商品条目
-    ShoppingCart::removeItem($cartItemId);
+    ShoppingCart::removeItem($itemId);
         
     //应用优惠券code
     ShoppingCart::setCouponCode($couponCode);
@@ -68,7 +68,32 @@ php artisan vendor:publish --tag="shopping-cart-config"
     //移除优惠券code
     ShoppingCart::removeCouponCode();
     
-    ShoppingCart::toggleBuy('single', true, $cartItemId);
+    //购物车中选中部分商品进行结算
+    ShoppingCart::toggleBuy('single', true, $itemId);
+
+```
+### tips
+```text
+多个购物车操作执行时，记得加上事务DB::transaction;
+
+```
+```php
+# 监听器需要监听多个事件中，所以需要如下配置：
+# 在文件App\Providers\EventServiceProvider中，加上：
+    protected $listen = [
+        # ...
+        CollectTotalEvent::class => [
+            CollectTotalsListener::class
+        ]
+    ];
+```
+```php
+# 产品model需要继承Cartable
+use MobileNowGroup\ShoppingCart\Contracts\Cartable;
+class Product extends Model implements Cartable
+{
+    #...
+}
 
 ```
 

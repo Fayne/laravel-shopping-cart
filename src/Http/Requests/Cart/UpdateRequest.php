@@ -17,7 +17,7 @@ class UpdateRequest extends FormRequest
     public function authorize(): bool
     {
         //@todo 可自行优化
-        $cartItem = ShoppingCartItem::with('cart')->find($this->input('cart_item_id'));
+        $cartItem = ShoppingCartItem::with('cart')->find($this->input('item_id'));
 
         return $cartItem->cart->customer_id === auth()->id();
     }
@@ -30,7 +30,7 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cart_item_id' => 'required|integer|exists:cart_items,id',
+            'item_id' => 'required|integer|exists:cart_items,id',
             'quantity' => 'required|integer|min:1',
         ];
     }
@@ -39,17 +39,20 @@ class UpdateRequest extends FormRequest
     {
         $requestedQuantity = $this->validated('quantity');
 
-        CartItemUpdateBefore::dispatch($this->validated('cart_item_id'), $this->validated('quantity'));
+        event(new CartItemUpdateBefore(
+            itemId: $this->validated('item_id'),
+            quantity: $this->validated('quantity')
+        ));
 
-        $item = ShoppingCartItem::find($this->validated('cart_item_id'));
+        $cart = ShoppingCart::updateItems($this->validated('item_id'), $requestedQuantity);
 
-        ShoppingCart::updateItems($this->validated('cart_item_id'), $requestedQuantity);
+        // ShoppingCart::collectTotals();
 
-        CartItemUpdateAfter::dispatch();
-
-        ShoppingCart::collectTotals();
-
-        $cart = ShoppingCart::getCart();
+        event(new CartItemUpdateAfter(
+            itemId: $this->validated('item_id'),
+            quantity: $this->validated('quantity'),
+            cart: $cart
+        ));
 
         return response()->json([
             'code' => 0,

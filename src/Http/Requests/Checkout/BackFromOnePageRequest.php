@@ -1,20 +1,23 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
+namespace MobileNowGroup\ShoppingCart\Http\Requests\Checkout;
 
 use Illuminate\Foundation\Http\FormRequest;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
+use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
 
-class DeleteRequest extends FormRequest
+class BackFromOnePageRequest extends FormRequest
 {
+    public ?CartModel $cart;
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        $cart = ShoppingCart::getCart();
+        $this->cart = ShoppingCart::getCart();
 
-        return (bool) $cart->is_temp === false;
+        return $this->cart && $this->cart->is_temp;
     }
 
     /**
@@ -25,6 +28,7 @@ class DeleteRequest extends FormRequest
     public function rules(): array
     {
         return [
+            //
         ];
     }
 }
