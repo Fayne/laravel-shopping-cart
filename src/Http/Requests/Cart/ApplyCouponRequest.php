@@ -53,12 +53,12 @@ class ApplyCouponRequest extends FormRequest
             }
 
             return response()->json([
-                'code' => ErrorConst::ERROR_INVALID_COUPON_CODE,
-                'message' => ErrorConst::ERROR_MESSAGE[ErrorConst::ERROR_INVALID_COUPON_CODE],
+                'code' => ErrorConst::ERROR_INVALID_COUPON_CODE->value,
+                'message' => ErrorConst::errorMessage(ErrorConst::ERROR_INVALID_COUPON_CODE->value),
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'code' => ErrorConst::ERROR_CANNOT_APPLY_COUPON,
+                'code' => ErrorConst::ERROR_CANNOT_APPLY_COUPON->value,
                 'message' => $e->getMessage(),
             ]);
         }

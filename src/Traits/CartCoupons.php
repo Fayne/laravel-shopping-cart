@@ -34,7 +34,7 @@ trait CartCoupons
             $isValid = $callback($code, $cart, $this);
 
             if (!$isValid) {
-                throw new CartServerException(ErrorConst::ERROR_COUPON_INVALID);
+                throw new CartServerException(ErrorConst::ERROR_COUPON_INVALID->value);
             }
         }
 
@@ -60,7 +60,7 @@ trait CartCoupons
             $isValid = $callback($cart, $this);
 
             if (!$isValid) {
-                throw new CartServerException(ErrorConst::ERROR_REMOVE_COUPON);
+                throw new CartServerException(ErrorConst::ERROR_REMOVE_COUPON->value);
             }
         }
         // 移除优惠券代码

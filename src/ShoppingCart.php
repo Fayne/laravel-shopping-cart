@@ -76,7 +76,7 @@ class ShoppingCart
         $cart = $this->getCart();
 
         if (! $cart && ! $cart = $this->create(['is_temp' => $isBuyNow])) {
-            throw new CartServerException(ErrorConst::ERROR_CART_NOT_CREATED);
+            throw new CartServerException(ErrorConst::ERROR_CART_NOT_CREATED->value);
         }
         $cart->storeItem($item, $quantity);
 
@@ -195,7 +195,7 @@ class ShoppingCart
 
             $cart = CartModel::create($cartData);
         } catch (\Exception $e){
-            throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE);
+            throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE->value);
         }
 
         return $cart;
@@ -221,7 +221,7 @@ class ShoppingCart
         }
 
         if ($quantity <= 0) {
-            throw new CartClientException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE);
+            throw new CartClientException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE->value);
         }
 
         $item->quantity = $quantity;
@@ -268,10 +268,10 @@ class ShoppingCart
         event(new CartToggleBuyBefore(type: $type, selected: $selected, itemId: $itemId));
 
         if (!in_array($type, ['single', 'all'])) {
-            throw new CartClientException(ErrorConst::CODE_ERROR);
+            throw new CartClientException(ErrorConst::CODE_ERROR->value);
         }
         if (! $cart = $this->getCart()) {
-            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST);
+            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value);
         }
 
         if ($type === 'single') {

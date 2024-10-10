@@ -35,7 +35,7 @@ class CartClientException extends Exception
      */
     public function __construct(int $customCode, ?array $data = [], ?string $message = null, int $httpCode = 200)
     {
-        $message = $message ?: ErrorConst::ERROR_MESSAGE[$customCode];
+        $message = $message ?: ErrorConst::errorMessage($customCode);
         parent::__construct($message);
 
         $this->message = $message;
