@@ -38,7 +38,7 @@ class CreateCartTable extends Migration
             $table->decimal('base_discount', 12)->default(0)->nullable();
 
             $table->string('checkout_method')->nullable();
-            $table->boolean('is_active')->nullable()->default(1);
+            $table->boolean('is_active')->default(true);
             $table->dateTime('conversion_time')->nullable();
 
             $table->ulid('customer_id')->nullable();

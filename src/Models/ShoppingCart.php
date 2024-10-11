@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use MobileNowGroup\ShoppingCart\Contracts\Cartable;
 use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
 use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsActive;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsSelected;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsTemp;
 
 /**
  * ShoppingCart
@@ -22,6 +25,7 @@ use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
  * @property string $coupon_code
  * @property string $customer_id
  * @property bool $is_temp
+ * @property bool $is_active
  */
 class ShoppingCart extends Model
 {
@@ -40,7 +44,8 @@ class ShoppingCart extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'is_temp' => 'bool',
+        'is_temp' => IsTemp::class,
+        'is_active' => IsActive::class,
     ];
 
     /**
@@ -116,7 +121,7 @@ class ShoppingCart extends Model
             'total' => $item->getPrice() * $quantity,
             'base_total' => $item->getPrice() * $quantity,
             'weight' => $item->getWeight() ?? 0,
-            'selected' => true,
+            'selected' => IsSelected::IS_SELECTED_YES->value,
             'total_weight' => ($item->getWeight() ?? 0) * $quantity,
             'base_total_weight' => ($item->getWeight() ?? 0) * $quantity,
         ]);

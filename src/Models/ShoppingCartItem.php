@@ -5,6 +5,7 @@ namespace MobileNowGroup\ShoppingCart\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsSelected;
 
 /**
  * @property bool $selected
@@ -25,7 +26,7 @@ class ShoppingCartItem extends Model
 {
     protected $casts = [
         'additional' => 'array',
-        'selected' => 'bool',
+        'selected' => IsSelected::class,
     ];
 
     protected $guarded = [

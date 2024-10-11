@@ -21,6 +21,9 @@ use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
 use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
 use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsActive;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsSelected;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsTemp;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 use MobileNowGroup\ShoppingCart\Traits\CartCoupons;
@@ -47,12 +50,12 @@ class ShoppingCart
 
         $cart = CartModel::withWhereHas('items', function ($query) use ($isCheckout) {
             if ($isCheckout) {
-                $query->where('selected', true);
+                $query->where('selected', IsSelected::IS_SELECTED_YES->value);
             }
             $query->with('itemable');
         })->firstWhere([
             'customer_id' => auth()->id(),
-            'is_active' => true,
+            'is_active' => IsActive::IS_ACTIVE->value,
         ]);
 
         event(new CartGetAfter($cart));
@@ -104,7 +107,9 @@ class ShoppingCart
             $cart->discount = $cart->base_discount = 0;
 
             foreach ($cart->items as $item) {
-                if (($cart->is_temp === false && $item->selected === true) || $cart->is_temp === true) {
+                if (($cart->is_temp === IsTemp::IS_COMMON->value &&
+                        $item->selected === IsSelected::IS_SELECTED_YES->value) ||
+                    $cart->is_temp === IsTemp::IS_TEMP->value) {
 
                     $cart->discount += $item->discount_amount;
                     $cart->base_discount += $item->base_discount_amount;
@@ -279,7 +284,7 @@ class ShoppingCart
             $item = ShoppingCartItem::find($itemId);
 
             if (! $item) {
-                throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
+                throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST->value);
             }
 
             $item->selected = $selected;

@@ -47,7 +47,7 @@ class CartController extends Controller
 
         return response()->json([
             'code' => 0,
-            'data' => $cart ? new CartResource($cart) : null,
+            'data' => $cart && !$cart->is_temp ? new CartResource($cart) : null,
         ]);
     }
 

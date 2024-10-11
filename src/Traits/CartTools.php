@@ -5,6 +5,8 @@ namespace MobileNowGroup\ShoppingCart\Traits;
 use Illuminate\Support\Facades\Cache;
 use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
 use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsActive;
+use MobileNowGroup\ShoppingCart\Models\Enums\IsTemp;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -41,7 +43,7 @@ trait CartTools
 
                 $this->collectTotals();
             } else {
-                $deactivatedCart->is_active = true;
+                $deactivatedCart->is_active = IsActive::IS_ACTIVE->value;
                 $deactivatedCart->save();
             }
             Cache::forget($this->getCacheKeyForDeactivatedCartId());
@@ -63,7 +65,7 @@ trait CartTools
             if ($deactivatedCart = $this->getCart()) {
                 Cache::put($this->getCacheKeyForDeactivatedCartId(), $deactivatedCart->id);
 
-                $this->deActivateCart();
+                $this->deActivateCart($deactivatedCart);
             }
         }
     }
@@ -75,60 +77,60 @@ trait CartTools
      */
     public function activateCartIfCacheHasDeactivatedCartId(): void
     {
-        if ($deactivatedCartId = $this->getDeactivateCartId()) {
+        if ($deactivatedCart = $this->getDeactivateCart()) {
 
-            $this->activateCart($deactivatedCartId);
+            $this->activateCart($deactivatedCart);
 
             Cache::forget($this->getCacheKeyForDeactivatedCartId());
         }
     }
 
     /**
+     * Get the deactivated cart.
+     * It will return the cart object.
+     * It is for common cart scenario and is not for is-buy-now.
+     *
      * @return mixed
      */
-    public function getDeactivateCartId(): mixed
+    public function getDeactivateCart(): mixed
     {
         return Cache::rememberForever($this->getCacheKeyForDeactivatedCartId(), function () {
             return ShoppingCart::firstWhere([
                 'user_id' => auth()->id(),
-                'is_active' => false,
-                'is_temp' => false,
-            ])->id ?? null;
+                'is_active' => IsActive::IS_DEACTIVATE->value,
+                'is_temp' => IsTemp::IS_COMMON->value,
+            ]) ?? null;
         });
     }
 
     /**
      * Deactivates current cart.
      *
+     * @param ShoppingCart $cart
      * @return void
      */
-    public function deActivateCart(): void
+    public function deActivateCart(ShoppingCart $cart): void
     {
-        if ($cart = $this->getCart()) {
-            $cart->is_active = false;
-            $cart->save();
-
-        }
+        $cart->is_active = IsActive::IS_DEACTIVATE->value;
+        $cart->save();
     }
 
     /**
-     * Activate the cart by id.
+     * Activate the cart
      *
-     * @param  int  $cartId
+     * @param  ShoppingCart  $cart
      * @return void
      */
-    public function activateCart($cartId): void
+    public function activateCart(ShoppingCart $cart): void
     {
-        ShoppingCart::where([
-            'id' => $cartId,
-            'is_temp' => false,
-        ])->update(['is_active' => true]);
+        $cart->is_active = IsActive::IS_ACTIVE->value;
+        $cart->save();
     }
 
     /**
      * @return string
      */
-    public function getCacheKeyForDeactivatedCartId()
+    public function getCacheKeyForDeactivatedCartId(): string
     {
         return sprintf('user_%s_deactivated_cart_id', auth()->id());
     }

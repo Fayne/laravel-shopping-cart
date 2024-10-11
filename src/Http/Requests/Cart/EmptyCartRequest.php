@@ -12,10 +12,9 @@ class EmptyCartRequest extends FormRequest
      */
     public function authorize(): bool
     {
-
         $cart = ShoppingCart::getCart();
 
-        return (bool) optional($cart)->is_temp === false;
+        return $cart && $cart->is_temp;
     }
 
     /**

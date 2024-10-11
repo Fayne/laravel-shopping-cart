@@ -41,13 +41,13 @@ class CheckoutController extends Controller
     {
         event(new ShowBefore);
 
-        $cart = $request->cart;
+        $cart = ShoppingCart::getCart(true);
 
         event(new ShowAfter($cart));
 
         return response()->json([
             'code' => 0,
-            'data' => $cart ? new CartResource($cart) : null,
+            'data' => $cart && !$cart->is_temp ? new CartResource($cart) : null,
         ]);
     }
 
@@ -61,13 +61,13 @@ class CheckoutController extends Controller
     {
         event(new OnePageBefore);
 
-        $cart = $request->cart;
+        $cart = ShoppingCart::getCart();
 
         event(new OnePageAfter($cart));
 
         return response()->json([
             'code' => 0,
-            'data' => $cart ? new CartResource($cart) : null,
+            'data' => $cart && $cart->is_temp ? new CartResource($cart) : null,
         ]);
     }
 
@@ -81,7 +81,7 @@ class CheckoutController extends Controller
     {
         event(new BackFromOnePageBefore);
 
-        ShoppingCart::deActivateCart();
+        ShoppingCart::deActivateCart($request->cart);
         ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
 
         $cart = ShoppingCart::getCart();
