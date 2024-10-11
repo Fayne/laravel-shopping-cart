@@ -1,19 +1,6 @@
 <?php
 
 return [
-
-    /*
-    |--------------------------------------------------------------------------
-    | Gross price as base price
-    |--------------------------------------------------------------------------
-    |
-    | This default value is used to select the method to calculate prices and taxes
-    | If true the item price is managed as a gross price, so taxes will be calculated by separation/exclusion
-    |
-    */
-
-    'calculator' => \MobileNowGroup\ShoppingCart\Calculation\DefaultCalculator::class,
-
     /*
     |--------------------------------------------------------------------------
     | Default tax rate
@@ -67,5 +54,24 @@ return [
         'decimals' => 2,
         'decimal_point' => '.',
         'thousand_separator' => ',',
+    ],
+    'models' => [
+        'users' => [
+            'table' => 'users',
+            'foreign_id' => 'user_id',
+        ],
+        'carts' => [
+            'table' => 'carts',
+            'foreign_id' => 'cart_id',
+        ],
+        'cart_items' => [
+            'table' => 'cart_items',
+        ],
+        'products' => [
+            'model' => 'Modules\Product\Models\Product',
+        ],
+        'skus' => [
+            'model' => 'Modules\Product\Models\ProductSku',
+        ],
     ],
 ];

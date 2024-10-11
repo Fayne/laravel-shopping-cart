@@ -1,0 +1,66 @@
+<?php
+
+namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\JsonResponse;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartApplyCouponAfter;
+use MobileNowGroup\ShoppingCart\Events\ShopCart\CartApplyCouponBefore;
+use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
+use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
+
+class ApplyCouponRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules(): array
+    {
+        return [
+            'code' => 'required',
+        ];
+    }
+
+    public function handle(): JsonResponse
+    {
+        $couponCode = $this->validated('code');
+        try {
+            if (strlen($couponCode)) {
+                event(new CartApplyCouponBefore($couponCode));
+
+                ShoppingCart::setCouponCode($couponCode)->collectTotals();
+
+                $cart = ShoppingCart::getCart();
+
+                if ($cart->coupon_code == $couponCode) {
+                    event(new CartApplyCouponAfter(couponCode: $couponCode, cart: $cart));
+
+                    return response()->json([
+                        'code' => 0,
+                        'message' => '应用优惠券成功',
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'code' => ErrorConst::ERROR_INVALID_COUPON_CODE->value,
+                'message' => ErrorConst::errorMessage(ErrorConst::ERROR_INVALID_COUPON_CODE->value),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => ErrorConst::ERROR_CANNOT_APPLY_COUPON->value,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+}
