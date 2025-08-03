@@ -3,11 +3,14 @@
 namespace MobileNowGroup\ShoppingCart\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Orchestra\Testbench\TestCase as Orchestra;
 use MobileNowGroup\ShoppingCart\ShoppingCartServiceProvider;
 
 class TestCase extends Orchestra
 {
+    use DatabaseTransactions;
+    
     protected function setUp(): void
     {
         parent::setUp();
@@ -32,5 +35,10 @@ class TestCase extends Orchestra
             'database' => ':memory:',
             'prefix' => '',
         ]);
+    }
+    
+    protected function defineDatabaseMigrations()
+    {
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
     }
 }

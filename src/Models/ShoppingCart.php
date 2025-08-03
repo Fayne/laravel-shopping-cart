@@ -33,9 +33,10 @@ class ShoppingCart extends Model
     protected $fillable = [
         'customer_id',
         'customer_name',
-        'customer_email',
         'session_id',
         'metadata',
+        'coupon_code',
+        'is_active',
     ];
 
     /**

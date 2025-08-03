@@ -1,238 +1,194 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Tests\Unit\Storage;
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
 use MobileNowGroup\ShoppingCart\Storage\DatabaseCartStorage;
 use MobileNowGroup\ShoppingCart\Storage\CacheCartStorage;
 use MobileNowGroup\ShoppingCart\Storage\RedisCartStorage;
-use MobileNowGroup\ShoppingCart\Storage\LayeredCartStorage;
-use MobileNowGroup\ShoppingCart\Tests\TestCase;
+use MobileNowGroup\ShoppingCart\Storage\CartStorageInterface;
 
-class CartStorageManagerTest extends TestCase
-{
-    use RefreshDatabase;
+uses(RefreshDatabase::class);
 
-    protected CartStorageManager $manager;
+beforeEach(function () {
+    $this->manager = new CartStorageManager($this->app);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        
-        $this->manager = new CartStorageManager($this->app);
-    }
+test('it can create database driver', function () {
+    Config::set('shopping-cart.storage.default', 'database');
+    Config::set('shopping-cart.storage.drivers.database', []);
 
-    /** @test */
-    public function it_can_create_database_driver()
-    {
-        Config::set('shopping-cart.storage.default', 'database');
-        Config::set('shopping-cart.storage.drivers.database', []);
+    $driver = $this->manager->driver('database');
 
-        $driver = $this->manager->driver('database');
+    expect($driver)->toBeInstanceOf(DatabaseCartStorage::class);
+});
 
-        $this->assertInstanceOf(DatabaseCartStorage::class, $driver);
-    }
+test('it can create cache driver', function () {
+    Config::set('shopping-cart.storage.default', 'cache');
+    Config::set('shopping-cart.storage.drivers.cache', [
+        'store' => 'default',
+        'prefix' => 'cart',
+        'ttl' => 3600,
+    ]);
 
-    /** @test */
-    public function it_can_create_cache_driver()
-    {
-        Config::set('shopping-cart.storage.default', 'cache');
-        Config::set('shopping-cart.storage.drivers.cache', [
-            'store' => 'default',
-            'prefix' => 'cart',
-            'ttl' => 3600,
-        ]);
+    $driver = $this->manager->driver('cache');
 
-        $driver = $this->manager->driver('cache');
+    expect($driver)->toBeInstanceOf(CacheCartStorage::class);
+});
 
-        $this->assertInstanceOf(CacheCartStorage::class, $driver);
-    }
+test('it can create redis driver', function () {
+    Config::set('shopping-cart.storage.default', 'redis');
+    Config::set('shopping-cart.storage.drivers.redis', [
+        'connection' => 'default',
+        'prefix' => 'cart',
+        'ttl' => 3600,
+    ]);
 
-    /** @test */
-    public function it_can_create_redis_driver()
-    {
-        Config::set('shopping-cart.storage.default', 'redis');
-        Config::set('shopping-cart.storage.drivers.redis', [
-            'connection' => 'default',
-            'prefix' => 'cart',
-            'ttl' => 3600,
-        ]);
+    $driver = $this->manager->driver('redis');
 
-        $driver = $this->manager->driver('redis');
+    expect($driver)->toBeInstanceOf(RedisCartStorage::class);
+});
 
-        $this->assertInstanceOf(RedisCartStorage::class, $driver);
-    }
+test('it can create layered driver', function () {
+    Config::set('shopping-cart.storage.default', 'layered');
+    Config::set('shopping-cart.storage.drivers.layered', [
+        'enable_cache' => true,
+        'enable_redis' => true,
+    ]);
+    Config::set('shopping-cart.storage.drivers.cache', [
+        'store' => 'default',
+        'prefix' => 'cart',
+        'ttl' => 3600,
+    ]);
+    Config::set('shopping-cart.storage.drivers.redis', [
+        'connection' => 'default',
+        'prefix' => 'cart',
+        'ttl' => 3600,
+    ]);
 
-    /** @test */
-    public function it_can_create_layered_driver()
-    {
-        Config::set('shopping-cart.storage.default', 'layered');
-        Config::set('shopping-cart.storage.drivers.layered', [
-            'cache_enabled' => true,
-            'redis_enabled' => true,
-        ]);
-        Config::set('shopping-cart.storage.drivers.cache', [
-            'store' => 'default',
-            'prefix' => 'cart',
-            'ttl' => 3600,
-        ]);
-        Config::set('shopping-cart.storage.drivers.redis', [
-            'connection' => 'default',
-            'prefix' => 'cart',
-            'ttl' => 3600,
-        ]);
+    $driver = $this->manager->driver('layered');
 
-        $driver = $this->manager->driver('layered');
+    expect($driver)->toBeInstanceOf(RedisCartStorage::class);
+});
 
-        $this->assertInstanceOf(LayeredCartStorage::class, $driver);
-    }
+test('it uses default driver when no driver specified', function () {
+    Config::set('shopping-cart.storage.default', 'database');
+    Config::set('shopping-cart.storage.drivers.database', []);
 
-    /** @test */
-    public function it_uses_default_driver_when_no_driver_specified()
-    {
-        Config::set('shopping-cart.storage.default', 'database');
-        Config::set('shopping-cart.storage.drivers.database', []);
+    $driver = $this->manager->driver();
 
-        $driver = $this->manager->driver();
+    expect($driver)->toBeInstanceOf(DatabaseCartStorage::class);
+});
 
-        $this->assertInstanceOf(DatabaseCartStorage::class, $driver);
-    }
+test('it returns same instance for same driver', function () {
+    Config::set('shopping-cart.storage.default', 'database');
+    Config::set('shopping-cart.storage.drivers.database', []);
 
-    /** @test */
-    public function it_returns_same_instance_for_same_driver()
-    {
-        Config::set('shopping-cart.storage.default', 'database');
-        Config::set('shopping-cart.storage.drivers.database', []);
+    $driver1 = $this->manager->driver('database');
+    $driver2 = $this->manager->driver('database');
 
-        $driver1 = $this->manager->driver('database');
-        $driver2 = $this->manager->driver('database');
+    expect($driver1)->toBe($driver2);
+});
 
-        $this->assertSame($driver1, $driver2);
-    }
+test('it throws exception for invalid driver', function () {
+    $this->manager->driver('invalid');
+})->throws(\InvalidArgumentException::class, 'Driver [invalid] not supported.');
 
-    /** @test */
-    public function it_throws_exception_for_invalid_driver()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Driver [invalid] not supported.');
+test('it can extend with custom driver', function () {
+    $customDriver = new DatabaseCartStorage();
+    
+    $this->manager->extend('custom', function () use ($customDriver) {
+        return $customDriver;
+    });
 
-        $this->manager->driver('invalid');
-    }
+    $driver = $this->manager->driver('custom');
 
-    /** @test */
-    public function it_can_extend_with_custom_driver()
-    {
-        $customDriver = new DatabaseCartStorage();
-        
-        $this->manager->extend('custom', function () use ($customDriver) {
-            return $customDriver;
-        });
+    expect($driver)->toBe($customDriver);
+});
 
-        $driver = $this->manager->driver('custom');
+test('it gets default driver name from config', function () {
+    Config::set('shopping-cart.storage.default', 'redis');
 
-        $this->assertSame($customDriver, $driver);
-    }
+    $defaultDriver = $this->manager->getDefaultDriver();
 
-    /** @test */
-    public function it_gets_default_driver_name_from_config()
-    {
-        Config::set('shopping-cart.storage.default', 'redis');
+    expect($defaultDriver)->toEqual('redis');
+});
 
-        $defaultDriver = $this->manager->getDefaultDriver();
+test('it falls back to database when no default configured', function () {
+    Config::set('shopping-cart.storage.default', null);
 
-        $this->assertEquals('redis', $defaultDriver);
-    }
+    $defaultDriver = $this->manager->getDefaultDriver();
 
-    /** @test */
-    public function it_falls_back_to_database_when_no_default_configured()
-    {
-        Config::set('shopping-cart.storage.default', null);
+    expect($defaultDriver)->toEqual('database');
+});
 
-        $defaultDriver = $this->manager->getDefaultDriver();
+test('it creates layered driver with cache only', function () {
+    Config::set('shopping-cart.storage.drivers.layered', [
+        'enable_cache' => true,
+        'enable_redis' => false,
+    ]);
+    Config::set('shopping-cart.storage.drivers.cache', [
+        'store' => 'default',
+        'prefix' => 'cart',
+        'ttl' => 3600,
+    ]);
 
-        $this->assertEquals('database', $defaultDriver);
-    }
+    $driver = $this->manager->driver('layered');
 
-    /** @test */
-    public function it_creates_layered_driver_with_cache_only()
-    {
-        Config::set('shopping-cart.storage.drivers.layered', [
-            'cache_enabled' => true,
-            'redis_enabled' => false,
-        ]);
-        Config::set('shopping-cart.storage.drivers.cache', [
-            'store' => 'default',
-            'prefix' => 'cart',
-            'ttl' => 3600,
-        ]);
+    expect($driver)->toBeInstanceOf(CacheCartStorage::class);
+});
 
-        $driver = $this->manager->driver('layered');
+test('it creates layered driver with redis only', function () {
+    Config::set('shopping-cart.storage.drivers.layered', [
+        'enable_cache' => false,
+        'enable_redis' => true,
+    ]);
+    Config::set('shopping-cart.storage.drivers.redis', [
+        'connection' => 'default',
+        'prefix' => 'cart',
+        'ttl' => 3600,
+    ]);
 
-        $this->assertInstanceOf(LayeredCartStorage::class, $driver);
-    }
+    $driver = $this->manager->driver('layered');
 
-    /** @test */
-    public function it_creates_layered_driver_with_redis_only()
-    {
-        Config::set('shopping-cart.storage.drivers.layered', [
-            'cache_enabled' => false,
-            'redis_enabled' => true,
-        ]);
-        Config::set('shopping-cart.storage.drivers.redis', [
-            'connection' => 'default',
-            'prefix' => 'cart',
-            'ttl' => 3600,
-        ]);
+    expect($driver)->toBeInstanceOf(RedisCartStorage::class);
+});
 
-        $driver = $this->manager->driver('layered');
+test('it creates layered driver with database only when no cache or redis', function () {
+    Config::set('shopping-cart.storage.drivers.layered', [
+        'enable_cache' => false,
+        'enable_redis' => false,
+    ]);
 
-        $this->assertInstanceOf(LayeredCartStorage::class, $driver);
-    }
+    $driver = $this->manager->driver('layered');
 
-    /** @test */
-    public function it_creates_layered_driver_with_database_only_when_no_cache_or_redis()
-    {
-        Config::set('shopping-cart.storage.drivers.layered', [
-            'cache_enabled' => false,
-            'redis_enabled' => false,
-        ]);
+    expect($driver)->toBeInstanceOf(DatabaseCartStorage::class);
+});
 
-        $driver = $this->manager->driver('layered');
+test('it uses correct cache configuration', function () {
+    Config::set('shopping-cart.storage.drivers.cache', [
+        'store' => 'redis',
+        'prefix' => 'custom_cart',
+        'ttl' => 7200,
+    ]);
 
-        $this->assertInstanceOf(LayeredCartStorage::class, $driver);
-    }
+    $driver = $this->manager->driver('cache');
 
-    /** @test */
-    public function it_uses_correct_cache_configuration()
-    {
-        Config::set('shopping-cart.storage.drivers.cache', [
-            'store' => 'redis',
-            'prefix' => 'custom_cart',
-            'ttl' => 7200,
-        ]);
+    expect($driver)->toBeInstanceOf(CacheCartStorage::class);
+    // Note: We can't easily test the internal configuration without exposing it,
+    // but we can verify the driver is created successfully
+});
 
-        $driver = $this->manager->driver('cache');
+test('it uses correct redis configuration', function () {
+    Config::set('shopping-cart.storage.drivers.redis', [
+        'connection' => 'cache',
+        'prefix' => 'custom_cart',
+        'ttl' => 7200,
+    ]);
 
-        $this->assertInstanceOf(CacheCartStorage::class, $driver);
-        // Note: We can't easily test the internal configuration without exposing it,
-        // but we can verify the driver is created successfully
-    }
+    $driver = $this->manager->driver('redis');
 
-    /** @test */
-    public function it_uses_correct_redis_configuration()
-    {
-        Config::set('shopping-cart.storage.drivers.redis', [
-            'connection' => 'cache',
-            'prefix' => 'custom_cart',
-            'ttl' => 7200,
-        ]);
-
-        $driver = $this->manager->driver('redis');
-
-        $this->assertInstanceOf(RedisCartStorage::class, $driver);
-        // Note: We can't easily test the internal configuration without exposing it,
-        // but we can verify the driver is created successfully
-    }
-}
+    expect($driver)->toBeInstanceOf(RedisCartStorage::class);
+    // Note: We can't easily test the internal configuration without exposing it,
+    // but we can verify the driver is created successfully
+});

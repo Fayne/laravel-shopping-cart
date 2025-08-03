@@ -108,7 +108,7 @@ class MigrateCartDataCommand extends Command
      */
     protected function validateOptions(?string $from, ?string $to): bool
     {
-        $validDrivers = ['database', 'cache', 'redis', 'layered'];
+        $configuredDrivers = array_keys(config('shopping-cart.storage.drivers', []));
         
         if (!$from) {
             $this->error('Source storage driver (--from) is required.');
@@ -120,18 +120,18 @@ class MigrateCartDataCommand extends Command
             return false;
         }
         
-        if (!in_array($from, $validDrivers)) {
-            $this->error("Invalid source driver: {$from}. Valid drivers: " . implode(', ', $validDrivers));
+        if (!in_array($from, $configuredDrivers)) {
+            $this->error("Error: Source driver [{$from}] is not configured.");
             return false;
         }
         
-        if (!in_array($to, $validDrivers)) {
-            $this->error("Invalid target driver: {$to}. Valid drivers: " . implode(', ', $validDrivers));
+        if (!in_array($to, $configuredDrivers)) {
+            $this->error("Error: Target driver [{$to}] is not configured.");
             return false;
         }
         
         if ($from === $to) {
-            $this->error('Source and target drivers cannot be the same.');
+            $this->error('Error: Source and target drivers cannot be the same.');
             return false;
         }
         
@@ -177,8 +177,16 @@ class MigrateCartDataCommand extends Command
             'errors' => []
         ];
         
+        // 输出开始消息
+        if ($customerId) {
+            $this->info("Starting cart data migration for customer: {$customerId}");
+        } else {
+            $message = $dryRun ? 'Starting cart data migration (DRY RUN)' : 'Starting cart data migration';
+            $this->info($message);
+        }
+        
         // 获取要迁移的购物车
-        $carts = $this->getCartsToMigrate($customerId);
+        $carts = $this->getCartsToMigrate($customerId, $sourceStorage);
         $result['total_carts'] = $carts->count();
         
         if ($result['total_carts'] === 0) {
@@ -193,13 +201,24 @@ class MigrateCartDataCommand extends Command
         $progressBar->start();
         
         // 分批处理
-        $carts->chunk($batchSize, function ($cartBatch) use (
-            $sourceStorage, $targetStorage, $dryRun, &$result, $progressBar
+        $carts->chunk($batchSize, function ($cartBatch, $batchIndex) use (
+            $sourceStorage, $targetStorage, $dryRun, &$result, $progressBar, $batchSize
         ) {
+            $totalBatches = ceil($result['total_carts'] / $batchSize);
+            if ($totalBatches > 1) {
+                $this->info("Processing batch " . ($batchIndex + 1) . "/{$totalBatches} ({$cartBatch->count()} carts)");
+            }
+            
             foreach ($cartBatch as $cart) {
                 try {
                     $this->migrateCart($cart, $sourceStorage, $targetStorage, $dryRun, $result);
                     $result['migrated_carts']++;
+                    
+                    if ($dryRun) {
+                        $this->info("DRY RUN: Would migrate cart for customer: {$cart->customer_id}");
+                    } else {
+                        $this->info("Migrated cart for customer: {$cart->customer_id}");
+                    }
                 } catch (\Exception $e) {
                     $result['failed_carts']++;
                     $result['errors'][] = [
@@ -207,6 +226,8 @@ class MigrateCartDataCommand extends Command
                         'customer_id' => $cart->customer_id,
                         'error' => $e->getMessage()
                     ];
+                    
+                    $this->error("Failed to migrate cart for customer: {$cart->customer_id}. Error: {$e->getMessage()}");
                     
                     Log::warning('Failed to migrate cart', [
                         'cart_id' => $cart->id,
@@ -228,15 +249,16 @@ class MigrateCartDataCommand extends Command
     /**
      * 获取要迁移的购物车
      */
-    protected function getCartsToMigrate(?string $customerId)
+    protected function getCartsToMigrate(?string $customerId, $sourceStorage = null)
     {
-        $query = ShoppingCart::with('items');
-        
         if ($customerId) {
-            $query->where('customer_id', $customerId);
+            // 获取特定客户的购物车
+            $cart = $sourceStorage->getCart($customerId);
+            return $cart ? collect([$cart]) : collect([]);
+        } else {
+            // 获取所有购物车
+            return $sourceStorage->getAllCarts();
         }
-        
-        return $query->get();
     }
 
     /**
@@ -292,6 +314,27 @@ class MigrateCartDataCommand extends Command
     protected function displayMigrationResult(array $result, float $duration, bool $dryRun): void
     {
         $this->newLine();
+        
+        // 显示简单的完成消息
+        if ($dryRun) {
+            $this->info("DRY RUN completed. {$result['migrated_carts']} carts would be migrated.");
+        } else {
+            if ($result['failed_carts'] > 0) {
+                $this->info('Migration completed with errors.');
+            } else {
+                $this->info('Migration completed successfully!');
+            }
+        }
+        
+        // 显示迁移摘要
+        if ($result['total_carts'] === 0) {
+            $this->info('Migration Summary:');
+            $this->info('- Total carts: 0');
+            $this->info('- Migrated: 0');
+            $this->info('- Skipped: 0');
+            $this->info('- Failed: 0');
+        }
+        
         $this->info('Migration ' . ($dryRun ? 'Simulation ' : '') . 'Completed');
         $this->info('========================');
         

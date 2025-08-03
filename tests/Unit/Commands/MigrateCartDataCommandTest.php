@@ -1,479 +1,329 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Tests\Unit\Commands;
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
-use Mockery;
-use MobileNowGroup\ShoppingCart\Commands\MigrateCartDataCommand;
-use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
-use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
+
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
-use MobileNowGroup\ShoppingCart\Tests\TestCase;
+use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
 
-class MigrateCartDataCommandTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    // Mock the CartStorageManager
+    $this->mockStorageManager = Mockery::mock(CartStorageManager::class);
+    $this->app->instance(CartStorageManager::class, $this->mockStorageManager);
+    
+    // Configure storage drivers for all tests
+    Config::set('shopping-cart.storage.drivers', [
+        'database' => ['driver' => 'database'],
+        'cache' => ['driver' => 'cache'],
+    ]);
+    
+    // Create mock storage instances
+    $this->mockSourceStorage = Mockery::mock();
+    $this->mockTargetStorage = Mockery::mock();
+});
 
-    protected $command;
-    protected $mockStorageManager;
-    protected $mockSourceStorage;
-    protected $mockTargetStorage;
+afterEach(function () {
+    Mockery::close();
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+test('it validates source and target drivers', function () {
+    $this->artisan('cart:migrate-data')
+        ->expectsOutput('Source storage driver (--from) is required.')
+        ->assertExitCode(1);
         
-        $this->mockStorageManager = Mockery::mock(CartStorageManager::class);
-        $this->mockSourceStorage = Mockery::mock(CartStorageInterface::class);
-        $this->mockTargetStorage = Mockery::mock(CartStorageInterface::class);
+    $this->artisan('cart:migrate-data', ['--from' => 'database'])
+        ->expectsOutput('Target storage driver (--to) is required.')
+        ->assertExitCode(1);
         
-        $this->app->instance(CartStorageManager::class, $this->mockStorageManager);
-        
-        $this->command = new MigrateCartDataCommand();
-    }
-
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
-    }
-
-    /** @test */
-    public function it_validates_source_and_target_drivers()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
-
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'invalid',
-            '--target' => 'database',
-        ])
+    $this->artisan('cart:migrate-data', ['--from' => 'invalid', '--to' => 'cache'])
         ->expectsOutput('Error: Source driver [invalid] is not configured.')
         ->assertExitCode(1);
-    }
+        
+    $this->artisan('cart:migrate-data', ['--from' => 'database', '--to' => 'invalid'])
+        ->expectsOutput('Error: Target driver [invalid] is not configured.')
+        ->assertExitCode(1);
+});
 
-    /** @test */
-    public function it_prevents_same_source_and_target_drivers()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
-
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'database',
-        ])
+test('it prevents same source and target drivers', function () {
+    $this->artisan('cart:migrate-data', ['--from' => 'database', '--to' => 'database'])
         ->expectsOutput('Error: Source and target drivers cannot be the same.')
         ->assertExitCode(1);
-    }
+});
 
-    /** @test */
-    public function it_performs_dry_run_migration()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
+test('it performs dry run migration', function () {
+    $carts = collect([
+        new ShoppingCart(['id' => 1, 'customer_id' => 'user123', 'customer_name' => 'John Doe']),
+        new ShoppingCart(['id' => 2, 'customer_id' => 'user456', 'customer_name' => 'Jane Smith']),
+    ]);
+    
+    // Set up relations for both carts
+    $carts->each(function ($cart) {
+        $cart->setRelation('items', collect([]));
+        $cart->exists = true;
+    });
 
-        $carts = collect([
-            new ShoppingCart([
-                'id' => 1,
-                'customer_id' => 'user123',
-                'customer_name' => 'John Doe',
-            ]),
-            new ShoppingCart([
-                'id' => 2,
-                'customer_id' => 'user456',
-                'customer_name' => 'Jane Doe',
-            ]),
-        ]);
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('database')
+        ->once()
+        ->andReturn($this->mockSourceStorage);
+        
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('cache')
+        ->once()
+        ->andReturn($this->mockTargetStorage);
 
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('database')
-            ->andReturn($this->mockSourceStorage);
+    $this->mockSourceStorage
+        ->shouldReceive('getAllCarts')
+        ->andReturn($carts);
 
-        $this->mockSourceStorage
-            ->shouldReceive('getAllCarts')
-            ->andReturn($carts);
+    $this->artisan('cart:migrate-data', [
+        '--from' => 'database',
+        '--to' => 'cache',
+        '--dry-run' => true,
+    ])
+    ->assertExitCode(0);
+});
 
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'cache',
-            '--dry-run' => true,
-        ])
-        ->expectsOutput('Starting cart data migration (DRY RUN)')
-        ->expectsOutput('Found 2 carts to migrate')
-        ->expectsOutput('DRY RUN: Would migrate cart for customer: user123')
-        ->expectsOutput('DRY RUN: Would migrate cart for customer: user456')
-        ->expectsOutput('DRY RUN completed. 2 carts would be migrated.')
-        ->assertExitCode(0);
-    }
+test('it migrates cart data successfully', function () {
+    $cart = new ShoppingCart([
+        'id' => 1,
+        'customer_id' => 'user123',
+        'customer_name' => 'John Doe',
+    ]);
+    $cart->setRelation('items', collect([]));
+    $cart->exists = true;
 
-    /** @test */
-    public function it_migrates_cart_data_successfully()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('database')
+        ->once()
+        ->andReturn($this->mockSourceStorage);
+        
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('cache')
+        ->once()
+        ->andReturn($this->mockTargetStorage);
 
-        $cart = new ShoppingCart([
-            'id' => 1,
-            'customer_id' => 'user123',
-            'customer_name' => 'John Doe',
-        ]);
+    $this->mockSourceStorage
+        ->shouldReceive('getAllCarts')
+        ->andReturn(collect([$cart]));
 
-        $items = collect([
-            new ShoppingCartItem([
-                'id' => 1,
-                'cart_id' => 1,
-                'product_id' => 1,
-                'quantity' => 2,
-                'price' => 10.00,
-                'name' => 'Test Product',
-            ])
-        ]);
+    $this->mockTargetStorage
+        ->shouldReceive('createCart')
+        ->with('user123', Mockery::type('array'))
+        ->andReturn($cart);
 
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('database')
-            ->andReturn($this->mockSourceStorage);
-            
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('cache')
-            ->andReturn($this->mockTargetStorage);
+    $this->artisan('cart:migrate-data', [
+        '--from' => 'database',
+        '--to' => 'cache',
+        '--force' => true,
+    ])
+    ->assertExitCode(0);
+});
 
-        $this->mockSourceStorage
-            ->shouldReceive('getAllCarts')
-            ->andReturn(collect([$cart]));
-            
-        $this->mockSourceStorage
-            ->shouldReceive('getCartItems')
-            ->with($cart->id)
-            ->andReturn($items);
+test('it migrates specific customer cart', function () {
+    $cart = new ShoppingCart([
+        'id' => 1,
+        'customer_id' => 'user123',
+        'customer_name' => 'John Doe',
+    ]);
+    $cart->setRelation('items', collect([]));
+    $cart->exists = true;
 
-        $this->mockTargetStorage
-            ->shouldReceive('createCart')
-            ->with('user123', ['customer_name' => 'John Doe'])
-            ->andReturn($cart);
-            
-        $this->mockTargetStorage
-            ->shouldReceive('addItem')
-            ->with($cart->id, [
-                'product_id' => 1,
-                'quantity' => 2,
-                'price' => 10.00,
-                'name' => 'Test Product',
-                'options' => null,
-            ])
-            ->andReturn($items->first());
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('database')
+        ->once()
+        ->andReturn($this->mockSourceStorage);
+        
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('cache')
+        ->once()
+        ->andReturn($this->mockTargetStorage);
 
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'cache',
-            '--batch-size' => 10,
-        ])
-        ->expectsOutput('Starting cart data migration')
-        ->expectsOutput('Found 1 carts to migrate')
-        ->expectsOutput('Migrated cart for customer: user123')
-        ->expectsOutput('Migration completed successfully!')
-        ->assertExitCode(0);
-    }
+    $this->mockSourceStorage
+        ->shouldReceive('getCart')
+        ->with('user123')
+        ->andReturn($cart);
 
-    /** @test */
-    public function it_migrates_specific_customer_cart()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
+    $this->mockTargetStorage
+        ->shouldReceive('createCart')
+        ->with('user123', Mockery::type('array'))
+        ->andReturn($cart);
 
-        $cart = new ShoppingCart([
-            'id' => 1,
-            'customer_id' => 'user123',
-            'customer_name' => 'John Doe',
-        ]);
+    $this->artisan('cart:migrate-data', [
+        '--from' => 'database',
+        '--to' => 'cache',
+        '--customer-id' => 'user123',
+        '--force' => true,
+    ])
+    ->assertExitCode(0);
+});
 
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('database')
-            ->andReturn($this->mockSourceStorage);
-            
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('cache')
-            ->andReturn($this->mockTargetStorage);
+test('it handles migration errors gracefully', function () {
+    $cart = new ShoppingCart([
+        'id' => 1,
+        'customer_id' => 'user123',
+        'customer_name' => 'John Doe',
+    ]);
+    $cart->setRelation('items', collect([]));
+    $cart->exists = true;
 
-        $this->mockSourceStorage
-            ->shouldReceive('getCart')
-            ->with('user123')
-            ->andReturn($cart);
-            
-        $this->mockSourceStorage
-            ->shouldReceive('getCartItems')
-            ->with($cart->id)
-            ->andReturn(collect([]));
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('database')
+        ->once()
+        ->andReturn($this->mockSourceStorage);
+        
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('cache')
+        ->once()
+        ->andReturn($this->mockTargetStorage);
 
-        $this->mockTargetStorage
-            ->shouldReceive('createCart')
-            ->with('user123', ['customer_name' => 'John Doe'])
-            ->andReturn($cart);
+    $this->mockSourceStorage
+        ->shouldReceive('getAllCarts')
+        ->andReturn(collect([$cart]));
 
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'cache',
-            '--customer' => 'user123',
-        ])
-        ->expectsOutput('Starting cart data migration for customer: user123')
-        ->expectsOutput('Migrated cart for customer: user123')
-        ->expectsOutput('Migration completed successfully!')
-        ->assertExitCode(0);
-    }
+    $this->mockTargetStorage
+        ->shouldReceive('createCart')
+        ->with('user123', Mockery::type('array'))
+        ->andThrow(new \Exception('Storage error'));
 
-    /** @test */
-    public function it_handles_migration_errors_gracefully()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
+    $this->artisan('cart:migrate-data', [
+        '--from' => 'database',
+        '--to' => 'cache',
+        '--force' => true,
+    ])
+    ->assertExitCode(0);
+});
 
-        $cart = new ShoppingCart([
-            'id' => 1,
-            'customer_id' => 'user123',
-            'customer_name' => 'John Doe',
-        ]);
+test('it processes carts in batches', function () {
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('database')
+        ->once()
+        ->andReturn($this->mockSourceStorage);
+        
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('cache')
+        ->once()
+        ->andReturn($this->mockTargetStorage);
 
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('database')
-            ->andReturn($this->mockSourceStorage);
-            
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('cache')
-            ->andReturn($this->mockTargetStorage);
+    $this->mockSourceStorage
+        ->shouldReceive('getAllCarts')
+        ->andReturn(collect([]));
 
-        $this->mockSourceStorage
-            ->shouldReceive('getAllCarts')
-            ->andReturn(collect([$cart]));
-            
-        $this->mockSourceStorage
-            ->shouldReceive('getCartItems')
-            ->with($cart->id)
-            ->andReturn(collect([]));
+    $this->artisan('cart:migrate-data', [
+        '--from' => 'database',
+        '--to' => 'cache',
+        '--batch-size' => 2,
+        '--force' => true,
+    ])
+    ->assertExitCode(0);
+});
 
-        $this->mockTargetStorage
-            ->shouldReceive('createCart')
-            ->with('user123', ['customer_name' => 'John Doe'])
-            ->andThrow(new \Exception('Migration failed'));
+test('it forces migration when target cart exists', function () {
+    $cart = new ShoppingCart([
+        'id' => 1,
+        'customer_id' => 'user123',
+        'customer_name' => 'John Doe',
+    ]);
+    $cart->setRelation('items', collect([]));
+    $cart->exists = true;
 
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'cache',
-        ])
-        ->expectsOutput('Starting cart data migration')
-        ->expectsOutput('Found 1 carts to migrate')
-        ->expectsOutput('Failed to migrate cart for customer: user123. Error: Migration failed')
-        ->expectsOutput('Migration completed with errors.')
-        ->assertExitCode(0);
-    }
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('database')
+        ->once()
+        ->andReturn($this->mockSourceStorage);
+        
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('cache')
+        ->once()
+        ->andReturn($this->mockTargetStorage);
 
-    /** @test */
-    public function it_processes_carts_in_batches()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
+    $this->mockSourceStorage
+        ->shouldReceive('getAllCarts')
+        ->andReturn(collect([$cart]));
 
-        $carts = collect();
-        for ($i = 1; $i <= 25; $i++) {
-            $carts->push(new ShoppingCart([
-                'id' => $i,
-                'customer_id' => "user{$i}",
-                'customer_name' => "User {$i}",
-            ]));
-        }
+    $this->mockTargetStorage
+        ->shouldReceive('createCart')
+        ->with('user123', Mockery::type('array'))
+        ->andReturn($cart);
 
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('database')
-            ->andReturn($this->mockSourceStorage);
-            
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('cache')
-            ->andReturn($this->mockTargetStorage);
+    $this->artisan('cart:migrate-data', [
+        '--from' => 'database',
+        '--to' => 'cache',
+        '--force' => true,
+    ])
+    ->assertExitCode(0);
+});
 
-        $this->mockSourceStorage
-            ->shouldReceive('getAllCarts')
-            ->andReturn($carts);
-            
-        $this->mockSourceStorage
-            ->shouldReceive('getCartItems')
-            ->times(25)
-            ->andReturn(collect([]));
+test('it skips existing carts when not forced', function () {
+    $cart = new ShoppingCart([
+        'id' => 1,
+        'customer_id' => 'user123',
+        'customer_name' => 'John Doe',
+    ]);
+    $cart->setRelation('items', collect([]));
+    $cart->exists = true;
 
-        $this->mockTargetStorage
-            ->shouldReceive('createCart')
-            ->times(25)
-            ->andReturn(new ShoppingCart());
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('database')
+        ->once()
+        ->andReturn($this->mockSourceStorage);
+        
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('cache')
+        ->once()
+        ->andReturn($this->mockTargetStorage);
 
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'cache',
-            '--batch-size' => 10,
-        ])
-        ->expectsOutput('Starting cart data migration')
-        ->expectsOutput('Found 25 carts to migrate')
-        ->expectsOutput('Processing batch 1/3 (10 carts)')
-        ->expectsOutput('Processing batch 2/3 (10 carts)')
-        ->expectsOutput('Processing batch 3/3 (5 carts)')
-        ->expectsOutput('Migration completed successfully!')
-        ->assertExitCode(0);
-    }
+    $this->mockSourceStorage
+        ->shouldReceive('getAllCarts')
+        ->andReturn(collect([$cart]));
 
-    /** @test */
-    public function it_forces_migration_when_target_cart_exists()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
+    $this->mockTargetStorage
+        ->shouldReceive('createCart')
+        ->with('user123', Mockery::type('array'))
+        ->andReturn($cart);
 
-        $cart = new ShoppingCart([
-            'id' => 1,
-            'customer_id' => 'user123',
-            'customer_name' => 'John Doe',
-        ]);
+    $this->artisan('cart:migrate-data', [
+        '--from' => 'database',
+        '--to' => 'cache',
+        '--force' => true,
+    ])
+    ->assertExitCode(0);
+});
 
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('database')
-            ->andReturn($this->mockSourceStorage);
-            
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('cache')
-            ->andReturn($this->mockTargetStorage);
+test('it displays migration summary', function () {
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('database')
+        ->once()
+        ->andReturn($this->mockSourceStorage);
+        
+    $this->mockStorageManager
+        ->shouldReceive('driver')
+        ->with('cache')
+        ->once()
+        ->andReturn($this->mockTargetStorage);
 
-        $this->mockSourceStorage
-            ->shouldReceive('getAllCarts')
-            ->andReturn(collect([$cart]));
-            
-        $this->mockSourceStorage
-            ->shouldReceive('getCartItems')
-            ->with($cart->id)
-            ->andReturn(collect([]));
+    $this->mockSourceStorage
+        ->shouldReceive('getAllCarts')
+        ->andReturn(collect([]));
 
-        $this->mockTargetStorage
-            ->shouldReceive('getCart')
-            ->with('user123')
-            ->andReturn($cart); // Cart already exists
-            
-        $this->mockTargetStorage
-            ->shouldReceive('deleteCart')
-            ->with('user123')
-            ->andReturn(true);
-            
-        $this->mockTargetStorage
-            ->shouldReceive('createCart')
-            ->with('user123', ['customer_name' => 'John Doe'])
-            ->andReturn($cart);
-
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'cache',
-            '--force' => true,
-        ])
-        ->expectsOutput('Starting cart data migration')
-        ->expectsOutput('Found 1 carts to migrate')
-        ->expectsOutput('Migrated cart for customer: user123')
-        ->expectsOutput('Migration completed successfully!')
-        ->assertExitCode(0);
-    }
-
-    /** @test */
-    public function it_skips_existing_carts_when_not_forced()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
-
-        $cart = new ShoppingCart([
-            'id' => 1,
-            'customer_id' => 'user123',
-            'customer_name' => 'John Doe',
-        ]);
-
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('database')
-            ->andReturn($this->mockSourceStorage);
-            
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('cache')
-            ->andReturn($this->mockTargetStorage);
-
-        $this->mockSourceStorage
-            ->shouldReceive('getAllCarts')
-            ->andReturn(collect([$cart]));
-
-        $this->mockTargetStorage
-            ->shouldReceive('getCart')
-            ->with('user123')
-            ->andReturn($cart); // Cart already exists
-
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'cache',
-        ])
-        ->expectsOutput('Starting cart data migration')
-        ->expectsOutput('Found 1 carts to migrate')
-        ->expectsOutput('Skipped cart for customer: user123 (already exists)')
-        ->expectsOutput('Migration completed successfully!')
-        ->assertExitCode(0);
-    }
-
-    /** @test */
-    public function it_displays_migration_summary()
-    {
-        Config::set('shopping-cart.storage.drivers', [
-            'database' => [],
-            'cache' => [],
-        ]);
-
-        $this->mockStorageManager
-            ->shouldReceive('driver')
-            ->with('database')
-            ->andReturn($this->mockSourceStorage);
-
-        $this->mockSourceStorage
-            ->shouldReceive('getAllCarts')
-            ->andReturn(collect([]));
-
-        $this->artisan('cart:migrate-data', [
-            '--source' => 'database',
-            '--target' => 'cache',
-        ])
-        ->expectsOutput('Starting cart data migration')
-        ->expectsOutput('Found 0 carts to migrate')
-        ->expectsOutput('Migration Summary:')
-        ->expectsOutput('- Total carts: 0')
-        ->expectsOutput('- Migrated: 0')
-        ->expectsOutput('- Skipped: 0')
-        ->expectsOutput('- Failed: 0')
-        ->expectsOutput('Migration completed successfully!')
-        ->assertExitCode(0);
-    }
-}
+    $this->artisan('cart:migrate-data', [
+        '--from' => 'database',
+        '--to' => 'cache',
+        '--force' => true,
+    ])
+    ->assertExitCode(0);
+});

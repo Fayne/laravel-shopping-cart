@@ -17,7 +17,7 @@ class CartStorageManager extends Manager
     public function getDefaultDriver(): string
     {
         if ($this->container->bound('config')) {
-            return $this->container['config']->get('shopping-cart.storage.default', 'database');
+            return $this->container['config']->get('shopping-cart.storage.default') ?: 'database';
         }
         
         return 'database';
@@ -82,7 +82,7 @@ class CartStorageManager extends Manager
         
         // 添加缓存层
         if ($config['enable_cache'] ?? true) {
-            $cacheConfig = $config['cache'] ?? [];
+            $cacheConfig = $this->container['config']->get('shopping-cart.storage.drivers.cache', []);
             $storage = new CacheCartStorage(
                 $storage,
                 $cacheConfig['prefix'] ?? 'cart',
@@ -93,7 +93,7 @@ class CartStorageManager extends Manager
         
         // 添加Redis层
         if ($config['enable_redis'] ?? false) {
-            $redisConfig = $config['redis'] ?? [];
+            $redisConfig = $this->container['config']->get('shopping-cart.storage.drivers.redis', []);
             $storage = new RedisCartStorage(
                 $storage,
                 $redisConfig['prefix'] ?? 'cart',

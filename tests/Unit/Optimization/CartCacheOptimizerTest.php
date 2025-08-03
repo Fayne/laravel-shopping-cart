@@ -1,414 +1,369 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Tests\Unit\Optimization;
-
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Mockery;
+
 use MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
-use MobileNowGroup\ShoppingCart\Tests\TestCase;
 
-class CartCacheOptimizerTest extends TestCase
-{
-    use RefreshDatabase;
+uses(RefreshDatabase::class);
 
-    protected CartCacheOptimizer $optimizer;
+beforeEach(function () {
+    $this->optimizer = new CartCacheOptimizer();
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+afterEach(function () {
+    Mockery::close();
+});
+
+test('it generates correct cache keys', function () {
+    $customerId = 'user123';
+    $cartId = '1';
+    
+    $cartKey = $this->optimizer->getCacheKey('cart', $customerId);
+    $itemsKey = $this->optimizer->getCacheKey('items', $cartId);
+    $statsKey = $this->optimizer->getCacheKey('stats', $customerId);
+    
+    expect($cartKey)->toBe('cart:cart:user123');
+    expect($itemsKey)->toBe('cart:items:1');
+    expect($statsKey)->toBe('cart:stats:user123');
+});
+
+test('it can cache cart data', function () {
+    $customerId = 'user123';
+    $cart = new ShoppingCart([
+        'id' => 1,
+        'customer_id' => $customerId,
+        'customer_name' => 'John Doe',
+    ]);
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andReturnSelf();
         
-        $this->optimizer = new CartCacheOptimizer();
-    }
+    Cache::shouldReceive('put')
+        ->once()
+        ->with('cart:cart:user123', $cart, Mockery::type('int'))
+        ->andReturn(true);
 
-    protected function tearDown(): void
-    {
-        Mockery::close();
-        parent::tearDown();
-    }
+    $result = $this->optimizer->cacheCart($customerId, $cart);
 
-    /** @test */
-    public function it_generates_correct_cache_keys()
-    {
-        $customerId = 'user123';
-        $cartId = '1';
-        
-        $cartKey = $this->optimizer->getCacheKey('cart', $customerId);
-        $itemsKey = $this->optimizer->getCacheKey('items', $cartId);
-        $statsKey = $this->optimizer->getCacheKey('stats', $customerId);
-        
-        $this->assertEquals('cart:cart:user123', $cartKey);
-        $this->assertEquals('cart:items:1', $itemsKey);
-        $this->assertEquals('cart:stats:user123', $statsKey);
-    }
+    expect($result)->toBeTrue();
+});
 
-    /** @test */
-    public function it_can_cache_cart_data()
-    {
-        $customerId = 'user123';
-        $cart = new ShoppingCart([
+test('it can cache cart items', function () {
+    $cartId = '1';
+    $items = collect([
+        new ShoppingCartItem([
             'id' => 1,
-            'customer_id' => $customerId,
-            'customer_name' => 'John Doe',
-        ]);
+            'cart_id' => $cartId,
+            'product_id' => 1,
+            'quantity' => 2,
+            'price' => 10.00,
+            'name' => 'Test Product',
+        ])
+    ]);
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andReturnSelf();
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('put')
-            ->once()
-            ->with('cart:cart:user123', $cart, Mockery::type('int'))
-            ->andReturn(true);
+    Cache::shouldReceive('put')
+        ->once()
+        ->with('cart:items:1', $items, Mockery::type('int'))
+        ->andReturn(true);
 
-        $result = $this->optimizer->cacheCart($customerId, $cart);
+    $result = $this->optimizer->cacheCartItems($cartId, $items);
 
-        $this->assertTrue($result);
-    }
+    expect($result)->toBeTrue();
+});
 
-    /** @test */
-    public function it_can_cache_cart_items()
-    {
-        $cartId = '1';
-        $items = collect([
-            new ShoppingCartItem([
-                'id' => 1,
-                'cart_id' => $cartId,
-                'product_id' => 1,
-                'quantity' => 2,
-                'price' => 10.00,
-                'name' => 'Test Product',
-            ])
-        ]);
+test('it can cache cart stats', function () {
+    $customerId = 'user123';
+    $stats = ['items_count' => 5, 'items_qty' => 10];
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andReturnSelf();
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('put')
-            ->once()
-            ->with('cart:items:1', $items, Mockery::type('int'))
-            ->andReturn(true);
+    Cache::shouldReceive('put')
+        ->once()
+        ->with('cart:stats:user123', $stats, Mockery::type('int'))
+        ->andReturn(true);
 
-        $result = $this->optimizer->cacheCartItems($cartId, $items);
+    $result = $this->optimizer->cacheCartStats($customerId, $stats);
 
-        $this->assertTrue($result);
-    }
+    expect($result)->toBeTrue();
+});
 
-    /** @test */
-    public function it_can_cache_cart_stats()
-    {
-        $customerId = 'user123';
-        $stats = ['items_count' => 5, 'items_qty' => 10];
+test('it can preload cart data', function () {
+    $customerIds = ['user123', 'user456'];
+    
+    Cache::shouldReceive('store')
+        ->times(6) // 2 customers * 3 cache operations each
+        ->with('default')
+        ->andReturnSelf();
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('put')
-            ->once()
-            ->with('cart:stats:user123', $stats, Mockery::type('int'))
-            ->andReturn(true);
+    Cache::shouldReceive('remember')
+        ->times(6)
+        ->andReturn(null); // Simulate cache miss
 
-        $result = $this->optimizer->cacheCartStats($customerId, $stats);
+    $result = $this->optimizer->preloadCartData($customerIds);
 
-        $this->assertTrue($result);
-    }
+    expect($result)->toBeArray()
+        ->toHaveKey('preloaded')
+        ->toHaveKey('failed');
+});
 
-    /** @test */
-    public function it_can_preload_cart_data()
-    {
-        $customerIds = ['user123', 'user456'];
+test('it can clear cart cache', function () {
+    $customerId = 'user123';
+    $cartId = '1';
+    
+    Cache::shouldReceive('store')
+        ->times(3)
+        ->with('default')
+        ->andReturnSelf();
         
-        Cache::shouldReceive('store')
-            ->times(6) // 2 customers * 3 cache operations each
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('remember')
-            ->times(6)
-            ->andReturn(null); // Simulate cache miss
-
-        $result = $this->optimizer->preloadCartData($customerIds);
-
-        $this->assertIsArray($result);
-        $this->assertArrayHasKey('preloaded', $result);
-        $this->assertArrayHasKey('failed', $result);
-    }
-
-    /** @test */
-    public function it_can_clear_cart_cache()
-    {
-        $customerId = 'user123';
-        $cartId = '1';
+    Cache::shouldReceive('forget')
+        ->once()
+        ->with('cart:cart:user123')
+        ->andReturn(true);
         
-        Cache::shouldReceive('store')
-            ->times(3)
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('forget')
-            ->once()
-            ->with('cart:cart:user123')
-            ->andReturn(true);
-            
-        Cache::shouldReceive('forget')
-            ->once()
-            ->with('cart:items:1')
-            ->andReturn(true);
-            
-        Cache::shouldReceive('forget')
-            ->once()
-            ->with('cart:stats:user123')
-            ->andReturn(true);
-
-        $result = $this->optimizer->clearCartCache($customerId, $cartId);
-
-        $this->assertTrue($result);
-    }
-
-    /** @test */
-    public function it_can_bulk_clear_cache()
-    {
-        $customerIds = ['user123', 'user456'];
+    Cache::shouldReceive('forget')
+        ->once()
+        ->with('cart:items:1')
+        ->andReturn(true);
         
-        Cache::shouldReceive('store')
-            ->times(4) // 2 customers * 2 cache operations each (cart + stats)
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('forget')
-            ->times(4)
-            ->andReturn(true);
+    Cache::shouldReceive('forget')
+        ->once()
+        ->with('cart:stats:user123')
+        ->andReturn(true);
 
-        $result = $this->optimizer->bulkClearCache($customerIds);
+    $result = $this->optimizer->clearCartCache($customerId, $cartId);
 
-        $this->assertIsArray($result);
-        $this->assertArrayHasKey('cleared', $result);
-        $this->assertArrayHasKey('failed', $result);
-    }
+    expect($result)->toBeTrue();
+});
 
-    /** @test */
-    public function it_calculates_dynamic_ttl_based_on_activity()
-    {
-        $customerId = 'user123';
+test('it can bulk clear cache', function () {
+    $customerIds = ['user123', 'user456'];
+    
+    Cache::shouldReceive('store')
+        ->times(4) // 2 customers * 2 cache operations each (cart + stats)
+        ->with('default')
+        ->andReturnSelf();
         
-        // Mock recent activity
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('get')
-            ->once()
-            ->with('cart:activity:user123')
-            ->andReturn(now()->timestamp);
+    Cache::shouldReceive('forget')
+        ->times(4)
+        ->andReturn(true);
 
-        $ttl = $this->optimizer->calculateDynamicTTL($customerId);
+    $result = $this->optimizer->bulkClearCache($customerIds);
 
-        $this->assertIsInt($ttl);
-        $this->assertGreaterThan(0, $ttl);
-    }
+    expect($result)->toBeArray()
+        ->toHaveKey('cleared')
+        ->toHaveKey('failed');
+});
 
-    /** @test */
-    public function it_calculates_default_ttl_for_inactive_users()
-    {
-        $customerId = 'user123';
+test('it calculates dynamic ttl based on activity', function () {
+    $customerId = 'user123';
+    
+    // Mock recent activity
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andReturnSelf();
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('get')
-            ->once()
-            ->with('cart:activity:user123')
-            ->andReturn(null);
+    Cache::shouldReceive('get')
+        ->once()
+        ->with('cart:activity:user123')
+        ->andReturn(now()->timestamp);
 
-        $ttl = $this->optimizer->calculateDynamicTTL($customerId);
+    $ttl = $this->optimizer->calculateDynamicTTL($customerId);
 
-        $this->assertEquals(3600, $ttl); // Default TTL
-    }
+    expect($ttl)->toBeInt()
+        ->toBeGreaterThan(0);
+});
 
-    /** @test */
-    public function it_records_cache_hit()
-    {
-        $key = 'cart:cart:user123';
+test('it calculates default ttl for inactive users', function () {
+    $customerId = 'user123';
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andReturnSelf();
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('increment')
-            ->once()
-            ->with('cart:monitor:hits')
-            ->andReturn(1);
-            
-        Cache::shouldReceive('increment')
-            ->once()
-            ->with('cart:monitor:hits:cart')
-            ->andReturn(1);
+    Cache::shouldReceive('get')
+        ->once()
+        ->with('cart:activity:user123')
+        ->andReturn(null);
 
-        $this->optimizer->recordCacheHit($key);
+    $ttl = $this->optimizer->calculateDynamicTTL($customerId);
 
-        // No assertion needed as we're just testing the method doesn't throw
-        $this->assertTrue(true);
-    }
+    expect($ttl)->toBe(3600); // Default TTL
+});
 
-    /** @test */
-    public function it_records_cache_miss()
-    {
-        $key = 'cart:cart:user123';
+test('it records cache hit', function () {
+    $key = 'cart:cart:user123';
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andReturnSelf();
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('increment')
-            ->once()
-            ->with('cart:monitor:misses')
-            ->andReturn(1);
-            
-        Cache::shouldReceive('increment')
-            ->once()
-            ->with('cart:monitor:misses:cart')
-            ->andReturn(1);
-
-        $this->optimizer->recordCacheMiss($key);
-
-        // No assertion needed as we're just testing the method doesn't throw
-        $this->assertTrue(true);
-    }
-
-    /** @test */
-    public function it_gets_cache_statistics()
-    {
-        Cache::shouldReceive('store')
-            ->times(4)
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('get')
-            ->once()
-            ->with('cart:monitor:hits', 0)
-            ->andReturn(100);
-            
-        Cache::shouldReceive('get')
-            ->once()
-            ->with('cart:monitor:misses', 0)
-            ->andReturn(20);
-            
-        Cache::shouldReceive('get')
-            ->once()
-            ->with('cart:monitor:hits:cart', 0)
-            ->andReturn(50);
-            
-        Cache::shouldReceive('get')
-            ->once()
-            ->with('cart:monitor:hits:items', 0)
-            ->andReturn(30);
-
-        $stats = $this->optimizer->getCacheStats();
-
-        $this->assertIsArray($stats);
-        $this->assertArrayHasKey('total_hits', $stats);
-        $this->assertArrayHasKey('total_misses', $stats);
-        $this->assertArrayHasKey('hit_rate', $stats);
-        $this->assertEquals(100, $stats['total_hits']);
-        $this->assertEquals(20, $stats['total_misses']);
-    }
-
-    /** @test */
-    public function it_cleans_expired_monitoring_data()
-    {
-        Cache::shouldReceive('store')
-            ->times(4)
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('forget')
-            ->times(4)
-            ->andReturn(true);
-
-        $result = $this->optimizer->cleanExpiredMonitoringData();
-
-        $this->assertTrue($result);
-    }
-
-    /** @test */
-    public function it_updates_user_activity()
-    {
-        $customerId = 'user123';
+    Cache::shouldReceive('increment')
+        ->once()
+        ->with('cart:monitor:hits')
+        ->andReturn(1);
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('put')
-            ->once()
-            ->with('cart:activity:user123', Mockery::type('int'), 86400)
-            ->andReturn(true);
+    Cache::shouldReceive('increment')
+        ->once()
+        ->with('cart:monitor:hits:cart')
+        ->andReturn(1);
 
-        $result = $this->optimizer->updateUserActivity($customerId);
+    $this->optimizer->recordCacheHit($key);
 
-        $this->assertTrue($result);
-    }
+    // No assertion needed as we're just testing the method doesn't throw
+    expect(true)->toBeTrue();
+});
 
-    /** @test */
-    public function it_handles_cache_exceptions_gracefully()
-    {
-        $customerId = 'user123';
-        $cart = new ShoppingCart([
-            'id' => 1,
-            'customer_id' => $customerId,
-            'customer_name' => 'John Doe',
-        ]);
+test('it records cache miss', function () {
+    $key = 'cart:cart:user123';
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andReturnSelf();
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('default')
-            ->andThrow(new \Exception('Cache connection failed'));
-            
-        Log::shouldReceive('error')
-            ->once()
-            ->with(Mockery::type('string'), Mockery::type('array'));
-
-        $result = $this->optimizer->cacheCart($customerId, $cart);
-
-        $this->assertFalse($result);
-    }
-
-    /** @test */
-    public function it_uses_custom_cache_store_when_configured()
-    {
-        $optimizer = new CartCacheOptimizer('redis');
-        $customerId = 'user123';
-        $cart = new ShoppingCart([
-            'id' => 1,
-            'customer_id' => $customerId,
-            'customer_name' => 'John Doe',
-        ]);
+    Cache::shouldReceive('increment')
+        ->once()
+        ->with('cart:monitor:misses')
+        ->andReturn(1);
         
-        Cache::shouldReceive('store')
-            ->once()
-            ->with('redis')
-            ->andReturnSelf();
-            
-        Cache::shouldReceive('put')
-            ->once()
-            ->andReturn(true);
+    Cache::shouldReceive('increment')
+        ->once()
+        ->with('cart:monitor:misses:cart')
+        ->andReturn(1);
 
-        $result = $optimizer->cacheCart($customerId, $cart);
+    $this->optimizer->recordCacheMiss($key);
 
-        $this->assertTrue($result);
-    }
-}
+    // No assertion needed as we're just testing the method doesn't throw
+    expect(true)->toBeTrue();
+});
+
+test('it gets cache statistics', function () {
+    Cache::shouldReceive('store')
+        ->times(4)
+        ->with('default')
+        ->andReturnSelf();
+        
+    Cache::shouldReceive('get')
+        ->once()
+        ->with('cart:monitor:hits', 0)
+        ->andReturn(100);
+        
+    Cache::shouldReceive('get')
+        ->once()
+        ->with('cart:monitor:misses', 0)
+        ->andReturn(20);
+        
+    Cache::shouldReceive('get')
+        ->once()
+        ->with('cart:monitor:hits:cart', 0)
+        ->andReturn(50);
+        
+    Cache::shouldReceive('get')
+        ->once()
+        ->with('cart:monitor:hits:items', 0)
+        ->andReturn(30);
+
+    $stats = $this->optimizer->getCacheStats();
+
+    expect($stats)->toBeArray()
+        ->toHaveKey('total_hits')
+        ->toHaveKey('total_misses')
+        ->toHaveKey('hit_rate');
+    expect($stats['total_hits'])->toBe(100);
+    expect($stats['total_misses'])->toBe(20);
+});
+
+test('it cleans expired monitoring data', function () {
+    Cache::shouldReceive('store')
+        ->times(4)
+        ->with('default')
+        ->andReturnSelf();
+        
+    Cache::shouldReceive('forget')
+        ->times(4)
+        ->andReturn(true);
+
+    $result = $this->optimizer->cleanExpiredMonitoringData();
+
+    expect($result)->toBeTrue();
+});
+
+test('it updates user activity', function () {
+    $customerId = 'user123';
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andReturnSelf();
+        
+    Cache::shouldReceive('put')
+        ->once()
+        ->with('cart:activity:user123', Mockery::type('int'), 86400)
+        ->andReturn(true);
+
+    $result = $this->optimizer->updateUserActivity($customerId);
+
+    expect($result)->toBeTrue();
+});
+
+test('it handles cache exceptions gracefully', function () {
+    $customerId = 'user123';
+    $cart = new ShoppingCart([
+        'id' => 1,
+        'customer_id' => $customerId,
+        'customer_name' => 'John Doe',
+    ]);
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('default')
+        ->andThrow(new \Exception('Cache connection failed'));
+        
+    Log::shouldReceive('error')
+        ->once()
+        ->with(Mockery::type('string'), Mockery::type('array'));
+
+    $result = $this->optimizer->cacheCart($customerId, $cart);
+
+    expect($result)->toBeFalse();
+});
+
+test('it uses custom cache store when configured', function () {
+    $optimizer = new CartCacheOptimizer('redis');
+    $customerId = 'user123';
+    $cart = new ShoppingCart([
+        'id' => 1,
+        'customer_id' => $customerId,
+        'customer_name' => 'John Doe',
+    ]);
+    
+    Cache::shouldReceive('store')
+        ->once()
+        ->with('redis')
+        ->andReturnSelf();
+        
+    Cache::shouldReceive('put')
+        ->once()
+        ->andReturn(true);
+
+    $result = $optimizer->cacheCart($customerId, $cart);
+
+    expect($result)->toBeTrue();
+});

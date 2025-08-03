@@ -1,6 +1,6 @@
 <?php
 
-use Mockery;
+
 use MobileNowGroup\ShoppingCart\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
@@ -16,7 +16,7 @@ afterEach(function () {
 });
 
 // Helper function to create mock user
-function createMockUser($id) {
+function createMockUserForShoppingCart($id) {
     return new class($id) extends Authenticatable {
         public $id;
         public function __construct($id) {
@@ -24,6 +24,24 @@ function createMockUser($id) {
         }
         public function getAuthIdentifier() {
             return $this->id;
+        }
+        public function getAuthIdentifierName() {
+            return 'id';
+        }
+        public function getAuthPassword() {
+            return 'password';
+        }
+        public function getAuthPasswordName() {
+            return 'password';
+        }
+        public function getRememberToken() {
+            return null;
+        }
+        public function setRememberToken($value) {
+            // Do nothing
+        }
+        public function getRememberTokenName() {
+            return 'remember_token';
         }
     };
 }
@@ -56,7 +74,7 @@ test('可以获取客户的购物车', function () {
     $customerId = 'user123';
     $cartModel = createMockCartModel(1, $customerId);
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -76,7 +94,7 @@ test('可以添加商品到购物车', function () {
     $cartModel = createMockCartModel(1, $customerId);
     $mockItem = createMockCartableItem(1);
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -106,7 +124,7 @@ test('可以添加带默认选项的商品', function () {
     $cartModel = createMockCartModel(1, $customerId);
     $mockItem = createMockCartableItem(1, 10.00, 'TEST-SKU-2');
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -135,7 +153,7 @@ test('可以从购物车移除商品', function () {
     
     $cartModel = createMockCartModel(1, $customerId);
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -168,7 +186,7 @@ test('可以更新购物车中的商品', function () {
     $mockCartItem->latest_price = 10.00;
     $mockCartItem->weight = 1.0;
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -197,7 +215,7 @@ test('可以清空购物车', function () {
     $customerId = 'user123';
     $cartModel = createMockCartModel(1, $customerId);
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -225,7 +243,7 @@ test('可以切换购买状态', function () {
     $cartModel = createMockCartModel(1, $customerId);
     $mockCartItem = Mockery::mock('MobileNowGroup\\ShoppingCart\\Models\\ShoppingCartItem');
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -255,7 +273,7 @@ test('可以获取商品数量', function () {
     $cartModel = createMockCartModel(1, $customerId);
     $count = 5;
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -279,7 +297,7 @@ test('可以获取商品总量', function () {
     $cartModel = createMockCartModel(1, $customerId);
     $qty = 10;
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -305,7 +323,7 @@ test('处理购物车中已存在的商品', function () {
     $cartModel = createMockCartModel(1, $customerId);
     $mockItem = createMockCartableItem(1);
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -335,7 +353,7 @@ test('添加不存在于购物车的新商品', function () {
     $cartModel = createMockCartModel(1, $customerId);
     $mockItem = createMockCartableItem(2, 10.00, 'TEST-SKU-2', 'Test Product 2', 1.5);
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
@@ -366,7 +384,7 @@ test('处理不同选项作为不同商品', function () {
     $cartModel = createMockCartModel(1, $customerId);
     $mockItem = createMockCartableItem(3, 10.00, 'TEST-SKU-3', 'Test Product with Options', 2.0);
     
-    $this->actingAs(createMockUser($customerId));
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $this->mockStorage
         ->shouldReceive('getCart')
