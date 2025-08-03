@@ -74,4 +74,78 @@ return [
             'model' => 'Modules\Product\Models\ProductSku',
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Storage Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure the storage layer for shopping cart data. This allows you to
+    | choose between different storage strategies for optimal performance
+    | in different environments.
+    |
+    */
+
+    'storage' => [
+        /*
+        |--------------------------------------------------------------------------
+        | Default Storage Driver
+        |--------------------------------------------------------------------------
+        |
+        | This option controls the default storage driver that will be used to
+        | store shopping cart data. You may set this to any of the drivers
+        | defined in the "drivers" array below.
+        |
+        | Supported: "database", "cache", "redis", "layered"
+        |
+        */
+
+        'default' => env('CART_STORAGE_DRIVER', 'database'),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Storage Drivers
+        |--------------------------------------------------------------------------
+        |
+        | Here you may configure the storage drivers for your application's
+        | shopping cart. Each driver has its own configuration options.
+        |
+        */
+
+        'drivers' => [
+            'database' => [
+                'driver' => 'database',
+            ],
+
+            'cache' => [
+                'driver' => 'cache',
+                'store' => env('CART_CACHE_STORE', 'default'),
+                'prefix' => env('CART_CACHE_PREFIX', 'cart'),
+                'ttl' => env('CART_CACHE_TTL', 3600), // 1 hour
+            ],
+
+            'redis' => [
+                'driver' => 'redis',
+                'connection' => env('CART_REDIS_CONNECTION', 'default'),
+                'prefix' => env('CART_REDIS_PREFIX', 'cart'),
+                'ttl' => env('CART_REDIS_TTL', 86400), // 24 hours
+            ],
+
+            'layered' => [
+                'driver' => 'layered',
+                'enable_cache' => env('CART_LAYERED_CACHE', true),
+                'enable_redis' => env('CART_LAYERED_REDIS', false),
+                'cache' => [
+                    'store' => env('CART_CACHE_STORE', 'default'),
+                    'prefix' => env('CART_CACHE_PREFIX', 'cart'),
+                    'ttl' => env('CART_CACHE_TTL', 3600),
+                ],
+                'redis' => [
+                    'connection' => env('CART_REDIS_CONNECTION', 'default'),
+                    'prefix' => env('CART_REDIS_PREFIX', 'cart'),
+                    'ttl' => env('CART_REDIS_TTL', 86400),
+                ],
+            ],
+        ],
+    ],
 ];

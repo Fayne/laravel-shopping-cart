@@ -5,6 +5,11 @@ namespace MobileNowGroup\ShoppingCart;
 use Illuminate\Support\Facades\File;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
+use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
+use MobileNowGroup\ShoppingCart\Cache\CartCacheOptimizer;
+use MobileNowGroup\ShoppingCart\Console\Commands;
+use MobileNowGroup\ShoppingCart\Listeners\CartOperationListener;
 
 class ShoppingCartServiceProvider extends PackageServiceProvider
 {
@@ -41,7 +46,31 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             __DIR__ . '/../database/migrations' => database_path('migrations'),
         ], 'migrations');
 
-        $this->app->bind('shopping-cart', ShoppingCart::class);
+        // 注册存储管理器
+        $this->app->singleton('cart.storage', function ($app) {
+            return new CartStorageManager($app);
+        });
+
+        // 注册存储接口
+        $this->app->bind(CartStorageInterface::class, function ($app) {
+            return $app['cart.storage']->driver();
+        });
+
+        // 注册购物车服务
+        $this->app->singleton('shopping-cart', function ($app) {
+            return new ShoppingCart($app[CartStorageInterface::class]);
+        });
+
+        // 注册缓存优化器
+        $this->app->singleton(CartCacheOptimizer::class);
+
+        // 注册命令
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                Commands\MigrateCartDataCommand::class,
+                Commands\CartPerformanceMonitorCommand::class,
+            ]);
+        }
     }
 
     /**
