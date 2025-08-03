@@ -79,6 +79,14 @@ class DatabaseCartStorage implements CartStorageInterface
     }
 
     /**
+     * 添加购物车项目 (别名)
+     */
+    public function addItem(int $cartId, array $itemData): ShoppingCartItem
+    {
+        return $this->addCartItem($cartId, $itemData);
+    }
+
+    /**
      * 更新购物车项目
      */
     public function updateCartItem(int $itemId, array $data): bool

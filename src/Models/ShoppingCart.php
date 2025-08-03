@@ -26,14 +26,16 @@ use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 class ShoppingCart extends Model
 {
     /**
-     * The attributes that aren't mass assignable.
+     * The attributes that are mass assignable.
      *
-     * @var array<string>|bool
+     * @var array<string>
      */
-    protected $guarded = [
-        'id',
-        'created_at',
-        'updated_at',
+    protected $fillable = [
+        'customer_id',
+        'customer_name',
+        'customer_email',
+        'session_id',
+        'metadata',
     ];
 
     /**
@@ -41,6 +43,7 @@ class ShoppingCart extends Model
      */
     protected $casts = [
         'is_temp' => 'bool',
+        'metadata' => 'array',
     ];
 
     /**

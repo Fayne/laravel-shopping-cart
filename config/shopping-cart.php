@@ -61,11 +61,11 @@ return [
             'foreign_id' => 'user_id',
         ],
         'carts' => [
-            'table' => 'carts',
+            'table' => 'shopping_carts',
             'foreign_id' => 'cart_id',
         ],
         'cart_items' => [
-            'table' => 'cart_items',
+            'table' => 'shopping_cart_items',
         ],
         'products' => [
             'model' => 'Modules\Product\Models\Product',
@@ -73,6 +73,54 @@ return [
         'skus' => [
             'model' => 'Modules\Product\Models\ProductSku',
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure caching options for the shopping cart.
+    |
+    */
+
+    'cache' => [
+        'enabled' => env('CART_CACHE_ENABLED', true),
+        'ttl' => env('CART_CACHE_TTL', 3600),
+        'store' => env('CART_CACHE_STORE', 'default'),
+        'prefix' => env('CART_CACHE_PREFIX', 'cart'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Events Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure event handling for the shopping cart.
+    |
+    */
+
+    'events' => [
+        'enabled' => env('CART_EVENTS_ENABLED', true),
+        'listeners' => [
+            'cart_operation' => true,
+            'collect_totals' => true,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routes Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure routing options for the shopping cart.
+    |
+    */
+
+    'routes' => [
+        'enabled' => env('CART_ROUTES_ENABLED', true),
+        'prefix' => env('CART_ROUTES_PREFIX', 'api/cart'),
+        'middleware' => ['api'],
     ],
 
     /*

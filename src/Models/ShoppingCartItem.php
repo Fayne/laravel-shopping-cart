@@ -23,15 +23,25 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class ShoppingCartItem extends Model
 {
+    protected $fillable = [
+        'cart_id',
+        'product_id',
+        'quantity',
+        'price',
+        'name',
+        'description',
+        'image',
+        'options',
+        'is_selected',
+    ];
+
     protected $casts = [
         'additional' => 'array',
         'selected' => 'bool',
-    ];
-
-    protected $guarded = [
-        'id',
-        'created_at',
-        'updated_at',
+        'options' => 'array',
+        'is_selected' => 'boolean',
+        'quantity' => 'integer',
+        'price' => 'decimal:2',
     ];
     /**
      * Create a new instance of the model.

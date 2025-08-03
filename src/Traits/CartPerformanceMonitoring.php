@@ -231,4 +231,37 @@ trait CartPerformanceMonitoring
     {
         $this->enablePerformanceMonitoring = false;
     }
+
+    /**
+     * 监控操作性能
+     *
+     * @param string $operation
+     * @param callable $callback
+     * @return mixed
+     * @throws \Exception
+     */
+    protected function monitorPerformance(string $operation, callable $callback)
+    {
+        if (!$this->enablePerformanceMonitoring) {
+            return $callback();
+        }
+
+        $this->startPerformanceMonitoring($operation);
+        
+        try {
+            $result = $callback();
+            $this->endPerformanceMonitoring($operation);
+            return $result;
+        } catch (\Exception $e) {
+            $this->endPerformanceMonitoring($operation, ['error' => $e->getMessage()]);
+            
+            Log::error('Cart operation failed', [
+                'operation' => $operation,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            throw $e;
+        }
+    }
 }

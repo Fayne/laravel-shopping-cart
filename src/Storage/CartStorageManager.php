@@ -16,7 +16,11 @@ class CartStorageManager extends Manager
      */
     public function getDefaultDriver(): string
     {
-        return $this->config->get('shopping-cart.storage.default', 'database');
+        if ($this->container->bound('config')) {
+            return $this->container['config']->get('shopping-cart.storage.default', 'database');
+        }
+        
+        return 'database';
     }
 
     /**
@@ -32,7 +36,10 @@ class CartStorageManager extends Manager
      */
     public function createCacheDriver(): CartStorageInterface
     {
-        $config = $this->config->get('shopping-cart.storage.drivers.cache', []);
+        $config = [];
+        if ($this->container->bound('config')) {
+            $config = $this->container['config']->get('shopping-cart.storage.drivers.cache', []);
+        }
         
         return new CacheCartStorage(
             $this->createDatabaseDriver(),
@@ -47,7 +54,10 @@ class CartStorageManager extends Manager
      */
     public function createRedisDriver(): CartStorageInterface
     {
-        $config = $this->config->get('shopping-cart.storage.drivers.redis', []);
+        $config = [];
+        if ($this->container->bound('config')) {
+            $config = $this->container['config']->get('shopping-cart.storage.drivers.redis', []);
+        }
         
         return new RedisCartStorage(
             $this->createDatabaseDriver(),
@@ -62,7 +72,10 @@ class CartStorageManager extends Manager
      */
     public function createLayeredDriver(): CartStorageInterface
     {
-        $config = $this->config->get('shopping-cart.storage.drivers.layered', []);
+        $config = [];
+        if ($this->container->bound('config')) {
+            $config = $this->container['config']->get('shopping-cart.storage.drivers.layered', []);
+        }
         
         // 构建存储层次
         $storage = $this->createDatabaseDriver();
