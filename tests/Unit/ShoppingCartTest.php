@@ -8,6 +8,18 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 
+// Helper function to create mock user for shopping cart
+if (!function_exists('createMockUserForShoppingCart')) {
+    function createMockUserForShoppingCart($customerId) {
+        $user = Mockery::mock(AuthenticatableContract::class);
+        $user->shouldReceive('getAuthIdentifier')->andReturn($customerId);
+        $user->shouldReceive('getAttribute')->with('name')->andReturn('Test User');
+        $user->shouldReceive('setAttribute')->with('name', 'Test User')->andReturnSelf();
+        $user->name = 'Test User';
+        return $user;
+    }
+}
+
 beforeEach(function () {
     $this->mockStorage = Mockery::mock(CartStorageInterface::class);
     $this->cart = new ShoppingCart($this->mockStorage);
@@ -52,7 +64,11 @@ test('it can create cart for customer', function () {
     ]);
     $cartModel->id = 1;
 
-    $this->actingAs(createMockUserForShoppingCart($customerId));
+    $user = Mockery::mock(AuthenticatableContract::class);
+    $user->shouldReceive('getAuthIdentifier')->andReturn($customerId);
+    $user->shouldReceive('getAttribute')->with('name')->andReturn($customerName);
+    $user->name = $customerName;
+    $this->actingAs($user);
 
     $this->mockStorage
         ->shouldReceive('createCart')
@@ -100,7 +116,12 @@ test('it can add product to cart', function () {
     $this->mockStorage
         ->shouldReceive('createCart')
         ->once()
-        ->with(Mockery::type('array'))
+        ->with([
+            'items_count' => 0,
+            'customer_id' => $customerId,
+            'customer_name' => 'Test User',
+            'is_temp' => false,
+        ])
         ->andReturn($cartModel);
         
     $cartItem = new ShoppingCartItem([
@@ -232,7 +253,7 @@ test('it can update items in cart', function () {
     
     $this->mockStorage
         ->shouldReceive('getCart')
-        ->twice()
+        ->once()
         ->with($customerId, false)
         ->andReturn($cartModel);
 
@@ -256,7 +277,7 @@ test('it can empty cart', function () {
         ->shouldReceive('getCart')
         ->twice()
         ->with($customerId, false)
-        ->andReturn($cartModel, $cartModel);
+        ->andReturn($cartModel);
         
     $this->mockStorage
         ->shouldReceive('emptyCart')
