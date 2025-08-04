@@ -4,6 +4,12 @@ use MobileNowGroup\ShoppingCart\Http\Controllers\CartController;
 use MobileNowGroup\ShoppingCart\ShoppingCart;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\StoreRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\UpdateRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\RemoveRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\EmptyCartRequest;
+use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as ShoppingCartFacade;
+use MobileNowGroup\ShoppingCart\Models\ShoppingCart as ShoppingCartModel;
 
 
 describe('CartController', function () {
@@ -11,6 +17,10 @@ describe('CartController', function () {
         $this->controller = new CartController();
         $this->mockShoppingCart = Mockery::mock(ShoppingCart::class);
         $this->mockRequest = Mockery::mock(Request::class);
+        $this->mockStoreRequest = Mockery::mock(StoreRequest::class);
+        $this->mockUpdateRequest = Mockery::mock(UpdateRequest::class);
+        $this->mockRemoveRequest = Mockery::mock(RemoveRequest::class);
+        $this->mockEmptyRequest = Mockery::mock(EmptyCartRequest::class);
         
         // Mock 用户认证
         $this->actingAs(createMockUserForController(1));
@@ -21,159 +31,75 @@ describe('CartController', function () {
     });
     
     it('可以显示购物车', function () {
-        $mockCart = (object) [
-            'id' => 1,
-            'customer_id' => 1,
-            'items' => [],
-            'total' => 0
-        ];
+        $mockCart = Mockery::mock(ShoppingCartModel::class);
+        $mockCart->shouldReceive('getAttribute')->andReturn(null);
+        $mockCart->shouldReceive('toArray')->andReturn([]);
         
-        $this->mockShoppingCart->shouldReceive('getCart')
+        ShoppingCartFacade::shouldReceive('collectTotals')
+            ->once();
+        
+        ShoppingCartFacade::shouldReceive('getCart')
             ->once()
             ->andReturn($mockCart);
         
-        // 使用反射来注入依赖
-        $reflection = new ReflectionClass($this->controller);
-        if ($reflection->hasProperty('shoppingCart')) {
-            $property = $reflection->getProperty('shoppingCart');
-            $property->setAccessible(true);
-            $property->setValue($this->controller, $this->mockShoppingCart);
-        }
-        
-        // 模拟 show 方法存在的情况
-        if (method_exists($this->controller, 'show')) {
-            $response = $this->controller->show();
-            expect($response)->toBeInstanceOf(JsonResponse::class);
-        } else {
-            // 如果方法不存在，测试控制器实例化
-            expect($this->controller)->toBeInstanceOf(CartController::class);
-        }
+        $response = $this->controller->show();
+        expect($response)->toBeInstanceOf(JsonResponse::class);
     });
     
     it('可以添加商品到购物车', function () {
-        $this->mockRequest->shouldReceive('input')
-            ->with('product_id')
-            ->andReturn(1);
-        $this->mockRequest->shouldReceive('input')
-            ->with('quantity', 1)
-            ->andReturn(2);
-        $this->mockRequest->shouldReceive('input')
-            ->with('price')
-            ->andReturn(10.99);
-        $this->mockRequest->shouldReceive('input')
-            ->with('name')
-            ->andReturn('Test Product');
-        $this->mockRequest->shouldReceive('input')
-            ->with('options', [])
-            ->andReturn([]);
+        $mockResponse = new JsonResponse(['success' => true]);
         
-        $mockCartItem = (object) [
-            'id' => 1,
-            'product_id' => 1,
-            'quantity' => 2,
-            'price' => 10.99,
-            'name' => 'Test Product'
-        ];
-        
-        $this->mockShoppingCart->shouldReceive('add')
+        $this->mockStoreRequest->shouldReceive('handle')
             ->once()
-            ->andReturn($mockCartItem);
+            ->andReturn($mockResponse);
         
-        // 使用反射来注入依赖
-        $reflection = new ReflectionClass($this->controller);
-        if ($reflection->hasProperty('shoppingCart')) {
-            $property = $reflection->getProperty('shoppingCart');
-            $property->setAccessible(true);
-            $property->setValue($this->controller, $this->mockShoppingCart);
-        }
-        
-        // 模拟 store 方法存在的情况
-        if (method_exists($this->controller, 'store')) {
-            $response = $this->controller->store($this->mockRequest);
-            expect($response)->toBeInstanceOf(JsonResponse::class);
-        } else {
-            // 如果方法不存在，测试控制器可以处理请求
-            expect($this->controller)->toBeInstanceOf(CartController::class);
-        }
+        $response = $this->controller->store($this->mockStoreRequest);
+        expect($response)->toBeInstanceOf(JsonResponse::class);
     });
     
     it('可以更新购物车商品', function () {
-        $itemId = 1;
+        $mockResponse = new JsonResponse(['success' => true]);
         
-        $this->mockRequest->shouldReceive('input')
-            ->with('quantity')
-            ->andReturn(3);
-        
-        $this->mockShoppingCart->shouldReceive('update')
-            ->with($itemId, 3)
+        $this->mockUpdateRequest->shouldReceive('handle')
             ->once()
-            ->andReturn(true);
+            ->andReturn($mockResponse);
         
-        // 使用反射来注入依赖
-        $reflection = new ReflectionClass($this->controller);
-        if ($reflection->hasProperty('shoppingCart')) {
-            $property = $reflection->getProperty('shoppingCart');
-            $property->setAccessible(true);
-            $property->setValue($this->controller, $this->mockShoppingCart);
-        }
-        
-        // 模拟 update 方法存在的情况
-        if (method_exists($this->controller, 'update')) {
-            $response = $this->controller->update($this->mockRequest, $itemId);
-            expect($response)->toBeInstanceOf(JsonResponse::class);
-        } else {
-            // 如果方法不存在，测试控制器实例化
-            expect($this->controller)->toBeInstanceOf(CartController::class);
-        }
+        $response = $this->controller->update($this->mockUpdateRequest);
+        expect($response)->toBeInstanceOf(JsonResponse::class);
     });
     
     it('可以删除购物车商品', function () {
-        $itemId = 1;
+        $mockCart = Mockery::mock(ShoppingCartModel::class);
+        $mockCart->shouldReceive('getAttribute')->andReturn(null);
+        $mockCart->shouldReceive('toArray')->andReturn([]);
         
-        $this->mockShoppingCart->shouldReceive('remove')
-            ->with($itemId)
+        $this->mockRemoveRequest->shouldReceive('validated')
+            ->with('item_id')
+            ->andReturn(1);
+        
+        ShoppingCartFacade::shouldReceive('removeItem')
+            ->with(1)
+            ->once();
+        
+        ShoppingCartFacade::shouldReceive('getCart')
             ->once()
-            ->andReturn(true);
+            ->andReturn($mockCart);
         
-        // 使用反射来注入依赖
-        $reflection = new ReflectionClass($this->controller);
-        if ($reflection->hasProperty('shoppingCart')) {
-            $property = $reflection->getProperty('shoppingCart');
-            $property->setAccessible(true);
-            $property->setValue($this->controller, $this->mockShoppingCart);
-        }
-        
-        // 模拟 destroy 方法存在的情况
-        if (method_exists($this->controller, 'destroy')) {
-            $response = $this->controller->destroy($itemId);
-            expect($response)->toBeInstanceOf(JsonResponse::class);
-        } else {
-            // 如果方法不存在，测试控制器实例化
-            expect($this->controller)->toBeInstanceOf(CartController::class);
-        }
+        $response = $this->controller->removeItem($this->mockRemoveRequest);
+        expect($response)->toBeInstanceOf(JsonResponse::class);
     });
     
     it('可以清空购物车', function () {
-        $this->mockShoppingCart->shouldReceive('clear')
+        $mockCart = Mockery::mock(ShoppingCartModel::class);
+        $mockCart->shouldReceive('getAttribute')->andReturn(null);
+        $mockCart->shouldReceive('toArray')->andReturn([]);
+        
+        ShoppingCartFacade::shouldReceive('emptyCart')
             ->once()
-            ->andReturn(true);
+            ->andReturn($mockCart);
         
-        // 使用反射来注入依赖
-        $reflection = new ReflectionClass($this->controller);
-        if ($reflection->hasProperty('shoppingCart')) {
-            $property = $reflection->getProperty('shoppingCart');
-            $property->setAccessible(true);
-            $property->setValue($this->controller, $this->mockShoppingCart);
-        }
-        
-        // 模拟 clear 方法存在的情况
-        if (method_exists($this->controller, 'clear')) {
-            $response = $this->controller->clear();
-            expect($response)->toBeInstanceOf(JsonResponse::class);
-        } else {
-            // 如果方法不存在，测试控制器实例化
-            expect($this->controller)->toBeInstanceOf(CartController::class);
-        }
+        $response = $this->controller->destroy($this->mockEmptyRequest);
+        expect($response)->toBeInstanceOf(JsonResponse::class);
     });
 });
 
