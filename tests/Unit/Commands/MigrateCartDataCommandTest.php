@@ -60,16 +60,21 @@ test('it prevents same source and target drivers', function () {
 });
 
 test('it performs dry run migration', function () {
-    $carts = collect([
-        new ShoppingCart(['id' => 1, 'customer_id' => 'user123', 'customer_name' => 'John Doe']),
-        new ShoppingCart(['id' => 2, 'customer_id' => 'user456', 'customer_name' => 'Jane Smith']),
-    ]);
+    $cart1 = Mockery::mock(ShoppingCart::class);
+    $cart1->shouldReceive('getAttribute')->with('id')->andReturn(1);
+    $cart1->shouldReceive('getAttribute')->with('customer_id')->andReturn('user123');
+    $cart1->shouldReceive('getAttribute')->with('customer_name')->andReturn('John Doe');
+    $cart1->shouldReceive('setRelation')->with('items', Mockery::any())->andReturnSelf();
+    $cart1->exists = true;
     
-    // Set up relations for both carts
-    $carts->each(function ($cart) {
-        $cart->setRelation('items', collect([]));
-        $cart->exists = true;
-    });
+    $cart2 = Mockery::mock(ShoppingCart::class);
+    $cart2->shouldReceive('getAttribute')->with('id')->andReturn(2);
+    $cart2->shouldReceive('getAttribute')->with('customer_id')->andReturn('user456');
+    $cart2->shouldReceive('getAttribute')->with('customer_name')->andReturn('Jane Smith');
+    $cart2->shouldReceive('setRelation')->with('items', Mockery::any())->andReturnSelf();
+    $cart2->exists = true;
+    
+    $carts = collect([$cart1, $cart2]);
 
     $this->mockStorageManager
         ->shouldReceive('driver')
@@ -96,12 +101,11 @@ test('it performs dry run migration', function () {
 });
 
 test('it migrates cart data successfully', function () {
-    $cart = new ShoppingCart([
-        'id' => 1,
-        'customer_id' => 'user123',
-        'customer_name' => 'John Doe',
-    ]);
-    $cart->setRelation('items', collect([]));
+    $cart = Mockery::mock(ShoppingCart::class);
+    $cart->shouldReceive('getAttribute')->with('id')->andReturn(1);
+    $cart->shouldReceive('getAttribute')->with('customer_id')->andReturn('user123');
+    $cart->shouldReceive('getAttribute')->with('customer_name')->andReturn('John Doe');
+    $cart->shouldReceive('setRelation')->with('items', Mockery::any())->andReturnSelf();
     $cart->exists = true;
 
     $this->mockStorageManager
@@ -134,12 +138,11 @@ test('it migrates cart data successfully', function () {
 });
 
 test('it migrates specific customer cart', function () {
-    $cart = new ShoppingCart([
-        'id' => 1,
-        'customer_id' => 'user123',
-        'customer_name' => 'John Doe',
-    ]);
-    $cart->setRelation('items', collect([]));
+    $cart = Mockery::mock(ShoppingCart::class);
+    $cart->shouldReceive('getAttribute')->with('id')->andReturn(1);
+    $cart->shouldReceive('getAttribute')->with('customer_id')->andReturn('user123');
+    $cart->shouldReceive('getAttribute')->with('customer_name')->andReturn('John Doe');
+    $cart->shouldReceive('setRelation')->with('items', Mockery::any())->andReturnSelf();
     $cart->exists = true;
 
     $this->mockStorageManager
@@ -174,12 +177,11 @@ test('it migrates specific customer cart', function () {
 });
 
 test('it handles migration errors gracefully', function () {
-    $cart = new ShoppingCart([
-        'id' => 1,
-        'customer_id' => 'user123',
-        'customer_name' => 'John Doe',
-    ]);
-    $cart->setRelation('items', collect([]));
+    $cart = Mockery::mock(ShoppingCart::class);
+    $cart->shouldReceive('getAttribute')->with('id')->andReturn(1);
+    $cart->shouldReceive('getAttribute')->with('customer_id')->andReturn('user123');
+    $cart->shouldReceive('getAttribute')->with('customer_name')->andReturn('John Doe');
+    $cart->shouldReceive('setRelation')->with('items', Mockery::any())->andReturnSelf();
     $cart->exists = true;
 
     $this->mockStorageManager
@@ -238,12 +240,11 @@ test('it processes carts in batches', function () {
 });
 
 test('it forces migration when target cart exists', function () {
-    $cart = new ShoppingCart([
-        'id' => 1,
-        'customer_id' => 'user123',
-        'customer_name' => 'John Doe',
-    ]);
-    $cart->setRelation('items', collect([]));
+    $cart = Mockery::mock(ShoppingCart::class);
+    $cart->shouldReceive('getAttribute')->with('id')->andReturn(1);
+    $cart->shouldReceive('getAttribute')->with('customer_id')->andReturn('user123');
+    $cart->shouldReceive('getAttribute')->with('customer_name')->andReturn('John Doe');
+    $cart->shouldReceive('setRelation')->with('items', Mockery::any())->andReturnSelf();
     $cart->exists = true;
 
     $this->mockStorageManager
@@ -276,12 +277,11 @@ test('it forces migration when target cart exists', function () {
 });
 
 test('it skips existing carts when not forced', function () {
-    $cart = new ShoppingCart([
-        'id' => 1,
-        'customer_id' => 'user123',
-        'customer_name' => 'John Doe',
-    ]);
-    $cart->setRelation('items', collect([]));
+    $cart = Mockery::mock(ShoppingCart::class);
+    $cart->shouldReceive('getAttribute')->with('id')->andReturn(1);
+    $cart->shouldReceive('getAttribute')->with('customer_id')->andReturn('user123');
+    $cart->shouldReceive('getAttribute')->with('customer_name')->andReturn('John Doe');
+    $cart->shouldReceive('setRelation')->with('items', Mockery::any())->andReturnSelf();
     $cart->exists = true;
 
     $this->mockStorageManager

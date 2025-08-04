@@ -44,13 +44,19 @@ class CartPerformanceMonitorCommand extends Command
     protected CartStorageManager $storageManager;
 
     /**
+     * 购物车模型
+     */
+    protected $cartModel;
+
+    /**
      * 构造函数
      */
-    public function __construct(CartCacheOptimizer $cacheOptimizer, CartStorageManager $storageManager)
+    public function __construct(CartCacheOptimizer $cacheOptimizer, CartStorageManager $storageManager, $cartModel = null)
     {
         parent::__construct();
         $this->cacheOptimizer = $cacheOptimizer;
         $this->storageManager = $storageManager;
+        $this->cartModel = $cartModel ?: new ShoppingCart();
     }
 
     /**
@@ -225,11 +231,11 @@ class CartPerformanceMonitorCommand extends Command
         $since = now()->subHours($hours);
         
         return [
-            'total_carts' => ShoppingCart::count(),
-            'active_carts' => ShoppingCart::where('is_active', true)->count(),
-            'recent_carts' => ShoppingCart::where('updated_at', '>=', $since)->count(),
-            'avg_items_per_cart' => ShoppingCart::avg('items_count') ?? 0,
-            'avg_cart_value' => ShoppingCart::avg('grand_total') ?? 0,
+            'total_carts' => $this->cartModel->count(),
+            'active_carts' => $this->cartModel->where('is_active', true)->count(),
+            'recent_carts' => $this->cartModel->where('updated_at', '>=', $since)->count(),
+            'avg_items_per_cart' => $this->cartModel->avg('items_count') ?? 0,
+            'avg_cart_value' => $this->cartModel->avg('grand_total') ?? 0,
         ];
     }
 

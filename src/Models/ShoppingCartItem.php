@@ -23,6 +23,13 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class ShoppingCartItem extends Model
 {
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'shopping_cart_items';
+
     protected $fillable = [
         'cart_id',
         'itemable_id',
@@ -51,7 +58,7 @@ class ShoppingCartItem extends Model
         'additional' => 'array',
         'selected' => 'bool',
         'quantity' => 'integer',
-        'price' => 'float',
+        'price' => 'decimal:2',
         'base_price' => 'decimal:2',
         'custom_price' => 'decimal:2',
         'total' => 'decimal:2',

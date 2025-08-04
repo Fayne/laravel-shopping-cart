@@ -15,12 +15,23 @@ beforeEach(function () {
     app()->instance(CartStorageManager::class, $this->mockStorageManager);
     
     // Mock ShoppingCart model for all tests
-    $this->mockCart = Mockery::mock('alias:MobileNowGroup\\ShoppingCart\\Models\\ShoppingCart');
-    $this->mockCart->shouldReceive('count')->andReturn(10)->byDefault();
-    $this->mockCart->shouldReceive('where')->andReturnSelf()->byDefault();
-    $this->mockCart->shouldReceive('avg')->andReturn(2.5)->byDefault();
+    $this->mockCart = Mockery::mock('MobileNowGroup\\ShoppingCart\\Models\\ShoppingCart');
     
-    $this->command = new CartPerformanceMonitorCommand($this->mockOptimizer, $this->mockStorageManager);
+    // 设置基础方法期望
+    $this->mockCart->shouldReceive('count')->andReturn(10)->byDefault();
+    $this->mockCart->shouldReceive('avg')->with('items_count')->andReturn(2.5)->byDefault();
+    $this->mockCart->shouldReceive('avg')->with('grand_total')->andReturn(150.0)->byDefault();
+    
+    // 设置where查询链式调用期望
+    $whereActiveMock = Mockery::mock();
+    $whereActiveMock->shouldReceive('count')->andReturn(8)->byDefault();
+    $this->mockCart->shouldReceive('where')->with('is_active', true)->andReturn($whereActiveMock)->byDefault();
+    
+    $whereRecentMock = Mockery::mock();
+    $whereRecentMock->shouldReceive('count')->andReturn(5)->byDefault();
+    $this->mockCart->shouldReceive('where')->with('updated_at', '>=', Mockery::any())->andReturn($whereRecentMock)->byDefault();
+    
+    $this->command = new CartPerformanceMonitorCommand($this->mockOptimizer, $this->mockStorageManager, $this->mockCart);
     
     // Register the command for testing
     app('Illuminate\Contracts\Console\Kernel')->registerCommand($this->command);
@@ -266,10 +277,24 @@ test('it formats execution time correctly', function () {
     Mockery::close();
     
     // 重新设置 ShoppingCart mock
-    $this->mockCart = Mockery::mock('alias:MobileNowGroup\\ShoppingCart\\Models\\ShoppingCart');
+    $this->mockCart = Mockery::mock('MobileNowGroup\\ShoppingCart\\Models\\ShoppingCart');
+    
+    // 设置基础方法期望
     $this->mockCart->shouldReceive('count')->andReturn(10)->byDefault();
-    $this->mockCart->shouldReceive('where')->andReturnSelf()->byDefault();
-    $this->mockCart->shouldReceive('avg')->andReturn(2.5)->byDefault();
+    $this->mockCart->shouldReceive('avg')->with('items_count')->andReturn(2.5)->byDefault();
+    $this->mockCart->shouldReceive('avg')->with('grand_total')->andReturn(150.0)->byDefault();
+    
+    // 设置where查询链式调用期望
+    $whereActiveMock = Mockery::mock();
+    $whereActiveMock->shouldReceive('count')->andReturn(8)->byDefault();
+    $this->mockCart->shouldReceive('where')->with('is_active', true)->andReturn($whereActiveMock)->byDefault();
+    
+    $whereRecentMock = Mockery::mock();
+    $whereRecentMock->shouldReceive('count')->andReturn(5)->byDefault();
+    $this->mockCart->shouldReceive('where')->with('updated_at', '>=', Mockery::any())->andReturn($whereRecentMock)->byDefault();
+    
+    // 重新创建命令实例
+    $this->command = new CartPerformanceMonitorCommand($this->mockOptimizer, $this->mockStorageManager, $this->mockCart);
     
     $stats = [
         'cache_hits' => 100,

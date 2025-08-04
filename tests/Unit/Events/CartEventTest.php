@@ -37,7 +37,7 @@ test('cart item added event contains correct data', function () {
         ->and($event->cart->customer_id)->toBe('user123')
         ->and($event->item->product_id)->toBe(1)
         ->and($event->item->quantity)->toBe(2)
-        ->and($event->item->price)->toBe(10.00);
+        ->and($event->item->price)->toBe('10.00');
 });
 
 test('cart item removed event contains correct data', function () {
@@ -78,11 +78,9 @@ test('cart total calculated event contains correct data', function () {
     $event = new CartTotalCalculated($this->cart, $total, $itemCount);
     
     expect($event->cart)->toBe($this->cart)
-        ->and($event->total)->toBe($total)
-        ->and($event->itemCount)->toBe($itemCount)
-        ->and($event->cart->customer_id)->toBe('user123')
-        ->and($event->total)->toBe(20.00)
-        ->and($event->itemCount)->toBe(2);
+        ->and($event->total)->toBe(20.0)
+        ->and($event->itemCount)->toBe(2)
+        ->and($event->cart->customer_id)->toBe('user123');
 });
 
 test('events can be serialized', function () {
@@ -147,7 +145,7 @@ test('cart cleared event handles empty items collection', function () {
 test('cart total calculated event handles zero values', function () {
     $event = new CartTotalCalculated($this->cart, 0.00, 0);
     
-    expect($event->total)->toBe(0.00)
+    expect($event->total)->toBe(0.0)
         ->and($event->itemCount)->toBe(0);
 });
 

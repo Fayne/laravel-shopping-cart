@@ -189,6 +189,17 @@ describe('CartResource', function () {
             ->with('items')
             ->andReturn($mockItems);
         
+        // 添加 toArray 方法的期望
+        $this->mockCart->shouldReceive('toArray')
+            ->andReturn([
+                'id' => 1,
+                'customer_id' => 123,
+                'total' => 50.00,
+                'created_at' => '2023-01-01 00:00:00',
+                'updated_at' => '2023-01-01 12:00:00',
+                'items' => []
+            ]);
+        
         $resource = new CartResource($this->mockCart);
         
         if (method_exists($resource, 'toArray')) {

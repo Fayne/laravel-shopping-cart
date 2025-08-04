@@ -82,8 +82,8 @@ test('it casts attributes correctly', function () {
 
     expect($item->additional)->toBeArray()
         ->and($item->additional)->toEqual($options)
-        ->and($item->price)->toBeFloat()
-        ->and($item->price)->toEqual(10.50)
+        ->and($item->price)->toBeString()
+        ->and($item->price)->toEqual('10.50')
         ->and($item->selected)->toBeBool()
         ->and($item->selected)->toBeTrue();
 });

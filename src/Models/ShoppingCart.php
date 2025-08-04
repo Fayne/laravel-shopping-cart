@@ -26,6 +26,13 @@ use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 class ShoppingCart extends Model
 {
     /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'shopping_carts';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<string>

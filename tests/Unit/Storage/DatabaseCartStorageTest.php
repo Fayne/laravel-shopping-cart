@@ -137,7 +137,7 @@ test('it can update cart items', function () {
     
     $item->refresh();
     expect($item->quantity)->toBe(5)
-        ->and($item->price)->toBe(15.00);
+        ->and($item->price)->toBe('15.00');
 });
 
 test('it can remove item from cart', function () {
