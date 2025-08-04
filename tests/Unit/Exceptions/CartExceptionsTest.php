@@ -21,7 +21,7 @@ describe('Cart Exceptions', function () {
         
         it('可以包含前一个异常', function () {
             $previous = new \Exception('前一个异常');
-            $exception = new CartClientException('当前异常', 400, $previous);
+            $exception = new CartClientException(400, [], '当前异常', 400, $previous);
             
             expect($exception->getPrevious())->toBe($previous);
         });

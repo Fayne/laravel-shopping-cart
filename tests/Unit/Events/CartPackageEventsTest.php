@@ -15,27 +15,6 @@ use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyBefore;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
 
-// 辅助函数
-function createMockUser($id = 1)
-{
-    return new class($id) implements \Illuminate\Contracts\Auth\Authenticatable {
-        private $id;
-        
-        public function __construct($id)
-        {
-            $this->id = $id;
-        }
-        
-        public function getAuthIdentifierName() { return 'id'; }
-        public function getAuthIdentifier() { return $this->id; }
-        public function getAuthPassword() { return 'password'; }
-        public function getAuthPasswordName() { return 'password'; }
-        public function getRememberToken() { return 'token'; }
-        public function setRememberToken($value) {}
-        public function getRememberTokenName() { return 'remember_token'; }
-    };
-}
-
 describe('CartPackage Events', function () {
     afterEach(function () {
         Mockery::close();

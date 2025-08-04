@@ -157,9 +157,9 @@ test('it resolves shopping cart with correct storage', function () {
     expect($result)->toBeNull();
     
     // Test that we can create a cart
-    expect($cart)->toHaveMethod('addProduct');
-    expect($cart)->toHaveMethod('removeItem');
-    expect($cart)->toHaveMethod('updateItem');
+    expect(method_exists($cart, 'addProduct'))->toBeTrue();
+    expect(method_exists($cart, 'removeItem'))->toBeTrue();
+    expect(method_exists($cart, 'updateItems'))->toBeTrue();
 });
 
 test('it resolves cart storage manager with correct configuration', function () {
@@ -257,10 +257,10 @@ test('it can publish all assets at once', function () {
     expect(file_exists(config_path('shopping-cart.php')))->toBeTrue();
     
     // Check that migration files are published
-    $migrationFiles = glob(database_path('migrations/*_create_shopping_carts_table.php'));
+    $migrationFiles = glob(database_path('migrations/*_create_cart_table.php'));
     expect($migrationFiles)->not->toBeEmpty();
     
-    $migrationFiles = glob(database_path('migrations/*_create_shopping_cart_items_table.php'));
+    $migrationFiles = glob(database_path('migrations/*_create_cart_items_table.php'));
     expect($migrationFiles)->not->toBeEmpty();
 });
 

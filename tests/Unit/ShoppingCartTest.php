@@ -183,31 +183,30 @@ test('it can remove item from cart', function () {
 });
 
 test('it can update items in cart', function () {
-    $customerId = 'user123';
-    $items = [['id' => 1, 'quantity' => 5]];
+    $itemId = 1;
+    $quantity = 5;
     
-    $cartModel = new CartModel([
-        'id' => 1,
-        'customer_id' => $customerId,
-        'customer_name' => 'John Doe',
+    $cartItemModel = new \MobileNowGroup\ShoppingCart\Models\ShoppingCartItem([
+        'id' => $itemId,
+        'quantity' => 3,
     ]);
-    $cartModel->id = 1;
+    $cartItemModel->id = $itemId;
 
     $this->mockStorage
-        ->shouldReceive('getCart')
+        ->shouldReceive('getCartItem')
         ->once()
-        ->with($customerId)
-        ->andReturn($cartModel);
+        ->with($itemId)
+        ->andReturn($cartItemModel);
         
     $this->mockStorage
-        ->shouldReceive('updateItems')
+        ->shouldReceive('updateCartItem')
         ->once()
-        ->with($cartModel->id, $items)
-        ->andReturn(true);
+        ->with($itemId, $quantity)
+        ->andReturn($cartItemModel);
 
-    $result = $this->cart->updateItems($customerId, $items);
+    $result = $this->cart->updateItems($itemId, $quantity);
 
-    expect($result)->toBeTrue();
+    expect($result)->toBeInstanceOf(\MobileNowGroup\ShoppingCart\Models\ShoppingCartItem::class);
 });
 
 test('it can empty cart', function () {

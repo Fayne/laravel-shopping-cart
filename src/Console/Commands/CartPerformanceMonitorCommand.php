@@ -20,7 +20,7 @@ class CartPerformanceMonitorCommand extends Command
      * 命令签名
      */
     protected $signature = 'cart:monitor 
-                            {--action=report : Action to perform (report, analyze, cleanup, benchmark)}
+                            {--action= : Action to perform (report, analyze, cleanup, benchmark)}
                             {--period=24h : Time period for analysis (1h, 24h, 7d, 30d)}
                             {--format=table : Output format (table, json, csv)}
                             {--export= : Export results to file}
@@ -60,6 +60,11 @@ class CartPerformanceMonitorCommand extends Command
     {
         $action = $this->option('action');
         
+        if (!$action) {
+            $this->error('Please specify a valid action: report, analyze, cleanup, or benchmark');
+            return self::FAILURE;
+        }
+        
         try {
             switch ($action) {
                 case 'report':
@@ -90,17 +95,19 @@ class CartPerformanceMonitorCommand extends Command
      */
     protected function generatePerformanceReport(): int
     {
-        $this->info('Generating Cart Performance Report');
-        $this->info('==================================');
-        
         $period = $this->option('period');
         $format = $this->option('format');
+        
+        // 验证 period 参数
+        if (!$this->validatePeriod($period)) {
+            return self::FAILURE;
+        }
         
         // 收集性能数据
         $data = $this->collectPerformanceData($period);
         
         // 输出报告
-        $this->outputReport($data, $format);
+        $this->outputReport($data, $format, $period);
         
         // 导出文件
         if ($exportFile = $this->option('export')) {
@@ -115,22 +122,28 @@ class CartPerformanceMonitorCommand extends Command
      */
     protected function analyzePerformance(): int
     {
-        $this->info('Analyzing Cart Performance Issues');
-        $this->info('=================================');
+        $this->info('Performance Analysis');
+        $this->info('===================');
         
         $responseThreshold = (int) $this->option('threshold-response');
         $memoryThreshold = (int) $this->option('threshold-memory');
         
-        $issues = $this->identifyPerformanceIssues($responseThreshold, $memoryThreshold);
+        // 获取操作数据
+        $operations = Cache::get('cart_performance_operations', []);
+        $issues = $this->identifyPerformanceIssues($responseThreshold, $memoryThreshold, $operations);
         
         if (empty($issues)) {
-            $this->info('✅ No performance issues detected.');
+            $this->info('✅ No performance issues detected!');
+            $this->info('Your cart system is performing well.');
         } else {
-            $this->warn('⚠️  Performance issues detected:');
+            $this->info('Issues Found:');
             foreach ($issues as $issue) {
-                $this->line("• {$issue['type']}: {$issue['description']}");
+                $this->line("⚠️  {$issue['description']}");
+            }
+            $this->info('Recommendations:');
+            foreach ($issues as $issue) {
                 if (isset($issue['recommendation'])) {
-                    $this->line("  Recommendation: {$issue['recommendation']}");
+                    $this->line("- {$issue['recommendation']}");
                 }
             }
         }
@@ -143,12 +156,13 @@ class CartPerformanceMonitorCommand extends Command
      */
     protected function cleanupMonitoringData(): int
     {
-        $this->info('Cleaning up monitoring data...');
+        $this->info('Cleaning up old monitoring data...');
         
-        $success = $this->cacheOptimizer->cleanupMonitoringData();
+        $removedCount = $this->cacheOptimizer->cleanupExpiredMonitoringData();
         
-        if ($success) {
-            $this->info('✅ Monitoring data cleaned up successfully.');
+        if ($removedCount !== false) {
+            $this->info("Removed {$removedCount} expired monitoring records.");
+            $this->info('Cleanup completed successfully!');
         } else {
             $this->error('❌ Failed to cleanup monitoring data.');
             return self::FAILURE;
@@ -165,13 +179,23 @@ class CartPerformanceMonitorCommand extends Command
         $this->info('Running Cart Performance Benchmark');
         $this->info('==================================');
         
+        $this->info('Testing cart operations...');
+        
         $iterations = (int) $this->option('benchmark-iterations');
         
-        $results = $this->performBenchmark($iterations);
-        
-        $this->displayBenchmarkResults($results);
-        
-        return self::SUCCESS;
+        try {
+            $results = $this->performBenchmark($iterations);
+            
+            $this->displayBenchmarkResults($results);
+            
+            $this->info('Benchmark completed!');
+            
+            return self::SUCCESS;
+        } catch (\Exception $e) {
+            $this->error('Error during benchmark:');
+            $this->error($e->getMessage());
+            return self::FAILURE;
+        }
     }
 
     /**
@@ -184,6 +208,7 @@ class CartPerformanceMonitorCommand extends Command
             'database_stats' => $this->getDatabaseStats($period),
             'cart_stats' => $this->getCartStats($period),
             'system_stats' => $this->getSystemStats(),
+            'operation_breakdown' => $this->getOperationBreakdown($period),
             'period' => $period,
             'generated_at' => now()->toISOString(),
         ];
@@ -206,6 +231,61 @@ class CartPerformanceMonitorCommand extends Command
             'avg_items_per_cart' => ShoppingCart::avg('items_count') ?? 0,
             'avg_cart_value' => ShoppingCart::avg('grand_total') ?? 0,
         ];
+    }
+
+    /**
+     * 验证 period 参数
+     */
+    protected function validatePeriod(string $period): bool
+    {
+        // 解析天数
+        if (preg_match('/^(\d+)d$/', $period, $matches)) {
+            $days = (int) $matches[1];
+            
+            if ($days <= 0) {
+                $this->error('Error: Days must be a positive integer.');
+                return false;
+            }
+            
+            if ($days > 90) {
+                $this->error('Error: Days cannot exceed 90.');
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * 获取操作分解统计
+     */
+    protected function getOperationBreakdown(string $period): array
+    {
+        $operations = Cache::get('cart_performance_operations', []);
+        $breakdown = [];
+        
+        foreach ($operations as $operation) {
+            $opName = $operation['operation'];
+            if (!isset($breakdown[$opName])) {
+                $breakdown[$opName] = [
+                    'times' => [],
+                    'count' => 0
+                ];
+            }
+            $breakdown[$opName]['times'][] = $operation['execution_time'];
+            $breakdown[$opName]['count']++;
+        }
+        
+        $result = [];
+        foreach ($breakdown as $opName => $data) {
+            $avgTime = count($data['times']) > 0 ? array_sum($data['times']) / count($data['times']) : 0;
+            $result[$opName] = [
+                'count' => $data['count'],
+                'avg_time' => number_format($avgTime, 2)
+            ];
+        }
+        
+        return $result;
     }
 
     /**
@@ -242,17 +322,31 @@ class CartPerformanceMonitorCommand extends Command
     /**
      * 输出报告
      */
-    protected function outputReport(array $data, string $format): void
+    protected function outputReport(array $data, string $format, string $period = '24h'): void
     {
+        // 获取操作数据一次并重用
+        $operations = Cache::get('cart_performance_operations', []);
+        
+        // 检查是否有性能数据
+        $hasCacheStats = isset($data['cache_stats']) && !empty($data['cache_stats']);
+        $hasOperationData = isset($data['operation_breakdown']) && !empty($data['operation_breakdown']);
+        $hasOperations = !empty($operations);
+        
+        if (!$hasCacheStats && !$hasOperationData && !$hasOperations) {
+            $this->info('Cart Performance Report');
+            $this->info('No performance data available.');
+            return;
+        }
+        
         switch ($format) {
             case 'json':
-                $this->line(json_encode($data, JSON_PRETTY_PRINT));
+                $this->outputJsonReport($data, $period);
                 break;
             case 'csv':
-                $this->outputCsvReport($data);
+                $this->outputCsvReport($data, $period);
                 break;
             default:
-                $this->outputTableReport($data);
+                $this->outputTableReport($data, $operations, $period);
                 break;
         }
     }
@@ -260,82 +354,130 @@ class CartPerformanceMonitorCommand extends Command
     /**
      * 输出表格报告
      */
-    protected function outputTableReport(array $data): void
+    protected function outputTableReport(array $data, array $operations = [], string $period = '24h'): void
     {
+        // 显示标题
+        if (preg_match('/^(\d+)d$/', $period, $matches)) {
+            $days = (int) $matches[1];
+            $this->info("Cart Performance Report (Last {$days} days)");
+        } else {
+            $this->info('Cart Performance Report');
+        }
+        
         // 缓存统计
         $this->info('Cache Statistics:');
-        $this->table(
-            ['Metric', 'Value'],
-            [
-                ['Hit Rate', $data['cache_stats']['hit_rate'] . '%'],
-                ['Total Operations', $data['cache_stats']['total_operations']],
-                ['Average Duration', round($data['cache_stats']['avg_duration'] * 1000, 2) . ' ms'],
-            ]
-        );
+        $this->line('- Cache Hits: ' . ($data['cache_stats']['cache_hits'] ?? 0));
+        $this->line('- Cache Misses: ' . ($data['cache_stats']['cache_misses'] ?? 0));
+        $this->line('- Hit Rate: ' . number_format($data['cache_stats']['hit_rate'] ?? 0, 2) . '%');
         
-        // 数据库统计
-        $this->info('Database Statistics:');
-        $this->table(
-            ['Metric', 'Value'],
-            [
-                ['Total Carts', number_format($data['database_stats']['total_carts'])],
-                ['Active Carts', number_format($data['database_stats']['active_carts'])],
-                ['Recent Carts', number_format($data['database_stats']['recent_carts'])],
-                ['Avg Items/Cart', round($data['database_stats']['avg_items_per_cart'], 2)],
-                ['Avg Cart Value', '$' . number_format($data['database_stats']['avg_cart_value'], 2)],
-            ]
-        );
+        // 操作性能统计
+        $this->info('Operation Performance:');
         
-        // 系统统计
-        $this->info('System Statistics:');
-        $this->table(
-            ['Metric', 'Value'],
-            [
-                ['PHP Version', $data['system_stats']['php_version']],
-                ['Memory Limit', $data['system_stats']['memory_limit']],
-                ['Current Memory', $data['system_stats']['current_memory_usage']],
-                ['Peak Memory', $data['system_stats']['peak_memory_usage']],
-                ['Cache Driver', $data['system_stats']['cache_driver']],
-                ['Database Driver', $data['system_stats']['database_driver']],
-            ]
-        );
+        // 使用传入的操作数据
+        if (!empty($operations)) {
+            $totalOperations = count($operations);
+            $this->line('- Total Operations: ' . $totalOperations);
+            
+            // 计算平均响应时间
+            $totalTime = array_sum(array_column($operations, 'execution_time'));
+            $avgResponseTime = number_format($totalTime / $totalOperations, 2);
+            $this->line("- Average Response Time: {$avgResponseTime}ms");
+            
+            // 计算慢操作数量
+            $slowOperations = count(array_filter($operations, function($op) {
+                return $op['execution_time'] > 100;
+            }));
+            $this->line("- Slow Operations (>100ms): {$slowOperations}");
+        } elseif (isset($data['operation_breakdown']) && !empty($data['operation_breakdown'])) {
+            $totalOperations = array_sum(array_column($data['operation_breakdown'], 'count'));
+            $this->line('- Total Operations: ' . $totalOperations);
+            
+            // 计算平均响应时间
+            $totalTime = 0;
+            $totalCount = 0;
+            $slowOperations = 0;
+            
+            foreach ($data['operation_breakdown'] as $operation => $stats) {
+                $totalTime += $stats['avg_time'] * $stats['count'];
+                $totalCount += $stats['count'];
+                if ($stats['avg_time'] > 100) {
+                    $slowOperations += $stats['count'];
+                }
+            }
+            
+            if ($totalCount > 0) {
+                $avgResponseTime = number_format($totalTime / $totalCount, 2);
+                $this->line("- Average Response Time: {$avgResponseTime}ms");
+            }
+            
+            $this->line("- Slow Operations (>100ms): {$slowOperations}");
+        }
+        
+        // 内存使用统计
+        $this->info('Memory Usage:');
+        $currentMemory = round(memory_get_usage(true) / 1024 / 1024, 2);
+        $peakMemory = round(memory_get_peak_usage(true) / 1024 / 1024, 2);
+        $this->line("- Current Memory: {$currentMemory}MB");
+        $this->line("- Peak Memory: {$peakMemory}MB");
+        
+        // 操作分解
+        if (isset($data['operation_breakdown']) && !empty($data['operation_breakdown'])) {
+            $this->info('Operation Breakdown:');
+            foreach ($data['operation_breakdown'] as $operation => $stats) {
+                $this->line("- {$operation}: {$stats['count']} operations, avg {$stats['avg_time']}ms");
+            }
+        }
     }
 
     /**
      * 识别性能问题
      */
-    protected function identifyPerformanceIssues(int $responseThreshold, int $memoryThreshold): array
+    protected function identifyPerformanceIssues(int $responseThreshold, int $memoryThreshold, array $operations = []): array
     {
         $issues = [];
         
         // 检查缓存命中率
         $cacheStats = $this->cacheOptimizer->getCacheStats();
-        if ($cacheStats['hit_rate'] < 80) {
+        $hitRate = $cacheStats['hit_rate'] ?? 0;
+        if ($hitRate < 80) {
             $issues[] = [
                 'type' => 'Low Cache Hit Rate',
-                'description' => "Cache hit rate is {$cacheStats['hit_rate']}% (< 80%)",
-                'recommendation' => 'Consider increasing cache TTL or optimizing cache keys'
+                'description' => "Low cache hit rate: " . number_format($hitRate, 2) . "% (recommended: >80%)",
+                'recommendation' => 'Increase cache TTL or optimize cache strategy'
             ];
         }
         
-        // 检查响应时间
-        $avgResponseTime = $this->getAverageResponseTime(now()->subHours(1)) * 1000;
-        if ($avgResponseTime > $responseThreshold) {
+        // 检查平均响应时间
+        $avgResponseTime = $cacheStats['avg_response_time'] ?? 0;
+        if ($avgResponseTime > 100) {
             $issues[] = [
                 'type' => 'High Response Time',
-                'description' => "Average response time is {$avgResponseTime}ms (> {$responseThreshold}ms)",
-                'recommendation' => 'Consider optimizing database queries or adding more cache layers'
+                'description' => "High average response time: " . number_format($avgResponseTime, 2) . "ms (recommended: <100ms)",
+                'recommendation' => 'Review and optimize slow database queries'
+            ];
+        }
+        
+        // 检查慢操作数量
+        $slowOperations = $cacheStats['slow_operations'] ?? 0;
+        if ($slowOperations > 5) {
+            $issues[] = [
+                'type' => 'High Slow Operations',
+                'description' => "High number of slow operations: {$slowOperations} (recommended: <5)",
+                'recommendation' => 'Consider implementing query result caching'
             ];
         }
         
         // 检查内存使用
-        $currentMemory = memory_get_usage(true) / 1024 / 1024;
-        if ($currentMemory > $memoryThreshold) {
-            $issues[] = [
-                'type' => 'High Memory Usage',
-                'description' => "Current memory usage is {$currentMemory}MB (> {$memoryThreshold}MB)",
-                'recommendation' => 'Consider optimizing data structures or implementing pagination'
-            ];
+        // 使用传入的operations参数
+        if (!empty($operations)) {
+            $maxMemory = max(array_column($operations, 'memory_usage'));
+            if ($maxMemory > 128) {
+                $issues[] = [
+                    'type' => 'High Memory Usage',
+                    'description' => "High memory usage detected: {$maxMemory}MB (recommended: <128MB)",
+                    'recommendation' => 'Optimize memory usage in cart operations'
+                ];
+            }
         }
         
         // 检查数据库连接
@@ -364,7 +506,12 @@ class CartPerformanceMonitorCommand extends Command
      */
     protected function performBenchmark(int $iterations): array
     {
-        $storage = $this->storageManager->driver();
+        try {
+            $storage = $this->storageManager->driver();
+        } catch (\Exception $e) {
+            throw new \Exception('Failed to initialize storage driver: ' . $e->getMessage());
+        }
+        
         $results = [
             'create_cart' => [],
             'get_cart' => [],
@@ -379,40 +526,55 @@ class CartPerformanceMonitorCommand extends Command
         for ($i = 0; $i < $iterations; $i++) {
             $customerId = 'benchmark_' . $i;
             
-            // 测试创建购物车
-            $startTime = microtime(true);
-            $cart = $storage->createCart($customerId);
-            $results['create_cart'][] = microtime(true) - $startTime;
-            $progressBar->advance();
-            
-            // 测试获取购物车
-            $startTime = microtime(true);
-            $storage->getCart($customerId);
-            $results['get_cart'][] = microtime(true) - $startTime;
-            $progressBar->advance();
-            
-            // 测试添加商品
-            $startTime = microtime(true);
-            $storage->addItem($cart->id, [
-                'product_id' => 1,
-                'quantity' => 1,
-                'price' => 10.00,
-                'name' => 'Test Product'
-            ]);
-            $results['add_item'][] = microtime(true) - $startTime;
-            $progressBar->advance();
-            
-            // 测试更新商品
-            $startTime = microtime(true);
-            $storage->updateItems($cart->id, [['quantity' => 2]]);
-            $results['update_item'][] = microtime(true) - $startTime;
-            $progressBar->advance();
-            
-            // 测试删除商品
-            $startTime = microtime(true);
-            $storage->removeItem($cart->id, 1);
-            $results['remove_item'][] = microtime(true) - $startTime;
-            $progressBar->advance();
+            try {
+                // 测试创建购物车
+                $startTime = microtime(true);
+                $cart = $storage->createCart($customerId);
+                $results['create_cart'][] = microtime(true) - $startTime;
+                $progressBar->advance();
+                
+                // 测试获取购物车
+                $startTime = microtime(true);
+                $storage->getCart($customerId);
+                $results['get_cart'][] = microtime(true) - $startTime;
+                $progressBar->advance();
+                
+                // 测试添加商品
+                $startTime = microtime(true);
+                $storage->addItem($cart->id, [
+                    'product_id' => 1,
+                    'quantity' => 1,
+                    'price' => 10.00,
+                    'name' => 'Test Product'
+                ]);
+                $results['add_item'][] = microtime(true) - $startTime;
+                $progressBar->advance();
+                
+                // 测试更新商品
+                $startTime = microtime(true);
+                $storage->updateItems($cart->id, [['quantity' => 2]]);
+                $results['update_item'][] = microtime(true) - $startTime;
+                $progressBar->advance();
+                
+                // 测试删除商品
+                $startTime = microtime(true);
+                $storage->removeItem($cart->id, 1);
+                $results['remove_item'][] = microtime(true) - $startTime;
+                $progressBar->advance();
+            } catch (\Exception $e) {
+                // 如果单个操作失败，记录到日志但继续测试
+                Log::warning('Benchmark operation failed', [
+                    'iteration' => $i,
+                    'error' => $e->getMessage()
+                ]);
+                // 为失败的操作添加默认时间
+                $results['create_cart'][] = 0;
+                $results['get_cart'][] = 0;
+                $results['add_item'][] = 0;
+                $results['update_item'][] = 0;
+                $results['remove_item'][] = 0;
+                $progressBar->advance(5);
+            }
         }
         
         $progressBar->finish();
@@ -420,12 +582,21 @@ class CartPerformanceMonitorCommand extends Command
         
         // 计算统计信息
         foreach ($results as $operation => &$times) {
-            $times = [
-                'avg' => array_sum($times) / count($times),
-                'min' => min($times),
-                'max' => max($times),
-                'median' => $this->calculateMedian($times),
-            ];
+            if (count($times) > 0) {
+                $times = [
+                    'avg' => array_sum($times) / count($times),
+                    'min' => min($times),
+                    'max' => max($times),
+                    'median' => $this->calculateMedian($times),
+                ];
+            } else {
+                $times = [
+                    'avg' => 0,
+                    'min' => 0,
+                    'max' => 0,
+                    'median' => 0,
+                ];
+            }
         }
         
         return $results;
@@ -438,21 +609,39 @@ class CartPerformanceMonitorCommand extends Command
     {
         $this->info('Benchmark Results:');
         
-        $tableData = [];
         foreach ($results as $operation => $stats) {
-            $tableData[] = [
-                ucfirst(str_replace('_', ' ', $operation)),
-                round($stats['avg'] * 1000, 2) . ' ms',
-                round($stats['min'] * 1000, 2) . ' ms',
-                round($stats['max'] * 1000, 2) . ' ms',
-                round($stats['median'] * 1000, 2) . ' ms',
-            ];
+            $operationName = ucfirst(str_replace('_', ' ', $operation));
+            $avgTime = number_format($stats['avg'] * 1000, 2); // 转换为毫秒
+            $this->line("- {$operationName}: {$avgTime}ms avg");
         }
-        
-        $this->table(
-            ['Operation', 'Average', 'Min', 'Max', 'Median'],
-            $tableData
-        );
+    }
+
+    /**
+     * 输出JSON格式报告
+     */
+    protected function outputJsonReport(array $data, string $period = '24h'): void
+    {
+        if (preg_match('/^(\d+)d$/', $period, $matches)) {
+            $days = (int) $matches[1];
+            $this->info("Cart Performance Report (Last {$days} days)");
+        } else {
+            $this->info('Cart Performance Report');
+        }
+        $this->line(json_encode($data, JSON_PRETTY_PRINT));
+    }
+
+    /**
+     * 输出CSV格式报告
+     */
+    protected function outputCsvReport(array $data, string $period = '24h'): void
+    {
+        if (preg_match('/^(\d+)d$/', $period, $matches)) {
+            $days = (int) $matches[1];
+            $this->info("Cart Performance Report (Last {$days} days)");
+        } else {
+            $this->info('Cart Performance Report');
+        }
+        $this->line($this->convertToCsv($data));
     }
 
     /**
@@ -480,9 +669,10 @@ class CartPerformanceMonitorCommand extends Command
      */
     protected function getOperationsCount($since): int
     {
-        // 这里应该从实际的监控数据中获取
-        // 暂时返回模拟数据
-        return rand(1000, 5000);
+        $operations = Cache::get('cart_performance_operations', []);
+        return count(array_filter($operations, function($op) use ($since) {
+            return isset($op['timestamp']) && $op['timestamp'] >= $since->timestamp;
+        }));
     }
 
     /**
@@ -490,9 +680,17 @@ class CartPerformanceMonitorCommand extends Command
      */
     protected function getAverageResponseTime($since): float
     {
-        // 这里应该从实际的监控数据中获取
-        // 暂时返回模拟数据
-        return rand(50, 200) / 1000; // 转换为秒
+        $operations = Cache::get('cart_performance_operations', []);
+        $recentOperations = array_filter($operations, function($op) use ($since) {
+            return isset($op['timestamp']) && $op['timestamp'] >= $since->timestamp;
+        });
+        
+        if (empty($recentOperations)) {
+            return 0.0;
+        }
+        
+        $totalTime = array_sum(array_column($recentOperations, 'execution_time'));
+        return $totalTime / count($recentOperations) / 1000; // 转换为秒
     }
 
     /**
@@ -500,9 +698,20 @@ class CartPerformanceMonitorCommand extends Command
      */
     protected function getErrorRate($since): float
     {
-        // 这里应该从实际的监控数据中获取
-        // 暂时返回模拟数据
-        return rand(0, 5) / 100; // 0-5%
+        $operations = Cache::get('cart_performance_operations', []);
+        $recentOperations = array_filter($operations, function($op) use ($since) {
+            return isset($op['timestamp']) && $op['timestamp'] >= $since->timestamp;
+        });
+        
+        if (empty($recentOperations)) {
+            return 0.0;
+        }
+        
+        $errorCount = count(array_filter($recentOperations, function($op) {
+            return isset($op['status']) && $op['status'] === 'error';
+        }));
+        
+        return $errorCount / count($recentOperations);
     }
 
     /**
