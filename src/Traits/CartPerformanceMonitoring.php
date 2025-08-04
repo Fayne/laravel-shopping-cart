@@ -271,4 +271,61 @@ trait CartPerformanceMonitoring
             throw $e;
         }
     }
+
+    /**
+     * 格式化内存使用量
+     *
+     * @param int $bytes
+     * @return string
+     */
+    protected function formatMemoryUsage(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $unitIndex = 0;
+        $size = $bytes;
+
+        while ($size >= 1024 && $unitIndex < count($units) - 1) {
+            $size /= 1024;
+            $unitIndex++;
+        }
+
+        if ($unitIndex === 0) {
+            return $size . $units[$unitIndex];
+        }
+
+        return number_format($size, 2) . $units[$unitIndex];
+    }
+
+    /**
+     * 格式化执行时间
+     *
+     * @param float $microseconds
+     * @return string
+     */
+    protected function formatExecutionTime(float $microseconds): string
+    {
+        if ($microseconds < 1000) {
+            // For microseconds, don't show decimals if it's a whole number
+            return ($microseconds == (int)$microseconds) ? (int)$microseconds . 'μs' : number_format($microseconds, 2) . 'μs';
+        }
+
+        $milliseconds = $microseconds / 1000;
+        if ($milliseconds < 1000) {
+            return number_format($milliseconds, 2) . 'ms';
+        }
+
+        $seconds = $milliseconds / 1000;
+        return number_format($seconds, 2) . 's';
+    }
+
+    /**
+     * 生成性能缓存键
+     *
+     * @param string $operation
+     * @return string
+     */
+    protected function getPerformanceCacheKey(string $operation): string
+    {
+        return config('shopping-cart.performance.cache_key', 'cart_performance_stats') . ':' . $operation;
+    }
 }
