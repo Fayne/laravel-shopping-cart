@@ -329,4 +329,19 @@ class CacheCartStorage implements CartStorageInterface
         
         return $result;
     }
+
+    /**
+     * 清除购物车项目缓存
+     */
+    protected function clearCartItemsCache(int $cartId): void
+    {
+        try {
+            Cache::store($this->cacheStore)->forget("{$this->cachePrefix}:items:{$cartId}");
+        } catch (\Exception $e) {
+            Log::warning('Failed to clear cart items cache', [
+                'cart_id' => $cartId,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

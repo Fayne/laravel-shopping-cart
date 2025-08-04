@@ -9,7 +9,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 beforeEach(function () {
     // 设置 morph 映射
     Relation::morphMap([
-        'Product' => 'Product',
+        'Product' => \MobileNowGroup\ShoppingCart\Tests\Product::class,
     ]);
     
     $this->storage = new DatabaseCartStorage();
