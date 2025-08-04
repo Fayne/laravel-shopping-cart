@@ -44,6 +44,9 @@ return new class extends Migration
             $table->ulid('customer_id')->nullable();
             $table->foreign('customer_id')->references('id')->on($userTableName)->onDelete('cascade');
 
+            $table->string('session_id')->nullable();
+            $table->json('metadata')->nullable();
+
             $table->timestamps();
         });
     }

@@ -128,4 +128,81 @@ class ShoppingCart extends Model
         return $this;
     }
 
+    /**
+     * Check if cart has a product with given ID.
+     */
+    public function hasProduct(int $productId): bool
+    {
+        return $this->items()->where('itemable_id', $productId)->exists();
+    }
+
+    /**
+     * Get the total amount of the cart.
+     */
+    public function getTotalAmount(): float
+    {
+        return $this->items()->sum('total') ?? 0.0;
+    }
+
+    /**
+     * Clear all items from the cart.
+     */
+    public function clearItems(): void
+    {
+        $this->items()->delete();
+    }
+
+    /**
+     * Check if the cart is empty.
+     */
+    public function isEmpty(): bool
+    {
+        return $this->items()->count() === 0;
+    }
+
+    /**
+     * Get the total number of items in the cart.
+     */
+    public function getTotalItems(): int
+    {
+        return $this->items()->sum('quantity') ?? 0;
+    }
+
+    /**
+     * Get the count of unique products in the cart.
+     */
+    public function getUniqueProductCount(): int
+    {
+        return $this->items()->count();
+    }
+
+    /**
+     * Find item by product ID.
+     */
+    public function findItemByProductId(int $productId): ?ShoppingCartItem
+    {
+        return $this->items()->where('itemable_id', $productId)->first();
+    }
+
+    /**
+     * Find item by product ID and options.
+     */
+    public function findItemByProductIdAndOptions(int $productId, array $options): ?ShoppingCartItem
+    {
+        return $this->items()
+            ->where('itemable_id', $productId)
+            ->where('additional', json_encode($options))
+            ->first();
+    }
+
+    /**
+     * Convert the model instance to an array.
+     */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        $array['items'] = $this->items->toArray();
+        return $array;
+    }
+
 }

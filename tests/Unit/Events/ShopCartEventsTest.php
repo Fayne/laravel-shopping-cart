@@ -25,8 +25,8 @@ describe('ShopCart Events', function () {
     describe('CartApplyCoupon Events', function () {
         it('可以创建CartApplyCouponBefore事件', function () {
             $couponCode = 'SAVE20';
-            $cartId = 1;
-            $event = new CartApplyCouponBefore($couponCode, $cartId);
+            $cart = null; // 或者创建一个 ShoppingCart 实例
+            $event = new CartApplyCouponBefore($couponCode, $cart);
             
             expect($event)->toBeInstanceOf(CartApplyCouponBefore::class);
             
@@ -40,9 +40,8 @@ describe('ShopCart Events', function () {
         
         it('可以创建CartApplyCouponAfter事件', function () {
             $couponCode = 'SAVE20';
-            $cartId = 1;
-            $result = ['success' => true, 'discount' => 20.0];
-            $event = new CartApplyCouponAfter($couponCode, $cartId, $result);
+            $cart = null; // 或者创建一个 ShoppingCart 实例
+            $event = new CartApplyCouponAfter($couponCode, $cart);
             
             expect($event)->toBeInstanceOf(CartApplyCouponAfter::class);
             
@@ -60,8 +59,8 @@ describe('ShopCart Events', function () {
     
     describe('CartEmpty Events', function () {
         it('可以创建CartEmptyBefore事件', function () {
-            $cartId = 1;
-            $event = new CartEmptyBefore($cartId);
+            $cart = null; // 或者创建一个 ShoppingCart 实例
+            $event = new CartEmptyBefore($cart);
             
             expect($event)->toBeInstanceOf(CartEmptyBefore::class);
             
@@ -71,9 +70,8 @@ describe('ShopCart Events', function () {
         });
         
         it('可以创建CartEmptyAfter事件', function () {
-            $cartId = 1;
-            $result = true;
-            $event = new CartEmptyAfter($cartId, $result);
+            $cart = null; // 或者创建一个 ShoppingCart 实例
+            $event = new CartEmptyAfter($cart);
             
             expect($event)->toBeInstanceOf(CartEmptyAfter::class);
             
@@ -88,8 +86,10 @@ describe('ShopCart Events', function () {
     
     describe('CartItemAdd Events', function () {
         it('可以创建CartItemAddBefore事件', function () {
-            $itemData = ['product_id' => 1, 'quantity' => 2, 'price' => 10.99];
-            $event = new CartItemAddBefore($itemData);
+            $isBuyNow = false;
+            $productSkuId = 1;
+            $quantity = 2;
+            $event = new CartItemAddBefore($isBuyNow, $productSkuId, $quantity);
             
             expect($event)->toBeInstanceOf(CartItemAddBefore::class);
             
@@ -99,9 +99,10 @@ describe('ShopCart Events', function () {
         });
         
         it('可以创建CartItemAddAfter事件', function () {
-            $itemData = ['product_id' => 1, 'quantity' => 2, 'price' => 10.99];
-            $result = ['success' => true, 'item_id' => 123];
-            $event = new CartItemAddAfter($itemData, $result);
+            $isBuyNow = false;
+            $productSkuId = 1;
+            $quantity = 2;
+            $event = new CartItemAddAfter($isBuyNow, $productSkuId, $quantity);
             
             expect($event)->toBeInstanceOf(CartItemAddAfter::class);
             
@@ -116,9 +117,10 @@ describe('ShopCart Events', function () {
     
     describe('CartItemIsBuyNow Event', function () {
         it('可以创建CartItemIsBuyNow事件', function () {
-            $itemId = 123;
             $isBuyNow = true;
-            $event = new CartItemIsBuyNow($itemId, $isBuyNow);
+            $productSkuId = 123;
+            $quantity = 1;
+            $event = new CartItemIsBuyNow($isBuyNow, $productSkuId, $quantity);
             
             expect($event)->toBeInstanceOf(CartItemIsBuyNow::class);
             
@@ -145,8 +147,7 @@ describe('ShopCart Events', function () {
         
         it('可以创建CartItemRemoveAfter事件', function () {
             $itemId = 456;
-            $result = true;
-            $event = new CartItemRemoveAfter($itemId, $result);
+            $event = new CartItemRemoveAfter($itemId);
             
             expect($event)->toBeInstanceOf(CartItemRemoveAfter::class);
             
@@ -162,8 +163,8 @@ describe('ShopCart Events', function () {
     describe('CartItemUpdate Events', function () {
         it('可以创建CartItemUpdateBefore事件', function () {
             $itemId = 789;
-            $updateData = ['quantity' => 3, 'price' => 15.99];
-            $event = new CartItemUpdateBefore($itemId, $updateData);
+            $quantity = 3;
+            $event = new CartItemUpdateBefore($itemId, $quantity);
             
             expect($event)->toBeInstanceOf(CartItemUpdateBefore::class);
             
@@ -177,9 +178,8 @@ describe('ShopCart Events', function () {
         
         it('可以创建CartItemUpdateAfter事件', function () {
             $itemId = 789;
-            $updateData = ['quantity' => 3, 'price' => 15.99];
-            $result = ['success' => true, 'updated_item' => []];
-            $event = new CartItemUpdateAfter($itemId, $updateData, $result);
+            $quantity = 3;
+            $event = new CartItemUpdateAfter($itemId, $quantity);
             
             expect($event)->toBeInstanceOf(CartItemUpdateAfter::class);
             
@@ -198,8 +198,8 @@ describe('ShopCart Events', function () {
     describe('CartRemoveCoupon Events', function () {
         it('可以创建CartRemoveCouponBefore事件', function () {
             $couponCode = 'SAVE20';
-            $cartId = 1;
-            $event = new CartRemoveCouponBefore($couponCode, $cartId);
+            $cart = null; // 或者创建一个 ShoppingCart 实例
+            $event = new CartRemoveCouponBefore($couponCode, $cart);
             
             expect($event)->toBeInstanceOf(CartRemoveCouponBefore::class);
             
@@ -213,9 +213,8 @@ describe('ShopCart Events', function () {
         
         it('可以创建CartRemoveCouponAfter事件', function () {
             $couponCode = 'SAVE20';
-            $cartId = 1;
-            $result = ['success' => true];
-            $event = new CartRemoveCouponAfter($couponCode, $cartId, $result);
+            $cart = null; // 或者创建一个 ShoppingCart 实例
+            $event = new CartRemoveCouponAfter($couponCode, $cart);
             
             expect($event)->toBeInstanceOf(CartRemoveCouponAfter::class);
             
@@ -233,8 +232,8 @@ describe('ShopCart Events', function () {
     
     describe('CartShow Events', function () {
         it('可以创建CartShowBefore事件', function () {
-            $cartId = 1;
-            $event = new CartShowBefore($cartId);
+            $cart = null; // 或者创建一个 ShoppingCart 实例
+            $event = new CartShowBefore($cart);
             
             expect($event)->toBeInstanceOf(CartShowBefore::class);
             
@@ -244,9 +243,8 @@ describe('ShopCart Events', function () {
         });
         
         it('可以创建CartShowAfter事件', function () {
-            $cartId = 1;
-            $cartData = ['id' => 1, 'items' => [], 'total' => 0];
-            $event = new CartShowAfter($cartId, $cartData);
+            $cart = null; // 或者创建一个 ShoppingCart 实例
+            $event = new CartShowAfter($cart);
             
             expect($event)->toBeInstanceOf(CartShowAfter::class);
             
@@ -261,21 +259,21 @@ describe('ShopCart Events', function () {
     
     it('所有ShopCart事件都可以被序列化', function () {
         $events = [
-            new CartApplyCouponBefore('SAVE20', 1),
-            new CartApplyCouponAfter('SAVE20', 1, ['success' => true]),
-            new CartEmptyBefore(1),
-            new CartEmptyAfter(1, true),
-            new CartItemAddBefore(['product_id' => 1]),
-            new CartItemAddAfter(['product_id' => 1], ['success' => true]),
-            new CartItemIsBuyNow(123, true),
+            new CartApplyCouponBefore('SAVE20', null),
+            new CartApplyCouponAfter('SAVE20', null),
+            new CartEmptyBefore(null),
+            new CartEmptyAfter(null),
+            new CartItemAddBefore(false, 1, 1),
+            new CartItemAddAfter(false, 1, 1),
+            new CartItemIsBuyNow(true, 123, 1),
             new CartItemRemoveBefore(456),
-            new CartItemRemoveAfter(456, true),
-            new CartItemUpdateBefore(789, ['quantity' => 3]),
-            new CartItemUpdateAfter(789, ['quantity' => 3], ['success' => true]),
-            new CartRemoveCouponBefore('SAVE20', 1),
-            new CartRemoveCouponAfter('SAVE20', 1, ['success' => true]),
-            new CartShowBefore(1),
-            new CartShowAfter(1, ['cart' => 'data'])
+            new CartItemRemoveAfter(456),
+            new CartItemUpdateBefore(789, 3),
+            new CartItemUpdateAfter(789, 3),
+            new CartRemoveCouponBefore('SAVE20', null),
+            new CartRemoveCouponAfter('SAVE20', null),
+            new CartShowBefore(null),
+            new CartShowAfter(null)
         ];
         
         foreach ($events as $event) {

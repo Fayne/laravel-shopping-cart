@@ -2,7 +2,6 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Redis;
-use Mockery;
 use MobileNowGroup\ShoppingCart\Storage\RedisCartStorage;
 use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;

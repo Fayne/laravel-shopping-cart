@@ -2,7 +2,6 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Mockery;
 use MobileNowGroup\ShoppingCart\Storage\CacheCartStorage;
 use MobileNowGroup\ShoppingCart\Storage\DatabaseCartStorage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;

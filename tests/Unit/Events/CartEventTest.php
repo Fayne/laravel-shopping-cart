@@ -18,11 +18,12 @@ beforeEach(function () {
     $this->item = new ShoppingCartItem([
         'id' => 1,
         'cart_id' => 1,
-        'product_id' => 1,
+        'itemable_id' => 1,
+        'itemable_type' => 'Product',
         'quantity' => 2,
         'price' => 10.00,
         'name' => 'Test Product',
-        'options' => ['color' => 'red'],
+        'additional' => ['color' => 'red'],
     ]);
 });
 

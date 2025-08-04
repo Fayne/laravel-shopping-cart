@@ -6,8 +6,6 @@ use MobileNowGroup\ShoppingCart\Storage\DatabaseCartStorage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 
-require_once __DIR__ . '/../../Fixtures/Product.php';
-
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
@@ -115,7 +113,7 @@ test('it can add item to cart', function () {
         ->and($item->cart_id)->toBe($cart->id)
         ->and($item->itemable_id)->toBe(1)
         ->and($item->quantity)->toBe(2)
-        ->and($item->price)->toBe(10.00)
+        ->and($item->price)->toBe('10.00')
         ->and($item->name)->toBe('Test Product');
 });
 

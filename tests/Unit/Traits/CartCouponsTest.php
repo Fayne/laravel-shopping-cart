@@ -1,7 +1,6 @@
 <?php
 
 use MobileNowGroup\ShoppingCart\Traits\CartCoupons;
-use Mockery;
 
 describe('CartCoupons Trait', function () {
     beforeEach(function () {

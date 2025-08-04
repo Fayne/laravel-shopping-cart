@@ -136,6 +136,11 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             $this->loadRoutesFrom(__DIR__ . '/routes.php');
         }
 
+        // 注册事件监听器
+        if (config('shopping-cart.events.enabled', true)) {
+            $this->registerEventListeners();
+        }
+
         // 注册命令
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -143,6 +148,19 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
                 CartPerformanceMonitorCommand::class,
             ]);
         }
+    }
+
+    /**
+     * 注册事件监听器
+     *
+     * @return void
+     */
+    protected function registerEventListeners(): void
+    {
+        $this->app['events']->listen(
+            \MobileNowGroup\ShoppingCart\Events\CartItemAdded::class,
+            \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductAdded'
+        );
     }
 
     /**

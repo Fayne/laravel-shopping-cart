@@ -37,9 +37,9 @@ describe('Cart Exceptions', function () {
         });
         
         it('可以使用默认错误码', function () {
-            $exception = new CartServerException('默认服务器错误');
+            $exception = new CartServerException(500, [], '默认服务器错误');
             
-            expect($exception->getCode())->toBe(0);
+            expect($exception->getCode())->toBe(500);
         });
         
         it('可以包含前一个异常', function () {

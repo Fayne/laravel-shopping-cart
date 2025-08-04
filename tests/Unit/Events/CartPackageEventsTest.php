@@ -118,17 +118,20 @@ describe('CartPackage Events', function () {
         });
         
         it('可以创建CartGetAfter事件', function () {
-            $customerId = 123;
-            $cart = ['id' => 1, 'customer_id' => 123];
-            $event = new CartGetAfter($customerId, $cart);
+            $cart = new \MobileNowGroup\ShoppingCart\Models\ShoppingCart([
+                'id' => 1,
+                'customer_id' => 123
+            ]);
+            $user = createMockUser(123);
+            $event = new CartGetAfter($cart, $user);
             
             expect($event)->toBeInstanceOf(CartGetAfter::class);
             
-            if (property_exists($event, 'customerId')) {
-                expect($event->customerId)->toBe($customerId);
-            }
             if (property_exists($event, 'cart')) {
                 expect($event->cart)->toBe($cart);
+            }
+            if (property_exists($event, 'user')) {
+                expect($event->user)->toBe($user);
             }
         });
     });
@@ -163,17 +166,21 @@ describe('CartPackage Events', function () {
     
     describe('CartToggleBuy Events', function () {
         it('可以创建CartToggleBuyBefore事件', function () {
+            $type = 'item';
+            $selected = true;
             $itemId = 789;
-            $isBuy = true;
-            $event = new CartToggleBuyBefore($itemId, $isBuy);
+            $event = new CartToggleBuyBefore($type, $selected, $itemId);
             
             expect($event)->toBeInstanceOf(CartToggleBuyBefore::class);
             
+            if (property_exists($event, 'type')) {
+                expect($event->type)->toBe($type);
+            }
+            if (property_exists($event, 'selected')) {
+                expect($event->selected)->toBe($selected);
+            }
             if (property_exists($event, 'itemId')) {
                 expect($event->itemId)->toBe($itemId);
-            }
-            if (property_exists($event, 'isBuy')) {
-                expect($event->isBuy)->toBe($isBuy);
             }
         });
         

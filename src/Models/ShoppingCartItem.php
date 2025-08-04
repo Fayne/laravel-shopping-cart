@@ -51,7 +51,7 @@ class ShoppingCartItem extends Model
         'additional' => 'array',
         'selected' => 'bool',
         'quantity' => 'integer',
-        'price' => 'decimal:2',
+        'price' => 'float',
         'base_price' => 'decimal:2',
         'custom_price' => 'decimal:2',
         'total' => 'decimal:2',
@@ -126,5 +126,168 @@ class ShoppingCartItem extends Model
     public function getOriginalTotalPriceAttribute(): float|int
     {
         return $this->quantity * $this->original_price;
+    }
+
+    /**
+     * 获取商品ID（兼容性访问器）
+     *
+     * @return mixed
+     */
+    public function getProductIdAttribute()
+    {
+        return $this->itemable_id;
+    }
+
+    /**
+     * 获取选项（兼容性访问器）
+     *
+     * @return array|null
+     */
+    public function getOptionsAttribute()
+    {
+        return $this->additional;
+    }
+
+    /**
+     * 获取是否选中（兼容性访问器）
+     *
+     * @return bool
+     */
+    public function getIsSelectedAttribute()
+    {
+        return $this->selected;
+    }
+
+    /**
+     * 计算小计
+     *
+     * @return float
+     */
+    public function getSubtotal()
+    {
+        return $this->quantity * $this->price;
+    }
+
+    /**
+     * 检查是否有选项
+     *
+     * @return bool
+     */
+    public function hasOptions()
+    {
+        return !empty($this->additional);
+    }
+
+    /**
+     * 获取选项值
+     *
+     * @param string $key
+     * @param mixed $default
+     * @return mixed
+     */
+    public function getOption($key, $default = null)
+    {
+        return $this->additional[$key] ?? $default;
+    }
+
+    /**
+     * 检查商品和选项是否匹配
+     *
+     * @param int $productId
+     * @param array|null $options
+     * @return bool
+     */
+    public function matches($productId, $options = null)
+    {
+        if ($this->itemable_id !== $productId) {
+            return false;
+        }
+
+        if (empty($options) && empty($this->additional)) {
+            return true;
+        }
+
+        if (empty($options) || empty($this->additional)) {
+            return false;
+        }
+
+        return $this->additional == $options;
+    }
+
+    /**
+     * 更新数量
+     *
+     * @param int $quantity
+     * @return void
+     */
+    public function updateQuantity($quantity)
+    {
+        $this->quantity = $quantity;
+        $this->save();
+    }
+
+    /**
+     * 增加数量
+     *
+     * @param int $amount
+     * @return void
+     */
+    public function incrementQuantity($amount = 1)
+    {
+        $this->quantity += $amount;
+        $this->save();
+    }
+
+    /**
+     * 减少数量
+     *
+     * @param int $amount
+     * @return void
+     */
+    public function decrementQuantity($amount = 1)
+    {
+        $this->quantity = max(0, $this->quantity - $amount);
+        $this->save();
+    }
+
+    /**
+     * 切换选中状态
+     *
+     * @return void
+     */
+    public function toggleSelection()
+    {
+        $this->selected = !$this->selected;
+        $this->save();
+        $this->refresh();
+    }
+
+    /**
+     * 设置选中状态
+     *
+     * @param bool $selected
+     * @return void
+     */
+    public function setSelected($selected)
+    {
+        $this->selected = $selected;
+        $this->save();
+    }
+
+    /**
+     * Convert the model instance to an array.
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        $array = parent::toArray();
+        
+        // 确保 selected 字段包含在数组中
+        if (!isset($array['selected'])) {
+            $array['selected'] = $this->selected;
+        }
+        
+        return $array;
     }
 }

@@ -78,7 +78,7 @@ test('it loads migration files', function () {
     $provider = new ShoppingCartServiceProvider(app());
     
     // Check if migrations are loaded by running them
-    $this->artisan('migrate', ['--path' => 'vendor/mobilenowgroup/laravel-shopping-cart/database/migrations']);
+    $this->artisan('migrate', ['--path' => 'database/migrations']);
     
     expect(\Schema::hasTable('shopping_carts'))->toBeTrue()
         ->and(\Schema::hasTable('shopping_cart_items'))->toBeTrue();
@@ -136,8 +136,10 @@ test('it resolves shopping cart with correct storage', function () {
     
     expect($cart)->toBeInstanceOf(ShoppingCart::class);
     
-    // Test that the cart can perform basic operations
-    expect($cart->getCart('test_user'))->toBeArray();
+    // Test that the cart can perform basic operations with authenticated user
+    $this->actingAs(createMockUser(1));
+    $result = $cart->getCart();
+    expect($result)->toBeInstanceOf(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
 });
 
 test('it resolves cart storage manager with correct configuration', function () {
