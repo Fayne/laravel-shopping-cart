@@ -6,6 +6,7 @@ use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 
 beforeEach(function () {
     $this->mockStorage = Mockery::mock(CartStorageInterface::class);
@@ -15,7 +16,6 @@ beforeEach(function () {
 afterEach(function () {
     Mockery::close();
 });
-
 
 
 test('it can get cart for customer', function () {
@@ -93,8 +93,14 @@ test('it can add product to cart', function () {
 
     $this->mockStorage
         ->shouldReceive('getCart')
-        ->once()
+        ->twice()
         ->with($customerId, false)
+        ->andReturn(null, $cartModel);
+        
+    $this->mockStorage
+        ->shouldReceive('createCart')
+        ->once()
+        ->with(Mockery::type('array'))
         ->andReturn($cartModel);
         
     $cartItem = new ShoppingCartItem([
@@ -467,11 +473,22 @@ test('it handles different options as different products', function () {
         ->with($customerId, false)
         ->andReturn($cartModel);
         
+    $cartItem = new ShoppingCartItem([
+        'id' => 1,
+        'cart_id' => $cartModel->id,
+        'product_id' => 3,
+        'sku' => 'TEST-SKU-3',
+        'name' => 'Test Product with Options',
+        'price' => 10.00,
+        'quantity' => $quantity,
+    ]);
+    $cartItem->id = 1;
+    
     $this->mockStorage
         ->shouldReceive('addCartItem')
         ->once()
         ->with($cartModel->id, Mockery::type('array'))
-        ->andReturn(true);
+        ->andReturn($cartItem);
 
     $result = $this->cart->addProduct($mockItem, $quantity);
 

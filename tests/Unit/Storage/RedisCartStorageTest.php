@@ -67,7 +67,9 @@ test('it falls back to fallback storage when redis fails', function () {
     // cacheCart 方法会调用 hmset 和 expire
     $this->mockRedis
         ->shouldReceive('hmset')
-        ->once();
+        ->once()
+        ->with(Mockery::type('string'), Mockery::type('array'))
+        ->andReturn('OK');
         
     $this->mockRedis
         ->shouldReceive('expire')
@@ -96,7 +98,9 @@ test('it can create cart and cache in redis', function () {
         
     $this->mockRedis
         ->shouldReceive('hmset')
-        ->once();
+        ->once()
+        ->with(Mockery::type('string'), Mockery::type('array'))
+        ->andReturn('OK');
         
     $this->mockRedis
         ->shouldReceive('expire')
@@ -123,7 +127,9 @@ test('it can update cart and update redis cache', function () {
         
     $this->mockRedis
         ->shouldReceive('hmset')
-        ->once();
+        ->once()
+        ->with(Mockery::type('string'), Mockery::type('array'))
+        ->andReturn('OK');
         
     $this->mockRedis
         ->shouldReceive('expire')
@@ -233,7 +239,8 @@ test('it can empty cart and clear redis cache', function () {
     $this->mockRedis
         ->shouldReceive('del')
         ->once()
-        ->with(["cart:items:{$cartId}"]);
+        ->with(["cart:items:{$cartId}"])
+        ->andReturn(1);
 
     $result = $this->storage->emptyCart($cartId);
 
@@ -364,7 +371,9 @@ test('it handles redis exceptions gracefully', function () {
         
     $this->mockRedis
         ->shouldReceive('hmset')
-        ->once();
+        ->once()
+        ->with(Mockery::type('string'), Mockery::type('array'))
+        ->andReturn('OK');
         
     $this->mockRedis
         ->shouldReceive('expire')
