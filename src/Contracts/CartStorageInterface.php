@@ -102,4 +102,13 @@ interface CartStorageInterface
      * @return array
      */
     public function getCartStats(int $cartId): array;
+
+    /**
+     * 批量更新购物车项目
+     *
+     * @param int $cartId
+     * @param array $items
+     * @return bool
+     */
+    public function updateItems(int $cartId, array $items): bool;
 }

@@ -232,6 +232,21 @@ class RedisCartStorage implements CartStorageInterface
     }
 
     /**
+     * 批量更新购物车项目
+     */
+    public function updateItems(int $cartId, array $items): bool
+    {
+        $result = $this->fallbackStorage->updateItems($cartId, $items);
+        
+        if ($result) {
+            // 清除相关的Redis缓存
+            $this->clearCartItemsFromRedis($cartId);
+        }
+        
+        return $result;
+    }
+
+    /**
      * 生成购物车Redis键
      */
     protected function getCartKey(string $customerId): string

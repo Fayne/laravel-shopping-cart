@@ -194,10 +194,12 @@ test('it uses custom thresholds when provided', function () {
     $testClass = new class {
         use CartPerformanceMonitoring;
         
-        protected $performanceThresholds = [
-            'execution_time' => 50, // 50ms
-            'memory_usage' => 512 * 1024, // 512KB
-        ];
+        public function __construct() {
+            $this->performanceThresholds = [
+                'execution_time' => 50, // 50ms
+                'memory_usage' => 512 * 1024, // 512KB
+            ];
+        }
         
         public function testCustomThresholds()
         {

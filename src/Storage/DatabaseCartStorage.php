@@ -159,4 +159,27 @@ class DatabaseCartStorage implements CartStorageInterface
             'selected_qty' => $items->where('selected', true)->sum('quantity'),
         ];
     }
+
+    /**
+     * 批量更新购物车项目
+     */
+    public function updateItems(int $cartId, array $items): bool
+    {
+        try {
+            return DB::transaction(function () use ($cartId, $items) {
+                foreach ($items as $itemData) {
+                    if (isset($itemData['id'])) {
+                        $updateData = $itemData;
+                        unset($updateData['id']);
+                        ShoppingCartItem::where('id', $itemData['id'])
+                            ->where('cart_id', $cartId)
+                            ->update($updateData);
+                    }
+                }
+                return true;
+            });
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
 }

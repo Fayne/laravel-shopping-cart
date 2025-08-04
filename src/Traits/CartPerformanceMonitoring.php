@@ -13,6 +13,7 @@ trait CartPerformanceMonitoring
 {
     protected array $performanceMetrics = [];
     protected bool $enablePerformanceMonitoring = true;
+    protected array $performanceThresholds = [];
 
     /**
      * 开始性能监控
@@ -123,11 +124,11 @@ trait CartPerformanceMonitoring
             $stats[$operation]['avg_time'] = $stats[$operation]['total_time'] / $stats[$operation]['count'];
             $stats[$operation]['avg_memory'] = $stats[$operation]['total_memory'] / $stats[$operation]['count'];
             
-            Cache::put($cacheKey, $stats, now()->addHours(25)); // 保存25小时
+            Cache::store('default')->put($cacheKey, $stats, now()->addHours(25)); // 保存25小时
         } catch (\Exception $e) {
-            Log::warning('Failed to cache performance stats', [
-                'error' => $e->getMessage(),
-                'data' => $data
+            Log::error('Failed to cache performance data', [
+                'operation' => $data['operation'],
+                'error' => $e->getMessage()
             ]);
         }
     }
@@ -150,25 +151,31 @@ trait CartPerformanceMonitoring
         $executionTime = $data['execution_time'];
         $memoryUsage = $data['memory_usage'];
 
+        // 获取执行时间阈值（优先使用操作特定阈值，否则使用默认阈值）
+        $executionTimeThreshold = $thresholds['execution_time'][$operation] ?? 
+                                 $thresholds['execution_time']['default'] ?? 
+                                 ($this->performanceThresholds['execution_time'] ?? 100);
+        
+        // 获取内存使用阈值（优先使用操作特定阈值，否则使用默认阈值）
+        $memoryUsageThreshold = $thresholds['memory_usage'][$operation] ?? 
+                               $thresholds['memory_usage']['default'] ?? 
+                               ($this->performanceThresholds['memory_usage'] ?? 1048576);
+
         // 检查执行时间阈值
-        if (isset($thresholds['execution_time'][$operation]) && 
-            $executionTime > $thresholds['execution_time'][$operation]) {
-            Log::warning('Cart operation exceeded execution time threshold', [
+        if ($executionTime > $executionTimeThreshold) {
+            Log::warning('Slow cart operation detected', [
                 'operation' => $operation,
                 'execution_time' => $executionTime,
-                'threshold' => $thresholds['execution_time'][$operation],
-                'data' => $data
+                'threshold' => $executionTimeThreshold,
             ]);
         }
 
         // 检查内存使用阈值
-        if (isset($thresholds['memory_usage'][$operation]) && 
-            $memoryUsage > $thresholds['memory_usage'][$operation]) {
-            Log::warning('Cart operation exceeded memory usage threshold', [
+        if ($memoryUsage > $memoryUsageThreshold) {
+            Log::warning('High memory usage detected in cart operation', [
                 'operation' => $operation,
                 'memory_usage' => $memoryUsage,
-                'threshold' => $thresholds['memory_usage'][$operation],
-                'data' => $data
+                'threshold' => $memoryUsageThreshold,
             ]);
         }
     }

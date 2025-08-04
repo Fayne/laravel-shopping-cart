@@ -196,4 +196,28 @@ return [
             ],
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Performance Monitoring Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure performance monitoring options for the shopping cart.
+    | This includes logging, caching, and threshold settings.
+    |
+    */
+
+    'performance' => [
+        'log_enabled' => env('CART_PERFORMANCE_LOG_ENABLED', true),
+        'log_channel' => env('CART_PERFORMANCE_LOG_CHANNEL', 'default'),
+        'cache_enabled' => env('CART_PERFORMANCE_CACHE_ENABLED', true),
+        'thresholds' => [
+            'execution_time' => [
+                'default' => 100, // milliseconds
+            ],
+            'memory_usage' => [
+                'default' => 1048576, // 1MB in bytes
+            ],
+        ],
+    ],
 ];

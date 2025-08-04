@@ -161,6 +161,26 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             \MobileNowGroup\ShoppingCart\Events\CartItemAdded::class,
             \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductAdded'
         );
+        
+        $this->app['events']->listen(
+            \MobileNowGroup\ShoppingCart\Events\CartItemRemoved::class,
+            \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductRemoved'
+        );
+        
+        $this->app['events']->listen(
+            \MobileNowGroup\ShoppingCart\Events\CartItemUpdated::class,
+            \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductUpdated'
+        );
+        
+        $this->app['events']->listen(
+            \MobileNowGroup\ShoppingCart\Events\CartCleared::class,
+            \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleCartCleared'
+        );
+        
+        $this->app['events']->listen(
+            \MobileNowGroup\ShoppingCart\Events\CartTotalCalculated::class,
+            \MobileNowGroup\ShoppingCart\Listeners\CollectTotalsListener::class . '@handle'
+        );
     }
 
     /**

@@ -187,6 +187,26 @@ class CacheCartStorage implements CartStorageInterface
     }
 
     /**
+     * 批量更新购物车项目
+     */
+    public function updateItems(int $cartId, array $items): bool
+    {
+        $result = $this->storage->updateItems($cartId, $items);
+        
+        if ($result) {
+            // 清除相关缓存
+            $this->clearCartCacheByCartId($cartId);
+            foreach ($items as $itemData) {
+                if (isset($itemData['id'])) {
+                    $this->clearCartItemCache($itemData['id']);
+                }
+            }
+        }
+        
+        return $result;
+    }
+
+    /**
      * 生成购物车缓存键
      */
     protected function getCartCacheKey(string $customerId, bool $isCheckout = false): string
