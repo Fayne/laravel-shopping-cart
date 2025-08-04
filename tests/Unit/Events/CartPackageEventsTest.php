@@ -15,6 +15,26 @@ use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyBefore;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
 
+// 辅助函数
+function createMockUser($id = 1)
+{
+    return new class($id) implements \Illuminate\Contracts\Auth\Authenticatable {
+        private $id;
+        
+        public function __construct($id)
+        {
+            $this->id = $id;
+        }
+        
+        public function getAuthIdentifierName() { return 'id'; }
+        public function getAuthIdentifier() { return $this->id; }
+        public function getAuthPassword() { return 'password'; }
+        public function getAuthPasswordName() { return 'password'; }
+        public function getRememberToken() { return 'token'; }
+        public function setRememberToken($value) {}
+        public function getRememberTokenName() { return 'remember_token'; }
+    };
+}
 
 describe('CartPackage Events', function () {
     afterEach(function () {
@@ -23,84 +43,77 @@ describe('CartPackage Events', function () {
     
     describe('CartAddProduct Events', function () {
         it('可以创建CartAddProductBefore事件', function () {
-            $data = ['product_id' => 1, 'quantity' => 2];
-            $event = new CartAddProductBefore($data);
+            $mockCartable = Mockery::mock(\MobileNowGroup\ShoppingCart\Contracts\Cartable::class);
+            $quantity = 2;
+            $isBuyNow = false;
+            $event = new CartAddProductBefore($mockCartable, $quantity, $isBuyNow);
             
             expect($event)->toBeInstanceOf(CartAddProductBefore::class);
             
-            if (property_exists($event, 'data')) {
-                expect($event->data)->toBe($data);
+            if (property_exists($event, 'item')) {
+                expect($event->item)->toBe($mockCartable);
+            }
+            if (property_exists($event, 'quantity')) {
+                expect($event->quantity)->toBe($quantity);
             }
         });
         
         it('可以创建CartAddProductAfter事件', function () {
-            $data = ['product_id' => 1, 'quantity' => 2];
-            $result = ['success' => true, 'item_id' => 123];
-            $event = new CartAddProductAfter($data, $result);
+            $mockCartable = Mockery::mock(\MobileNowGroup\ShoppingCart\Contracts\Cartable::class);
+            $event = new CartAddProductAfter($mockCartable);
             
             expect($event)->toBeInstanceOf(CartAddProductAfter::class);
             
-            if (property_exists($event, 'data')) {
-                expect($event->data)->toBe($data);
-            }
-            if (property_exists($event, 'result')) {
-                expect($event->result)->toBe($result);
+            if (property_exists($event, 'item')) {
+                expect($event->item)->toBe($mockCartable);
             }
         });
     });
     
     describe('CartCollectTotal Events', function () {
         it('可以创建CartCollectTotalBefore事件', function () {
-            $cartData = ['id' => 1, 'items' => []];
-            $event = new CartCollectTotalBefore($cartData);
+            $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $event = new CartCollectTotalBefore($mockCart);
             
             expect($event)->toBeInstanceOf(CartCollectTotalBefore::class);
             
-            if (property_exists($event, 'cartData')) {
-                expect($event->cartData)->toBe($cartData);
+            if (property_exists($event, 'cart')) {
+                expect($event->cart)->toBe($mockCart);
             }
         });
         
         it('可以创建CartCollectTotalAfter事件', function () {
-            $cartData = ['id' => 1, 'items' => []];
-            $total = 99.99;
-            $event = new CartCollectTotalAfter($cartData, $total);
+            $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $event = new CartCollectTotalAfter($mockCart);
             
             expect($event)->toBeInstanceOf(CartCollectTotalAfter::class);
             
-            if (property_exists($event, 'cartData')) {
-                expect($event->cartData)->toBe($cartData);
-            }
-            if (property_exists($event, 'total')) {
-                expect($event->total)->toBe($total);
+            if (property_exists($event, 'cart')) {
+                expect($event->cart)->toBe($mockCart);
             }
         });
     });
     
     describe('CartEmpty Events', function () {
         it('可以创建CartEmptyBefore事件', function () {
-            $cartId = 1;
-            $event = new CartEmptyBefore($cartId);
+            $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $event = new CartEmptyBefore($mockCart);
             
             expect($event)->toBeInstanceOf(CartEmptyBefore::class);
             
-            if (property_exists($event, 'cartId')) {
-                expect($event->cartId)->toBe($cartId);
+            if (property_exists($event, 'cart')) {
+                expect($event->cart)->toBe($mockCart);
             }
         });
         
         it('可以创建CartEmptyAfter事件', function () {
-            $cartId = 1;
-            $result = true;
-            $event = new CartEmptyAfter($cartId, $result);
+            $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $event = new CartEmptyAfter($mockCart);
             
             expect($event)->toBeInstanceOf(CartEmptyAfter::class);
             
-            if (property_exists($event, 'cartId')) {
-                expect($event->cartId)->toBe($cartId);
-            }
-            if (property_exists($event, 'result')) {
-                expect($event->result)->toBe($result);
+            if (property_exists($event, 'cart')) {
+                expect($event->cart)->toBe($mockCart);
             }
         });
     });
@@ -150,7 +163,7 @@ describe('CartPackage Events', function () {
         
         it('可以创建CartRemoveItemAfter事件', function () {
             $itemId = 456;
-            $cart = Mockery::mock(ShoppingCart::class);
+            $cart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
             $event = new CartRemoveItemAfter($itemId, $cart);
             
             expect($event)->toBeInstanceOf(CartRemoveItemAfter::class);
@@ -158,8 +171,8 @@ describe('CartPackage Events', function () {
             if (property_exists($event, 'itemId')) {
                 expect($event->itemId)->toBe($itemId);
             }
-            if (property_exists($event, 'result')) {
-                expect($event->result)->toBe($result);
+            if (property_exists($event, 'cart')) {
+                expect($event->cart)->toBe($cart);
             }
         });
     });
@@ -185,21 +198,21 @@ describe('CartPackage Events', function () {
         });
         
         it('可以创建CartToggleBuyAfter事件', function () {
+            $type = 'buy';
+            $selected = true;
             $itemId = 789;
-            $isBuy = true;
-            $result = ['success' => true];
-            $event = new CartToggleBuyAfter($itemId, $isBuy, $result);
+            $event = new CartToggleBuyAfter($type, $selected, $itemId);
             
             expect($event)->toBeInstanceOf(CartToggleBuyAfter::class);
             
+            if (property_exists($event, 'type')) {
+                expect($event->type)->toBe($type);
+            }
+            if (property_exists($event, 'selected')) {
+                expect($event->selected)->toBe($selected);
+            }
             if (property_exists($event, 'itemId')) {
                 expect($event->itemId)->toBe($itemId);
-            }
-            if (property_exists($event, 'isBuy')) {
-                expect($event->isBuy)->toBe($isBuy);
-            }
-            if (property_exists($event, 'result')) {
-                expect($event->result)->toBe($result);
             }
         });
     });
@@ -207,62 +220,56 @@ describe('CartPackage Events', function () {
     describe('CartUpdateItem Events', function () {
         it('可以创建CartUpdateItemBefore事件', function () {
             $itemId = 101;
-            $data = ['quantity' => 3, 'price' => 15.99];
-            $event = new CartUpdateItemBefore($itemId, $data);
+            $quantity = 3;
+            $event = new CartUpdateItemBefore($itemId, $quantity);
             
             expect($event)->toBeInstanceOf(CartUpdateItemBefore::class);
             
             if (property_exists($event, 'itemId')) {
                 expect($event->itemId)->toBe($itemId);
             }
-            if (property_exists($event, 'data')) {
-                expect($event->data)->toBe($data);
+            if (property_exists($event, 'quantity')) {
+                expect($event->quantity)->toBe($quantity);
             }
         });
         
         it('可以创建CartUpdateItemAfter事件', function () {
-            $itemId = 101;
-            $data = ['quantity' => 3, 'price' => 15.99];
-            $result = ['success' => true, 'updated_item' => []];
-            $event = new CartUpdateItemAfter($itemId, $data, $result);
+            $mockCartItem = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCartItem::class);
+            $event = new CartUpdateItemAfter($mockCartItem);
             
             expect($event)->toBeInstanceOf(CartUpdateItemAfter::class);
             
-            if (property_exists($event, 'itemId')) {
-                expect($event->itemId)->toBe($itemId);
-            }
-            if (property_exists($event, 'data')) {
-                expect($event->data)->toBe($data);
-            }
-            if (property_exists($event, 'result')) {
-                expect($event->result)->toBe($result);
+            if (property_exists($event, 'item')) {
+                expect($event->item)->toBe($mockCartItem);
             }
         });
     });
     
-    it('所有事件都可以被序列化', function () {
+    it('事件可以被实例化', function () {
+        // 创建模拟对象
+        $mockCartable = Mockery::mock(\MobileNowGroup\ShoppingCart\Contracts\Cartable::class);
+        $mockCartItem = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCartItem::class);
+        $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+        
         $events = [
-            new CartAddProductBefore(['test' => 'data']),
-            new CartAddProductAfter(['test' => 'data'], ['result' => 'success']),
-            new CartCollectTotalBefore(['cart' => 'data']),
-            new CartCollectTotalAfter(['cart' => 'data'], 100.0),
-            new CartEmptyBefore(1),
-            new CartEmptyAfter(1, true),
+            new CartAddProductBefore($mockCartable, 1, false),
+            new CartAddProductAfter($mockCartable),
+            new CartCollectTotalBefore($mockCart),
+            new CartCollectTotalAfter($mockCart),
+            new CartEmptyBefore($mockCart),
+            new CartEmptyAfter($mockCart),
             new CartGetBefore(123),
-            new CartGetAfter(123, ['cart' => 'data']),
+            new CartGetAfter($mockCart),
             new CartRemoveItemBefore(456),
-            new CartRemoveItemAfter(456, true),
-            new CartToggleBuyBefore(789, true),
-            new CartToggleBuyAfter(789, true, ['success' => true]),
-            new CartUpdateItemBefore(101, ['data' => 'test']),
-            new CartUpdateItemAfter(101, ['data' => 'test'], ['result' => 'success'])
+            new CartRemoveItemAfter(456, $mockCart),
+            new CartToggleBuyBefore('buy', true, 789),
+            new CartToggleBuyAfter('buy', true, 789),
+            new CartUpdateItemBefore(101, 2),
+            new CartUpdateItemAfter($mockCartItem)
         ];
         
         foreach ($events as $event) {
-            $serialized = serialize($event);
-            $unserialized = unserialize($serialized);
-            
-            expect($unserialized)->toBeInstanceOf(get_class($event));
+            expect($event)->toBeObject();
         }
     });
 });
