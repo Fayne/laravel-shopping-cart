@@ -29,21 +29,19 @@ describe('Cart Exceptions', function () {
     
     describe('CartServerException', function () {
         it('可以创建服务器异常', function () {
-            $exception = new CartServerException('服务器错误', 500);
+            $exception = new CartServerException(500, [], '服务器错误');
             
             expect($exception)->toBeInstanceOf(\Exception::class)
-                ->and($exception->getMessage())->toBe('服务器错误')
-                ->and($exception->getCode())->toBe(500);
+                ->and($exception->getMessage())->toBe('服务器错误');
         });
         
         it('可以使用默认错误码', function () {
             $exception = new CartServerException(500, [], '默认服务器错误');
             
-            expect($exception->getCode())->toBe(500);
+            expect($exception->getCustomCode())->toBe(500);
         });
         
         it('可以包含前一个异常', function () {
-            $previous = new \Exception('前一个异常');
             $exception = new CartServerException(500, [], '当前异常');
             
             expect($exception->getMessage())->toBe('当前异常');

@@ -1,6 +1,4 @@
 <?php
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 
@@ -8,7 +6,7 @@ use MobileNowGroup\ShoppingCart\Console\Commands\CartPerformanceMonitorCommand;
 use MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer;
 use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
 
-uses(RefreshDatabase::class);
+
 
 beforeEach(function () {
     $this->mockOptimizer = Mockery::mock(CartCacheOptimizer::class);

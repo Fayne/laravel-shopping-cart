@@ -1,10 +1,8 @@
 <?php
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 
-uses(RefreshDatabase::class);
+
 
 beforeEach(function () {
     $this->cart = ShoppingCart::create([

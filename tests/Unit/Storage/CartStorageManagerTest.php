@@ -1,6 +1,4 @@
 <?php
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
 use MobileNowGroup\ShoppingCart\Storage\DatabaseCartStorage;
@@ -8,7 +6,7 @@ use MobileNowGroup\ShoppingCart\Storage\CacheCartStorage;
 use MobileNowGroup\ShoppingCart\Storage\RedisCartStorage;
 use MobileNowGroup\ShoppingCart\Storage\CartStorageInterface;
 
-uses(RefreshDatabase::class);
+
 
 beforeEach(function () {
     $this->manager = new CartStorageManager($this->app);

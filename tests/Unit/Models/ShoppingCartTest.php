@@ -1,10 +1,8 @@
 <?php
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 
-uses(RefreshDatabase::class);
+
 
 test('it can create a shopping cart', function () {
     $cart = ShoppingCart::create([

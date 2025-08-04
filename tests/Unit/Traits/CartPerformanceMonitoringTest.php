@@ -1,11 +1,9 @@
 <?php
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use MobileNowGroup\ShoppingCart\Traits\CartPerformanceMonitoring;
 
-uses(RefreshDatabase::class);
+
 
 beforeEach(function () {
     $this->testClass = new class {

@@ -14,6 +14,7 @@ beforeEach(function () {
         'customer_id' => 'user123',
         'customer_name' => 'John Doe',
     ]);
+    $this->cart->id = 1; // Explicitly set the id
     
     $this->item = new ShoppingCartItem([
         'id' => 1,
@@ -25,6 +26,7 @@ beforeEach(function () {
         'name' => 'Test Product',
         'additional' => ['color' => 'red'],
     ]);
+    $this->item->cart_id = 1; // Explicitly set the cart_id
 });
 
 test('cart item added event contains correct data', function () {

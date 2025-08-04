@@ -45,6 +45,33 @@ class CartServerException extends Exception
     }
 
     /**
+     * Get the custom error code
+     * @return int
+     */
+    public function getCustomCode(): int
+    {
+        return $this->customCode;
+    }
+
+    /**
+     * Get the HTTP status code
+     * @return int
+     */
+    public function getHttpCode(): int
+    {
+        return $this->httpCode;
+    }
+
+    /**
+     * Get the additional data
+     * @return array|null
+     */
+    public function getData(): ?array
+    {
+        return $this->data;
+    }
+
+    /**
      * @param $request
      * @return JsonResponse
      */

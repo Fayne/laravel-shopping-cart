@@ -150,8 +150,8 @@ describe('CartPackage Events', function () {
         
         it('可以创建CartRemoveItemAfter事件', function () {
             $itemId = 456;
-            $result = true;
-            $event = new CartRemoveItemAfter($itemId, $result);
+            $cart = Mockery::mock(ShoppingCart::class);
+            $event = new CartRemoveItemAfter($itemId, $cart);
             
             expect($event)->toBeInstanceOf(CartRemoveItemAfter::class);
             

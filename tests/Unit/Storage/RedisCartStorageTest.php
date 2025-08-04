@@ -1,13 +1,11 @@
 <?php
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Redis;
 use MobileNowGroup\ShoppingCart\Storage\RedisCartStorage;
 use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 
-uses(RefreshDatabase::class);
+
 
 beforeEach(function () {
     $this->mockFallbackStorage = Mockery::mock(CartStorageInterface::class);

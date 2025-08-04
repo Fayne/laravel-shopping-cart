@@ -52,6 +52,17 @@ describe('CartResource', function () {
             ->with('items')
             ->andReturn($mockItems);
         
+        // 添加 toArray 方法的期望
+        $this->mockCart->shouldReceive('toArray')
+            ->andReturn([
+                'id' => 1,
+                'customer_id' => 123,
+                'total' => 99.99,
+                'created_at' => '2023-01-01 00:00:00',
+                'updated_at' => '2023-01-01 12:00:00',
+                'items' => []
+            ]);
+        
         $resource = new CartResource($this->mockCart);
         
         // 如果 CartResource 有 toArray 方法，测试数据转换
@@ -99,6 +110,17 @@ describe('CartResource', function () {
         $this->mockCart->shouldReceive('getAttribute')
             ->with('items')
             ->andReturn(collect([]));
+        
+        // 添加 toArray 方法的期望
+        $this->mockCart->shouldReceive('toArray')
+            ->andReturn([
+                'id' => 1,
+                'customer_id' => 123,
+                'total' => 0,
+                'created_at' => '2023-01-01 00:00:00',
+                'updated_at' => '2023-01-01 12:00:00',
+                'items' => []
+            ]);
         
         $resource = new CartResource($this->mockCart);
         
@@ -207,6 +229,8 @@ describe('CartResource', function () {
             ->andReturn(null);
         $this->mockCart->shouldReceive('relationLoaded')
             ->andReturn(false);
+        $this->mockCart->shouldReceive('toArray')
+            ->andReturn([]);
         
         $resource = new CartResource($this->mockCart);
         

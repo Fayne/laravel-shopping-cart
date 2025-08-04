@@ -1,14 +1,11 @@
 <?php
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 use MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->optimizer = new CartCacheOptimizer();

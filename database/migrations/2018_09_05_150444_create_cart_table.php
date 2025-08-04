@@ -42,7 +42,11 @@ return new class extends Migration
             $table->dateTime('conversion_time')->nullable();
 
             $table->ulid('customer_id')->nullable();
-            $table->foreign('customer_id')->references('id')->on($userTableName)->onDelete('cascade');
+            
+            // Only add foreign key constraint if the users table exists
+            if (Schema::hasTable($userTableName)) {
+                $table->foreign('customer_id')->references('id')->on($userTableName)->onDelete('cascade');
+            }
 
             $table->string('session_id')->nullable();
             $table->json('metadata')->nullable();

@@ -1,12 +1,8 @@
 <?php
-
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use MobileNowGroup\ShoppingCart\Storage\DatabaseCartStorage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->loadMigrationsFrom(__DIR__ . '/../../../database/migrations');
