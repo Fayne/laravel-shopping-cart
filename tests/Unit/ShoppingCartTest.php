@@ -93,11 +93,22 @@ test('it can add product to cart', function () {
         ->with($customerId, false)
         ->andReturn($cartModel);
         
+    $cartItem = new ShoppingCartItem([
+        'id' => 1,
+        'cart_id' => $cartModel->id,
+        'product_id' => 2,
+        'sku' => 'TEST-SKU-2',
+        'name' => 'Test Product 2',
+        'price' => 10.00,
+        'quantity' => $quantity,
+    ]);
+    $cartItem->id = 1;
+    
     $this->mockStorage
         ->shouldReceive('addCartItem')
         ->once()
         ->with($cartModel->id, Mockery::type('array'))
-        ->andReturn(true);
+        ->andReturn($cartItem);
 
     $result = $this->cart->addProduct($mockItem, $quantity);
 

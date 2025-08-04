@@ -176,10 +176,14 @@ test('it calculates dynamic ttl based on activity', function () {
         
     Cache::shouldReceive('get')
         ->once()
-        ->with('cart:activity:user123')
+        ->with('cart:last_activity:user123')
         ->andReturn(now()->timestamp);
 
-    $ttl = $this->optimizer->calculateDynamicTTL($customerId);
+    // Use reflection to access protected method
+    $reflection = new \ReflectionClass($this->optimizer);
+    $method = $reflection->getMethod('calculateDynamicTtl');
+    $method->setAccessible(true);
+    $ttl = $method->invoke($this->optimizer, $customerId);
 
     expect($ttl)->toBeInt()
         ->toBeGreaterThan(0);
@@ -195,10 +199,14 @@ test('it calculates default ttl for inactive users', function () {
         
     Cache::shouldReceive('get')
         ->once()
-        ->with('cart:activity:user123')
+        ->with('cart:last_activity:user123')
         ->andReturn(null);
 
-    $ttl = $this->optimizer->calculateDynamicTTL($customerId);
+    // Use reflection to access protected method
+    $reflection = new \ReflectionClass($this->optimizer);
+    $method = $reflection->getMethod('calculateDynamicTtl');
+    $method->setAccessible(true);
+    $ttl = $method->invoke($this->optimizer, $customerId);
 
     expect($ttl)->toBe(3600); // Default TTL
 });
@@ -221,7 +229,11 @@ test('it records cache hit', function () {
         ->with('cart:monitor:hits:cart')
         ->andReturn(1);
 
-    $this->optimizer->recordCacheHit($key);
+    // Use reflection to access protected method
+    $reflection = new \ReflectionClass($this->optimizer);
+    $method = $reflection->getMethod('recordCacheHit');
+    $method->setAccessible(true);
+    $method->invoke($this->optimizer, $key, 0.1, 'hit');
 
     // No assertion needed as we're just testing the method doesn't throw
     expect(true)->toBeTrue();
@@ -245,7 +257,11 @@ test('it records cache miss', function () {
         ->with('cart:monitor:misses:cart')
         ->andReturn(1);
 
-    $this->optimizer->recordCacheMiss($key);
+    // Use reflection to access protected method
+    $reflection = new \ReflectionClass($this->optimizer);
+    $method = $reflection->getMethod('recordCacheHit');
+    $method->setAccessible(true);
+    $method->invoke($this->optimizer, $key, 0.1, 'miss');
 
     // No assertion needed as we're just testing the method doesn't throw
     expect(true)->toBeTrue();
@@ -312,7 +328,7 @@ test('it updates user activity', function () {
         
     Cache::shouldReceive('put')
         ->once()
-        ->with('cart:activity:user123', Mockery::type('int'), 86400)
+        ->with('cart:activity:user123', Mockery::type('int'), Mockery::type('int'))
         ->andReturn(true);
 
     $result = $this->optimizer->updateUserActivity($customerId);

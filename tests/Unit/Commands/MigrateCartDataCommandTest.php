@@ -4,11 +4,17 @@ use Illuminate\Support\Facades\Config;
 
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
+use MobileNowGroup\ShoppingCart\Console\Commands\MigrateCartDataCommand;
+use MobileNowGroup\ShoppingCart\Cache\CartCacheOptimizer;
 
 beforeEach(function () {
     // Mock the CartStorageManager
     $this->mockStorageManager = Mockery::mock(CartStorageManager::class);
     $this->app->instance(CartStorageManager::class, $this->mockStorageManager);
+    
+    // Mock the CartCacheOptimizer
+    $this->mockCacheOptimizer = Mockery::mock(CartCacheOptimizer::class);
+    $this->app->instance(CartCacheOptimizer::class, $this->mockCacheOptimizer);
     
     // Configure storage drivers for all tests
     Config::set('shopping-cart.storage.drivers', [
@@ -19,6 +25,10 @@ beforeEach(function () {
     // Create mock storage instances
     $this->mockSourceStorage = Mockery::mock();
     $this->mockTargetStorage = Mockery::mock();
+    
+    // Create and register the command
+    $this->command = new MigrateCartDataCommand($this->mockStorageManager, $this->mockCacheOptimizer);
+    app('Illuminate\Contracts\Console\Kernel')->registerCommand($this->command);
 });
 
 afterEach(function () {

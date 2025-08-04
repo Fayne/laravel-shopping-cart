@@ -15,6 +15,9 @@ beforeEach(function () {
     app()->instance(CartStorageManager::class, $this->mockStorageManager);
     
     $this->command = new CartPerformanceMonitorCommand($this->mockOptimizer, $this->mockStorageManager);
+    
+    // Register the command for testing
+    app('Illuminate\Contracts\Console\Kernel')->registerCommand($this->command);
 });
 
 afterEach(function () {
