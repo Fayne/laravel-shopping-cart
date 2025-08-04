@@ -284,6 +284,8 @@ function createMockUserForShoppingCart($customerId) {
     $user->shouldReceive('getAuthIdentifier')->andReturn($customerId);
     $user->shouldReceive('getAttribute')->with('name')->andReturn('Test User');
     $user->shouldReceive('setAttribute')->with('name', 'Test User')->andReturnSelf();
+    $user->shouldReceive('offsetExists')->andReturn(true);
+    $user->shouldReceive('offsetGet')->with('name')->andReturn('Test User');
     $user->name = 'Test User';
     return $user;
 }

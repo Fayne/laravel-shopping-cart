@@ -195,11 +195,11 @@ class ShoppingCart
             $cartData = [
                 'items_count' => 0,
                 'customer_id' => auth()->id(),
-                'customer_name' => auth()->user()->name ?? '',
+                'customer_name' => auth()->user()?->name ?? '',
             ] + $data;
 
             $cart = $this->storage->createCart($cartData);
-        } catch (\Exception $e){
+        } catch (\Exception $e) {
             throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE->value);
         }
 
