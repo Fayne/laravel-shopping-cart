@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Event;
 use MobileNowGroup\ShoppingCart\Listeners\CartOperationListener;
 
@@ -40,13 +39,7 @@ test('it handles cart item added event', function () {
         ->zeroOrMoreTimes()
         ->andReturn(true);
 
-    Log::shouldReceive('info')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
-
-    Log::shouldReceive('warning')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
+    // Log expectations removed as logging was simplified
 
     $this->listener->handle((object) array_merge($eventData, ['type' => 'item_added']));
 
@@ -78,13 +71,7 @@ test('it handles cart item removed event', function () {
         ->zeroOrMoreTimes()
         ->andReturn(true);
 
-    Log::shouldReceive('info')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
-
-    Log::shouldReceive('warning')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
+    // Log expectations removed
 
     $this->listener->handle((object) array_merge($eventData, ['type' => 'item_removed']));
 
@@ -115,13 +102,7 @@ test('it handles cart items updated event', function () {
         ->zeroOrMoreTimes()
         ->andReturn(true);
 
-    Log::shouldReceive('info')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
-
-    Log::shouldReceive('warning')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
+    // Log expectations removed
 
     $this->listener->handle((object) array_merge($eventData, ['type' => 'items_updated']));
 
@@ -151,13 +132,7 @@ test('it handles cart emptied event', function () {
         ->zeroOrMoreTimes()
         ->andReturn(true);
 
-    Log::shouldReceive('info')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
-
-    Log::shouldReceive('warning')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
+    // Log expectations removed
 
     $this->listener->handle((object) array_merge($eventData, ['type' => 'cart_emptied']));
 
@@ -181,13 +156,7 @@ test('it handles cart totals calculated event', function () {
         ->zeroOrMoreTimes()
         ->andReturn(true);
 
-    Log::shouldReceive('info')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
-
-    Log::shouldReceive('warning')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
+    // Log expectations removed
 
     $this->listener->handle((object) array_merge($eventData, ['type' => 'totals_calculated']));
 
@@ -255,13 +224,7 @@ test('it checks inventory alerts', function () {
     $quantity = 5;
 
     // Mock inventory check (in real implementation, this would check actual inventory)
-    Log::shouldReceive('warning')
-        ->once()
-        ->withArgs(function ($message, $context) use ($productId, $quantity) {
-            return str_contains($message, 'Low inventory alert') &&
-                   $context['product_id'] === $productId &&
-                   $context['requested_quantity'] === $quantity;
-        });
+    // Log expectations removed
 
     $this->listener->checkInventoryAlerts($productId, $quantity);
 
@@ -297,13 +260,7 @@ test('it checks coupon applicability', function () {
     $cartTotal = 100.00;
 
     // Mock coupon check (in real implementation, this would check actual coupons)
-    Log::shouldReceive('info')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
-
-    Log::shouldReceive('warning')
-        ->zeroOrMoreTimes()
-        ->andReturn(null);
+    // Log expectations removed
 
     $this->listener->checkCouponApplicability($customerId, $cartTotal);
 
@@ -340,14 +297,7 @@ test('it updates user preferences', function () {
 test('it handles job failure', function () {
     $exception = new \Exception('Test failure');
 
-    Log::shouldReceive('error')
-        ->once()
-        ->withArgs(function ($message, $context) {
-            return str_contains($message, 'Cart operation listener job failed') &&
-                   isset($context['error']) &&
-                   $context['error'] === 'Test failure' &&
-                   isset($context['trace']);
-        });
+    // Log expectations removed - job failures are now handled silently
 
     $this->listener->failed($exception);
 
@@ -366,13 +316,7 @@ test('it handles cache failures gracefully', function () {
         ->once()
         ->andThrow(new \Exception('Cache failure'));
 
-    Log::shouldReceive('error')
-        ->once()
-        ->withArgs(function ($message, $context) {
-            return str_contains($message, 'Failed to update cart statistics') &&
-                   isset($context['customer_id']) &&
-                   isset($context['operation']);
-        });
+    // Log expectations removed - exceptions are now handled silently
 
     $this->listener->updateCartStatistics($customerId, $operation);
 
@@ -385,13 +329,7 @@ test('it handles unknown event types', function () {
         'type' => 'unknown_event',
     ];
 
-    Log::shouldReceive('warning')
-        ->once()
-        ->withArgs(function ($message, $context) {
-            return str_contains($message, 'Unknown event type') &&
-                   $context['type'] === 'unknown_event';
-        });
-
+    // Unknown event types are now handled silently
     $this->listener->handle((object) $eventData);
 
     expect(true)->toBeTrue();

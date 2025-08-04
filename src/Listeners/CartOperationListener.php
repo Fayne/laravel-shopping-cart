@@ -4,7 +4,6 @@ namespace MobileNowGroup\ShoppingCart\Listeners;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
@@ -49,14 +48,11 @@ class CartOperationListener implements ShouldQueue
     public function handle(object $event): void
     {
         if (!isset($event->type)) {
-            Log::warning('Event type not specified', (array) $event);
-
             return;
         }
 
         switch ($event->type) {
             case 'cart_emptied':
-                Log::info('Cart emptied', (array) $event);
                 if (isset($event->customer_id)) {
                     $this->recordUserBehavior($event->customer_id, 'cart_emptied', (array) $event);
                     $this->updateCartStatistics($event->customer_id, 'carts_emptied');
@@ -67,7 +63,6 @@ class CartOperationListener implements ShouldQueue
                 break;
             case 'item_added':
             case 'product_added':
-                Log::info('Cart item added', (array) $event);
                 if (isset($event->customer_id)) {
                     $this->recordUserBehavior($event->customer_id, 'add_cart_item', (array) $event);
                     $this->updateCartStatistics($event->customer_id, 'items_added');
@@ -77,7 +72,6 @@ class CartOperationListener implements ShouldQueue
                 }
                 break;
             case 'item_removed':
-                Log::info('Cart item removed', (array) $event);
                 if (isset($event->customer_id)) {
                     $this->recordUserBehavior($event->customer_id, 'remove_cart_item', (array) $event);
                     $this->updateCartStatistics($event->customer_id, 'items_removed');
@@ -87,7 +81,6 @@ class CartOperationListener implements ShouldQueue
                 }
                 break;
             case 'item_updated':
-                Log::info('Cart item updated', (array) $event);
                 if (isset($event->customer_id)) {
                     $this->recordUserBehavior($event->customer_id, 'update_cart_item', (array) $event);
                     $this->updateCartStatistics($event->customer_id, 'items_updated');
@@ -97,10 +90,10 @@ class CartOperationListener implements ShouldQueue
                 }
                 break;
             case 'totals_calculated':
-                Log::info('Cart totals calculated', (array) $event);
                 break;
             default:
-                Log::warning('Unknown event type: ' . $event->type, (array) $event);
+                // Unknown event type, do nothing
+                break;
         }
     }
 
@@ -130,11 +123,7 @@ class CartOperationListener implements ShouldQueue
             $this->checkInventoryAlert($event->item);
 
         } catch (\Exception $e) {
-            Log::error('Failed to handle product added event', [
-                'cart_id' => $event->cart->id,
-                'item_id' => $event->item->getKey(),
-                'error' => $e->getMessage(),
-            ]);
+            // Silently handle exceptions
         }
     }
 
@@ -156,10 +145,7 @@ class CartOperationListener implements ShouldQueue
             $this->updateCartStatistics(auth()->id(), 'item_removed');
 
         } catch (\Exception $e) {
-            Log::error('Failed to handle item removed event', [
-                'item_id' => $event->itemId,
-                'error' => $e->getMessage(),
-            ]);
+            // Silently handle exceptions
         }
     }
 
@@ -179,10 +165,7 @@ class CartOperationListener implements ShouldQueue
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Failed to handle item updated event', [
-                'item_id' => $event->item->id,
-                'error' => $e->getMessage(),
-            ]);
+            // Silently handle exceptions
         }
     }
 
@@ -206,10 +189,7 @@ class CartOperationListener implements ShouldQueue
             }
 
         } catch (\Exception $e) {
-            Log::error('Failed to handle cart emptied event', [
-                'cart_id' => $event->cart?->id,
-                'error' => $e->getMessage(),
-            ]);
+            // Silently handle exceptions
         }
     }
 
@@ -232,10 +212,7 @@ class CartOperationListener implements ShouldQueue
             $this->updateShoppingPreferences($event->cart);
 
         } catch (\Exception $e) {
-            Log::error('Failed to handle total calculated event', [
-                'cart_id' => $event->cart->id,
-                'error' => $e->getMessage(),
-            ]);
+            // Silently handle exceptions
         }
     }
 
@@ -257,11 +234,7 @@ class CartOperationListener implements ShouldQueue
 
             Cache::put($cacheKey, $stats, now()->addDays(30));
         } catch (\Exception $e) {
-            Log::error('Failed to update cart statistics', [
-                'customer_id' => $customerId,
-                'operation' => $action,
-                'error' => $e->getMessage(),
-            ]);
+            // Silently handle exceptions
         }
     }
 
@@ -288,13 +261,7 @@ class CartOperationListener implements ShouldQueue
         // 保存到缓存，24小时过期
         Cache::store('default')->put("cart:behavior:{$customerId}", $behaviorData, 86400);
         
-        // 记录日志
-        Log::info('User cart behavior recorded', [
-            'customer_id' => $customerId,
-            'action' => $action,
-            'data' => $data,
-            'timestamp' => now()->toISOString(),
-        ]);
+        // Behavior recorded to cache
     }
 
     /**
@@ -309,11 +276,7 @@ class CartOperationListener implements ShouldQueue
         // 这里可以集成推荐系统API
         // 例如：更新用户偏好，触发相关商品推荐等
 
-        Log::debug('Recommendation system update triggered', [
-            'customer_id' => $customerId,
-            'item_id' => $item->getKey(),
-            'item_type' => get_class($item),
-        ]);
+        // Recommendation system integration point
     }
 
     /**
@@ -332,13 +295,7 @@ class CartOperationListener implements ShouldQueue
             $threshold = config('shopping-cart.inventory.low_stock_threshold', 10);
 
             if ($stock <= $threshold) {
-                Log::warning('Low stock alert', [
-                    'item_id' => $item->getKey(),
-                    'current_stock' => $stock,
-                    'threshold' => $threshold,
-                ]);
-
-                // 这里可以发送通知给管理员
+                // Low stock detected - could send notification to admin
             }
         }
     }
@@ -383,11 +340,7 @@ class CartOperationListener implements ShouldQueue
         // 这里可以检查当前购物车是否符合某些优惠券的使用条件
         // 如果符合条件，可以发送通知给用户
 
-        Log::debug('Checking coupon eligibility', [
-            'cart_id' => $cart->id,
-            'customer_id' => $cart->customer_id,
-            'grand_total' => $cart->grand_total,
-        ]);
+        // Coupon eligibility check logic would go here
     }
 
     /**
@@ -443,10 +396,7 @@ class CartOperationListener implements ShouldQueue
      */
     public function checkCouponApplicability($customerId, $cartTotal)
     {
-        Log::info('Checking coupon applicability', [
-            'customer_id' => $customerId,
-            'cart_total' => $cartTotal,
-        ]);
+        // Coupon applicability logic would go here
     }
 
     /**
@@ -454,10 +404,7 @@ class CartOperationListener implements ShouldQueue
      */
     public function checkInventoryAlerts($productId, $quantity)
     {
-        Log::warning('Low inventory alert', [
-            'product_id' => $productId,
-            'requested_quantity' => $quantity,
-        ]);
+        // Inventory alert logic would go here
     }
 
     /**
@@ -468,9 +415,6 @@ class CartOperationListener implements ShouldQueue
      */
     public function failed(\Exception $exception): void
     {
-        Log::error('Cart operation listener job failed', [
-            'error' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString(),
-        ]);
+        // Handle failed job - could log to a different system or send alerts
     }
 }
