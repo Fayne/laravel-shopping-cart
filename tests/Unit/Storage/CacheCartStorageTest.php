@@ -8,8 +8,6 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 
 
 beforeEach(function () {
-    $this->loadMigrationsFrom(__DIR__ . '/../../../database/migrations');
-    
     $this->mockDatabaseStorage = Mockery::mock(DatabaseCartStorage::class);
     $this->storage = new CacheCartStorage($this->mockDatabaseStorage);
 });
@@ -84,7 +82,7 @@ test('it can create cart and clear cache', function () {
     $this->mockDatabaseStorage
         ->shouldReceive('createCart')
         ->once()
-        ->with($customerId, $data)
+        ->with(array_merge($data, ['customer_id' => $customerId]))
         ->andReturn($cart);
 
     Cache::shouldReceive('store')
@@ -104,7 +102,7 @@ test('it can create cart and clear cache', function () {
         ->once()
         ->with("cart:items:{$cart->id}");
 
-    $result = $this->storage->createCart($customerId, $data);
+    $result = $this->storage->createCart(array_merge($data, ['customer_id' => $customerId]));
 
     expect($result)->toBe($cart);
 });
@@ -190,15 +188,19 @@ test('it can add item and clear cache', function () {
         ->andReturn($item);
 
     Cache::shouldReceive('store')
-        ->once()
+        ->twice()
         ->with('default')
         ->andReturnSelf();
         
     Cache::shouldReceive('forget')
         ->once()
-        ->with("cart:items:{$cartId}");
+        ->with("cart:item:{$itemId}");
+        
+    Cache::shouldReceive('forget')
+        ->once()
+        ->with("cart:stats:{$cartId}");
 
-    $result = $this->storage->addItem($cartId, $itemData);
+    $result = $this->storage->addCartItem($cartId, $itemData);
 
     expect($result)->toBe($item);
 });
@@ -206,6 +208,7 @@ test('it can add item and clear cache', function () {
 test('it can update items and clear cache', function () {
     $cartId = '1';
     $items = [['id' => 1, 'quantity' => 5]];
+    $itemId = $items[0]['id'];
 
     $this->mockDatabaseStorage
         ->shouldReceive('updateItems')
@@ -214,13 +217,17 @@ test('it can update items and clear cache', function () {
         ->andReturn(true);
 
     Cache::shouldReceive('store')
-        ->once()
+        ->twice()
         ->with('default')
         ->andReturnSelf();
         
     Cache::shouldReceive('forget')
         ->once()
-        ->with("cart:items:{$cartId}");
+        ->with("cart:item:{$itemId}");
+        
+    Cache::shouldReceive('forget')
+        ->once()
+        ->with("cart:stats:{$cartId}");
 
     $result = $this->storage->updateItems($cartId, $items);
 
@@ -228,36 +235,51 @@ test('it can update items and clear cache', function () {
 });
 
 test('it can remove item and clear cache', function () {
-    $cartId = '1';
+    $cartId = 1;
     $itemId = 1;
 
+    $cartItem = new \MobileNowGroup\ShoppingCart\Models\ShoppingCartItem([
+        'id' => $itemId,
+        'cart_id' => $cartId
+    ]);
+
     $this->mockDatabaseStorage
-        ->shouldReceive('removeItem')
+        ->shouldReceive('getCartItem')
         ->once()
-        ->with($cartId, $itemId)
+        ->with($itemId)
+        ->andReturn($cartItem);
+
+    $this->mockDatabaseStorage
+        ->shouldReceive('removeCartItem')
+        ->once()
+        ->with($itemId)
         ->andReturn(true);
 
     Cache::shouldReceive('store')
-        ->once()
+        ->twice()
         ->with('default')
         ->andReturnSelf();
         
     Cache::shouldReceive('forget')
         ->once()
-        ->with("cart:items:{$cartId}");
+        ->with("cart:item:{$itemId}");
+        
+    Cache::shouldReceive('forget')
+        ->once()
+        ->with("cart:stats:{$cartId}");
 
-    $result = $this->storage->removeItem($cartId, $itemId);
+    $result = $this->storage->removeCartItem($itemId);
 
     expect($result)->toBeTrue();
 });
 
 test('it can empty cart and clear cache', function () {
-    $customerId = 'user123';
+    $cartId = 1;
 
     $this->mockDatabaseStorage
         ->shouldReceive('emptyCart')
         ->once()
-        ->with($customerId)
+        ->with($cartId)
         ->andReturn(true);
 
     Cache::shouldReceive('store')
@@ -267,13 +289,13 @@ test('it can empty cart and clear cache', function () {
         
     Cache::shouldReceive('forget')
         ->once()
-        ->with("cart:cart:{$customerId}");
+        ->with("cart:cart:{$cartId}");
         
     Cache::shouldReceive('forget')
         ->once()
-        ->with("cart:stats:{$customerId}");
+        ->with("cart:stats:{$cartId}");
 
-    $result = $this->storage->emptyCart($customerId);
+    $result = $this->storage->emptyCart($cartId);
 
     expect($result)->toBeTrue();
 });
@@ -334,7 +356,7 @@ test('it can get items qty from cache', function () {
     Cache::shouldReceive('remember')
         ->once()
         ->with("cart:stats:{$customerId}", 1800, Mockery::type('callable'))
-        ->andReturn(['items_qty' => $qty]);
+        ->andReturn($qty);
 
     $result = $this->storage->getItemsQty($customerId);
 

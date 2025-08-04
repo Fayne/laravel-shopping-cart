@@ -111,4 +111,20 @@ interface CartStorageInterface
      * @return bool
      */
     public function updateItems(int $cartId, array $items): bool;
+
+    /**
+     * 获取用户购物车商品数量
+     *
+     * @param string $customerId
+     * @return int
+     */
+    public function getItemsCount(string $customerId): int;
+
+    /**
+     * 获取用户购物车商品总数量
+     *
+     * @param string $customerId
+     * @return int
+     */
+    public function getItemsQty(string $customerId): int;
 }

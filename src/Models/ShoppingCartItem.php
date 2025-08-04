@@ -112,7 +112,12 @@ class ShoppingCartItem extends Model
      */
     public function getLatestPriceAttribute(): float
     {
-        return $this->itemable->getPrice(); // 假设 product 关联了最新的价格
+        if ($this->itemable && method_exists($this->itemable, 'getPrice')) {
+            return $this->itemable->getPrice();
+        }
+        
+        // 如果没有关联对象或方法，返回当前价格
+        return $this->price ?? 0.0;
     }
 
     /**

@@ -50,6 +50,7 @@ test('it can create cart for customer', function () {
         'customer_id' => $customerId,
         'customer_name' => $customerName,
     ]);
+    $cartModel->id = 1;
 
     $this->actingAs(createMockUserForShoppingCart($customerId));
 
@@ -57,6 +58,7 @@ test('it can create cart for customer', function () {
         ->shouldReceive('createCart')
         ->once()
         ->with([
+            'items_count' => 0,
             'customer_id' => $customerId,
             'customer_name' => $customerName,
         ])
@@ -76,7 +78,9 @@ test('it can add product to cart', function () {
     $cartModel->shouldReceive('getAttribute')->with('customer_id')->andReturn($customerId);
     $cartModel->shouldReceive('getAttribute')->with('customer_name')->andReturn('John Doe');
     $cartModel->shouldReceive('getAttribute')->with('items')->andReturn(collect());
-    $cartModel->id = 1;
+    $cartModel->shouldReceive('setAttribute')->with('id', 1)->andReturnSelf();
+    $cartModel->shouldReceive('__get')->with('id')->andReturn(1);
+    $cartModel->shouldReceive('__set')->with('id', 1)->andReturnNull();
     
     $mockItem = Mockery::mock('MobileNowGroup\\ShoppingCart\\Contracts\\Cartable');
     $mockItem->shouldReceive('getPrice')->andReturn(10.00);
@@ -89,7 +93,7 @@ test('it can add product to cart', function () {
 
     $this->mockStorage
         ->shouldReceive('getCart')
-        ->twice()
+        ->once()
         ->with($customerId, false)
         ->andReturn($cartModel);
         
@@ -124,6 +128,7 @@ test('it can add product with default options', function () {
     $cartModel->shouldReceive('getAttribute')->with('customer_id')->andReturn($customerId);
     $cartModel->shouldReceive('getAttribute')->with('customer_name')->andReturn('John Doe');
     $cartModel->shouldReceive('getAttribute')->with('items')->andReturn(collect());
+    $cartModel->shouldReceive('setAttribute')->with('id', 1)->andReturnSelf();
     $cartModel->id = 1;
     
     $mockItem = Mockery::mock('MobileNowGroup\\ShoppingCart\\Contracts\\Cartable');
@@ -141,11 +146,14 @@ test('it can add product with default options', function () {
         ->with($customerId, false)
         ->andReturn($cartModel);
         
+    $cartItem = new \MobileNowGroup\ShoppingCart\Models\ShoppingCartItem();
+    $cartItem->id = 1;
+    
     $this->mockStorage
         ->shouldReceive('addCartItem')
         ->once()
         ->with($cartModel->id, Mockery::type('array'))
-        ->andReturn(true);
+        ->andReturn($cartItem);
 
     $result = $this->cart->addProduct($mockItem, $quantity);
 
@@ -183,30 +191,48 @@ test('it can remove item from cart', function () {
 });
 
 test('it can update items in cart', function () {
+    $customerId = 'user123';
     $itemId = 1;
     $quantity = 5;
+    
+    $this->actingAs(createMockUserForShoppingCart($customerId));
     
     $cartItemModel = new \MobileNowGroup\ShoppingCart\Models\ShoppingCartItem([
         'id' => $itemId,
         'quantity' => 3,
+        'latest_price' => 10.00,
+        'weight' => 1.5,
     ]);
     $cartItemModel->id = $itemId;
 
     $this->mockStorage
         ->shouldReceive('getCartItem')
-        ->once()
+        ->twice()
         ->with($itemId)
         ->andReturn($cartItemModel);
         
     $this->mockStorage
         ->shouldReceive('updateCartItem')
         ->once()
-        ->with($itemId, $quantity)
-        ->andReturn($cartItemModel);
+        ->with($itemId, Mockery::type('array'))
+        ->andReturn(true);
+        
+    $cartModel = new \MobileNowGroup\ShoppingCart\Models\ShoppingCart([
+        'id' => 1,
+        'customer_id' => $customerId,
+        'customer_name' => 'John Doe',
+    ]);
+    $cartModel->id = 1;
+    
+    $this->mockStorage
+        ->shouldReceive('getCart')
+        ->twice()
+        ->with($customerId, false)
+        ->andReturn($cartModel);
 
     $result = $this->cart->updateItems($itemId, $quantity);
 
-    expect($result)->toBeInstanceOf(\MobileNowGroup\ShoppingCart\Models\ShoppingCartItem::class);
+    expect($result)->toBeInstanceOf(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
 });
 
 test('it can empty cart', function () {
@@ -253,14 +279,23 @@ test('it can toggle buy status', function () {
 
     $this->mockStorage
         ->shouldReceive('getCart')
-        ->once()
+        ->twice()
         ->with($customerId, false)
         ->andReturn($cartModel);
         
+    $cartItem = new \MobileNowGroup\ShoppingCart\Models\ShoppingCartItem();
+    $cartItem->id = $itemId;
+    
     $this->mockStorage
-        ->shouldReceive('toggleItemSelection')
+        ->shouldReceive('getCartItem')
         ->once()
-        ->with($cartModel->id, $itemId, $selected)
+        ->with($itemId)
+        ->andReturn($cartItem);
+        
+    $this->mockStorage
+        ->shouldReceive('updateCartItem')
+        ->once()
+        ->with($itemId, ['selected' => $selected])
         ->andReturn(true);
 
     $result = $this->cart->toggleBuy($type, $selected, $itemId);
@@ -352,11 +387,14 @@ test('it handles existing product in cart', function () {
         ->with($customerId, false)
         ->andReturn($cartModel);
         
+    $cartItem = new \MobileNowGroup\ShoppingCart\Models\ShoppingCartItem();
+    $cartItem->id = 1;
+    
     $this->mockStorage
         ->shouldReceive('addCartItem')
         ->once()
         ->with($cartModel->id, Mockery::type('array'))
-        ->andReturn(true);
+        ->andReturn($cartItem);
 
     $result = $this->cart->addProduct($mockItem, $quantity);
 
@@ -389,11 +427,14 @@ test('it adds new product when not exists in cart', function () {
         ->with($customerId, false)
         ->andReturn($cartModel);
         
+    $cartItem = new \MobileNowGroup\ShoppingCart\Models\ShoppingCartItem();
+    $cartItem->id = 1;
+    
     $this->mockStorage
         ->shouldReceive('addCartItem')
         ->once()
         ->with($cartModel->id, Mockery::type('array'))
-        ->andReturn(true);
+        ->andReturn($cartItem);
 
     $result = $this->cart->addProduct($mockItem, $quantity);
 

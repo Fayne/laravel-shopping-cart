@@ -412,8 +412,14 @@ class RedisCartStorage implements CartStorageInterface
      */
     protected function clearCartItemsFromRedis(int $cartId): void
     {
-        // 实现清除购物车所有项目的逻辑
-        // 这里需要根据实际的Redis键结构来实现
+        try {
+            Redis::connection($this->connection)->del(["cart:items:{$cartId}"]);
+        } catch (\Exception $e) {
+            Log::warning('Failed to clear cart items from Redis', [
+                'cart_id' => $cartId,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -423,5 +429,157 @@ class RedisCartStorage implements CartStorageInterface
     {
         // 实现批量更新购物车项目选中状态的逻辑
         // 这里需要根据实际的Redis键结构来实现
+    }
+
+    /**
+     * 获取用户购物车商品数量
+     */
+    public function getItemsCount(string $customerId): int
+    {
+        try {
+            $cart = $this->getCart($customerId);
+            return $cart ? $cart->items->count() : 0;
+        } catch (\Exception $e) {
+            Log::error('Failed to get items count from Redis', [
+                'customer_id' => $customerId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->fallbackStorage->getItemsCount($customerId);
+        }
+    }
+
+    /**
+     * 获取用户购物车商品总数量
+     */
+    public function getItemsQty(string $customerId): int
+    {
+        try {
+            $cart = $this->getCart($customerId);
+            return $cart ? $cart->items->sum('quantity') : 0;
+        } catch (\Exception $e) {
+            Log::error('Failed to get items qty from Redis', [
+                'customer_id' => $customerId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->fallbackStorage->getItemsQty($customerId);
+        }
+    }
+
+    /**
+     * 批量更新购物车项目选中状态
+     */
+    public function toggleItemsSelection(int $cartId, array $itemIds, bool $selected): bool
+    {
+        try {
+            $result = $this->fallbackStorage->toggleItemsSelection($cartId, $itemIds, $selected);
+            
+            if ($result) {
+                // 清除购物车项目缓存
+                $this->clearCartItemsCache($cartId);
+            }
+            
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('Failed to toggle items selection in Redis', [
+                'cart_id' => $cartId,
+                'item_ids' => $itemIds,
+                'selected' => $selected,
+                'error' => $e->getMessage()
+            ]);
+            return $this->fallbackStorage->toggleItemsSelection($cartId, $itemIds, $selected);
+        }
+    }
+
+    /**
+     * 获取购物车项目列表
+     */
+    public function getCartItems(int $cartId): array
+    {
+        try {
+            $key = "cart:items:{$cartId}";
+            $data = Redis::connection($this->connection)->get($key);
+            
+            if (!$data) {
+                return $this->fallbackStorage->getCartItems($cartId);
+            }
+            
+            $itemsData = json_decode($data, true);
+            $items = [];
+            
+            foreach ($itemsData as $itemData) {
+                $items[] = new ShoppingCartItem($itemData);
+            }
+            
+            return $items;
+        } catch (\Exception $e) {
+            Log::error('Failed to get cart items from Redis', [
+                'cart_id' => $cartId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->fallbackStorage->getCartItems($cartId);
+        }
+    }
+
+    /**
+     * 移除购物车项目
+     */
+    public function removeItem(int $cartId, int $itemId): bool
+    {
+        try {
+            $result = $this->fallbackStorage->removeItem($cartId, $itemId);
+            
+            if ($result) {
+                // 清除购物车项目缓存
+                $this->clearCartItemsCache($cartId);
+            }
+            
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('Failed to remove item from Redis', [
+                'cart_id' => $cartId,
+                'item_id' => $itemId,
+                'error' => $e->getMessage()
+            ]);
+            return $this->fallbackStorage->removeItem($cartId, $itemId);
+        }
+    }
+
+    /**
+     * 添加购物车项目
+     */
+    public function addItem(int $cartId, array $itemData): ShoppingCartItem
+    {
+        try {
+            $result = $this->fallbackStorage->addItem($cartId, $itemData);
+            
+            if ($result) {
+                // 清除购物车项目缓存
+                $this->clearCartItemsCache($cartId);
+            }
+            
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('Failed to add item to Redis', [
+                'cart_id' => $cartId,
+                'item_data' => $itemData,
+                'error' => $e->getMessage()
+            ]);
+            return $this->fallbackStorage->addItem($cartId, $itemData);
+        }
+    }
+
+    /**
+     * 清除购物车项目缓存
+     */
+    protected function clearCartItemsCache(int $cartId): void
+    {
+        try {
+            Redis::connection($this->connection)->del("cart:items:{$cartId}");
+        } catch (\Exception $e) {
+            Log::error('Failed to clear cart items cache', [
+                'cart_id' => $cartId,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

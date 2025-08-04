@@ -79,8 +79,8 @@ test('it loads migration files', function () {
     
     // Since tables are already created in setUp, just verify they exist
     // This test verifies that the service provider can handle migration loading
-    expect(\Schema::hasTable('shopping_carts'))->toBeTrue()
-        ->and(\Schema::hasTable('shopping_cart_items'))->toBeTrue();
+    expect(\Schema::connection('testing')->hasTable('shopping_carts'))->toBeTrue()
+        ->and(\Schema::connection('testing')->hasTable('shopping_cart_items'))->toBeTrue();
 });
 
 test('it can handle migration path registration', function () {

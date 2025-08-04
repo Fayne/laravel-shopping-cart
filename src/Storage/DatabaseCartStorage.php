@@ -182,4 +182,22 @@ class DatabaseCartStorage implements CartStorageInterface
             return false;
         }
     }
+
+    /**
+     * 获取用户购物车商品数量
+     */
+    public function getItemsCount(string $customerId): int
+    {
+        $cart = $this->getCart($customerId);
+        return $cart ? $cart->items->count() : 0;
+    }
+
+    /**
+     * 获取用户购物车商品总数量
+     */
+    public function getItemsQty(string $customerId): int
+    {
+        $cart = $this->getCart($customerId);
+        return $cart ? $cart->items->sum('quantity') : 0;
+    }
 }

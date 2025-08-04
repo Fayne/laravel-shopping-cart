@@ -4,6 +4,8 @@ namespace MobileNowGroup\ShoppingCart\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Orchestra\Testbench\TestCase as Orchestra;
 use MobileNowGroup\ShoppingCart\ShoppingCartServiceProvider;
 
@@ -162,23 +164,51 @@ class TestCase extends Orchestra
       */
      protected function runMigrations()
      {
-         // 清理现有表
-         \Illuminate\Support\Facades\Schema::dropIfExists('shopping_cart_items');
-         \Illuminate\Support\Facades\Schema::dropIfExists('shopping_carts');
-        // 创建购物车表
-        \Illuminate\Support\Facades\Schema::create('shopping_carts', function (\Illuminate\Database\Schema\Blueprint $table) {
-            $table->id();
-            $table->string('customer_id')->index();
-            $table->string('customer_name')->nullable();
-            $table->string('session_id')->nullable()->index();
-            $table->json('metadata')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamps();
-        });
-        
-        // 创建购物车项目表
-         \Illuminate\Support\Facades\Schema::create('shopping_cart_items', function (\Illuminate\Database\Schema\Blueprint $table) {
+         // 确保使用正确的数据库连接
+         config(['database.default' => 'testing']);
+         
+         // 手动创建表结构，因为包开发环境没有 artisan 命令
+         // 强制删除现有表
+         try {
+             Schema::connection('testing')->dropIfExists('shopping_cart_items');
+             Schema::connection('testing')->dropIfExists('shopping_carts');
+             Schema::connection('testing')->dropIfExists('products');
+         } catch (\Exception $e) {
+             // 忽略删除错误
+         }
+         
+         // 确保表确实被删除了
+         if (Schema::connection('testing')->hasTable('shopping_carts') || Schema::connection('testing')->hasTable('shopping_cart_items') || Schema::connection('testing')->hasTable('products')) {
+             throw new \Exception('Failed to drop existing tables');
+         }
+         
+         // 创建 shopping_carts 表
+         Schema::connection('testing')->create('shopping_carts', function (Blueprint $table) {
+             $table->increments('id');
+             $table->text('customer_name')->nullable();
+             $table->string('shipping_method')->nullable();
+             $table->string('coupon_code')->nullable();
+             $table->boolean('is_gift')->default(0);
+             $table->boolean('is_temp')->default(false);
+             $table->integer('items_count')->nullable();
+             $table->decimal('items_qty', 12)->nullable();
+             $table->decimal('grand_total', 12)->default(0)->nullable();
+             $table->decimal('base_grand_total', 12)->default(0)->nullable();
+             $table->decimal('sub_total', 12)->default(0)->nullable();
+             $table->decimal('base_sub_total', 12)->default(0)->nullable();
+             $table->decimal('discount', 12)->default(0)->nullable();
+             $table->decimal('base_discount', 12)->default(0)->nullable();
+             $table->string('checkout_method')->nullable();
+             $table->boolean('is_active')->nullable()->default(1);
+             $table->dateTime('conversion_time')->nullable();
+             $table->ulid('customer_id')->nullable();
+             $table->string('session_id')->nullable();
+             $table->json('metadata')->nullable();
+             $table->timestamps();
+         });
+         
+         // 创建 shopping_cart_items 表
+         Schema::connection('testing')->create('shopping_cart_items', function (Blueprint $table) {
              $table->id();
              $table->integer('quantity')->unsigned()->default(0);
              $table->string('sku')->nullable();
@@ -188,26 +218,72 @@ class TestCase extends Orchestra
              $table->decimal('weight', 12)->default(1);
              $table->decimal('total_weight', 12)->default(0);
              $table->decimal('base_total_weight', 12)->default(0);
-             
              $table->decimal('price', 12)->default(1);
              $table->decimal('base_price', 12)->default(0);
              $table->decimal('custom_price', 12)->default(0);
-             
              $table->decimal('total', 12)->default(0);
              $table->decimal('base_total', 12)->default(0);
-             
              $table->decimal('discount_percent', 12)->default(0);
              $table->decimal('discount_amount', 12)->default(0);
              $table->decimal('base_discount_amount', 12)->default(0);
-             
              $table->json('additional')->nullable();
-             
              $table->morphs('itemable');
              $table->boolean('selected')->default(false);
              $table->integer('cart_id')->unsigned();
              $table->foreign('cart_id')->references('id')->on('shopping_carts')->onDelete('cascade');
              $table->timestamps();
          });
-    }
+         
+         // 创建 products 表用于测试
+         Schema::connection('testing')->create('products', function (Blueprint $table) {
+             $table->id();
+             $table->string('name');
+             $table->decimal('price', 8, 2);
+             $table->string('sku');
+             $table->timestamps();
+         });
+         
+         // 验证表是否创建成功
+         if (!Schema::connection('testing')->hasTable('shopping_carts') || !Schema::connection('testing')->hasTable('shopping_cart_items')) {
+             throw new \Exception('Failed to create required tables');
+         }
+     }
 
+}
+
+/**
+ * 测试用的简单 Product 类
+ */
+class Product extends \Illuminate\Database\Eloquent\Model
+{
+    protected $fillable = ['name', 'price', 'sku'];
+    
+    public function getPrice()
+    {
+        return $this->price ?? 10.00;
+    }
+    
+    public function getName()
+    {
+        return $this->name ?? 'Test Product';
+    }
+    
+    public function getSku()
+    {
+        return $this->sku ?? 'TEST-SKU';
+    }
+    
+    public function getWeight()
+    {
+        return 1.0;
+    }
+}
+
+function createMockUserForShoppingCart($customerId) {
+    $user = \Mockery::mock(\Illuminate\Foundation\Auth\User::class);
+    $user->shouldReceive('getAuthIdentifier')->andReturn($customerId);
+    $user->shouldReceive('getAttribute')->with('name')->andReturn('Test User');
+    $user->shouldReceive('setAttribute')->with('name', 'Test User')->andReturnSelf();
+    $user->name = 'Test User';
+    return $user;
 }

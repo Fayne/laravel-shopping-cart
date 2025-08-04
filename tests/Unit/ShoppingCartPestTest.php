@@ -1,6 +1,5 @@
 <?php
 
-
 use MobileNowGroup\ShoppingCart\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
@@ -15,35 +14,16 @@ afterEach(function () {
     Mockery::close();
 });
 
-// Helper function to create mock user
-function createMockUserForShoppingCart($id) {
-    return new class($id) extends Authenticatable {
-        public $id;
-        public function __construct($id) {
-            $this->id = $id;
-        }
-        public function getAuthIdentifier() {
-            return $this->id;
-        }
-        public function getAuthIdentifierName() {
-            return 'id';
-        }
-        public function getAuthPassword() {
-            return 'password';
-        }
-        public function getAuthPasswordName() {
-            return 'password';
-        }
-        public function getRememberToken() {
-            return null;
-        }
-        public function setRememberToken($value) {
-            // Do nothing
-        }
-        public function getRememberTokenName() {
-            return 'remember_token';
-        }
-    };
+
+
+// Helper function to create mock user for shopping cart
+function createMockUserForShoppingCart($customerId) {
+    $user = Mockery::mock(Authenticatable::class);
+    $user->shouldReceive('getAuthIdentifier')->andReturn($customerId);
+    $user->shouldReceive('getAttribute')->with('name')->andReturn('Test User');
+    $user->shouldReceive('setAttribute')->with('name', 'Test User')->andReturnSelf();
+    $user->name = 'Test User';
+    return $user;
 }
 
 // Helper function to create mock cart model

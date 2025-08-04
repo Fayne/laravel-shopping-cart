@@ -286,4 +286,47 @@ class CacheCartStorage implements CartStorageInterface
             ]);
         }
     }
+
+    /**
+     * 获取用户购物车商品数量
+     */
+    public function getItemsCount(string $customerId): int
+    {
+        $cacheKey = "{$this->cachePrefix}:stats:{$customerId}";
+        
+        return Cache::store($this->cacheStore)->remember(
+            $cacheKey,
+            $this->cacheTtl / 2,
+            fn() => $this->storage->getItemsCount($customerId)
+        );
+    }
+
+    /**
+     * 获取用户购物车商品总数量
+     */
+    public function getItemsQty(string $customerId): int
+    {
+        $cacheKey = "{$this->cachePrefix}:stats:{$customerId}";
+        
+        return Cache::store($this->cacheStore)->remember(
+            $cacheKey,
+            $this->cacheTtl / 2,
+            fn() => $this->storage->getItemsQty($customerId)
+        );
+    }
+
+    /**
+     * 批量更新购物车项目选中状态
+     */
+    public function toggleItemsSelection(int $cartId, array $itemIds, bool $selected): bool
+    {
+        $result = $this->storage->toggleItemsSelection($cartId, $itemIds, $selected);
+        
+        if ($result) {
+            // 清除购物车项目缓存
+            $this->clearCartItemsCache($cartId);
+        }
+        
+        return $result;
+    }
 }

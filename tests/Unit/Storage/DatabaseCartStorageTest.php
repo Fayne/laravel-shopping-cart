@@ -1,11 +1,17 @@
 <?php
+
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use MobileNowGroup\ShoppingCart\Storage\DatabaseCartStorage;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 
 beforeEach(function () {
-    $this->loadMigrationsFrom(__DIR__ . '/../../../database/migrations');
+    // 设置 morph 映射
+    Relation::morphMap([
+        'Product' => 'Product',
+    ]);
+    
     $this->storage = new DatabaseCartStorage();
 });
 
@@ -31,11 +37,21 @@ test('it can get existing cart', function () {
         'is_active' => true,
     ]);
     
+    // 创建一个测试产品
+    $product = new \MobileNowGroup\ShoppingCart\Tests\Product();
+    $product->fill([
+        'name' => 'Test Product',
+        'price' => 10.00,
+        'sku' => 'TEST-SKU',
+    ]);
+    $product->save();
+    $product->id = 1;
+    
     // 添加商品项，因为 getCart 使用了 withWhereHas
     ShoppingCartItem::create([
         'cart_id' => $cart->id,
         'itemable_type' => 'Product',
-        'itemable_id' => 1,
+        'itemable_id' => $product->id,
         'quantity' => 1,
         'price' => 10.00,
         'name' => 'Test Product',
@@ -85,7 +101,7 @@ test('it can delete cart', function () {
     $result = $this->storage->deleteCart($customerId);
 
     expect($result)->toBeTrue();
-    $this->assertDatabaseMissing('carts', ['id' => $cart->id]);
+    $this->assertDatabaseMissing('shopping_carts', ['id' => $cart->id]);
 });
 
 test('it can add item to cart', function () {
@@ -158,7 +174,7 @@ test('it can remove item from cart', function () {
     $result = $this->storage->removeCartItem($item->id);
 
     expect($result)->toBeTrue();
-    $this->assertDatabaseMissing('cart_items', ['id' => $item->id]);
+    $this->assertDatabaseMissing('shopping_cart_items', ['id' => $item->id]);
 });
 
 test('it can empty cart', function () {
