@@ -16,7 +16,7 @@ php artisan vendor:publish --provider="MobileNowGroup\ShoppingCart\ShoppingCartS
 You can publish and run the migrations with:
 
 ```bash
-php artisan vendor:publish --tag="shopping-cart-migrations"
+php artisan vendor:publish --provider="MobileNowGroup\ShoppingCart\ShoppingCartServiceProvider" --tag="migrations"
 php artisan migrate
 ```
 

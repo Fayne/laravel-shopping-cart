@@ -41,8 +41,8 @@ return new class extends Migration
             $table->boolean('is_active')->nullable()->default(1);
             $table->dateTime('conversion_time')->nullable();
 
-            $table->ulid('customer_id')->nullable();
-            
+            $table->unsignedBigInteger('customer_id')->nullable();
+
             // Only add foreign key constraint if the users table exists
             if (Schema::hasTable($userTableName)) {
                 $table->foreign('customer_id')->references('id')->on($userTableName)->onDelete('cascade');

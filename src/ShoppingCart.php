@@ -23,7 +23,6 @@ use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
 use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
 use MobileNowGroup\ShoppingCart\Traits\CartCoupons;
 use MobileNowGroup\ShoppingCart\Traits\CartTools;
 
@@ -82,7 +81,7 @@ class ShoppingCart
         if (! $cart && ! $cart = $this->create(['is_temp' => $isBuyNow])) {
             throw new CartServerException(ErrorConst::ERROR_CART_NOT_CREATED->value);
         }
-        
+
         // 使用存储层添加商品
         $this->addItemToCart($cart, $item, $quantity);
 
@@ -167,13 +166,13 @@ class ShoppingCart
     public function removeItem(int $itemId): bool
     {
         event(new CartRemoveItemBefore($itemId));
-        
+
         if (! $this->getCart()) {
             return false;
         }
 
         $result = $this->storage->removeCartItem($itemId);
-        
+
         if ($result) {
             event(new CartRemoveItemAfter($itemId));
         }
@@ -236,9 +235,9 @@ class ShoppingCart
             'total_weight' => $item->weight * $quantity,
             'base_total_weight' => $item->weight * $quantity,
         ];
-        
+
         $this->storage->updateCartItem($itemId, $updateData);
-        
+
         // 重新获取更新后的项目用于事件
         $updatedItem = $this->storage->getCartItem($itemId);
         event(new CartUpdateItemAfter($updatedItem));
@@ -290,7 +289,7 @@ class ShoppingCart
             if (!$itemId) {
                 throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
             }
-            
+
             $item = $this->storage->getCartItem($itemId);
             if (! $item) {
                 throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
@@ -318,6 +317,7 @@ class ShoppingCart
         }
 
         $stats = $this->storage->getCartStats($cart->id);
+
         return $stats['items_count'] ?? 0;
     }
 
@@ -333,9 +333,10 @@ class ShoppingCart
         }
 
         $stats = $this->storage->getCartStats($cart->id);
+
         return $stats['items_qty'] ?? 0;
     }
-    
+
     /**
      * 添加商品到购物车的内部方法
      *
@@ -354,7 +355,7 @@ class ShoppingCart
                 break;
             }
         }
-        
+
         if ($existingItem) {
             // 更新现有商品数量
             $newQuantity = $existingItem->quantity + $quantity;

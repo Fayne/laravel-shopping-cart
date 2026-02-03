@@ -220,4 +220,6 @@ return [
             ],
         ],
     ],
+
+    'order_class' => env('ORDER_CLASS', \MobileNowGroup\OMS\Models\Order::class),
 ];

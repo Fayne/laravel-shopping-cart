@@ -11,7 +11,6 @@ use MobileNowGroup\ShoppingCart\Cache\CartCacheOptimizer as CacheOptimizer;
 use MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer;
 use MobileNowGroup\ShoppingCart\Console\Commands\MigrateCartDataCommand;
 use MobileNowGroup\ShoppingCart\Console\Commands\CartPerformanceMonitorCommand;
-use MobileNowGroup\ShoppingCart\Listeners\CartOperationListener;
 
 class ShoppingCartServiceProvider extends PackageServiceProvider
 {
@@ -71,7 +70,7 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             $config = $this->app->make('config');
             $configPath = __DIR__ . '/../config/shopping-cart.php';
             $key = 'shopping-cart';
-            
+
             if (! ($this->app instanceof \Illuminate\Contracts\Foundation\CachesConfiguration && $this->app->configurationIsCached())) {
                 $existingConfig = $config->get($key, []);
                 if (!is_array($existingConfig)) {
@@ -87,7 +86,7 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         $this->app->singleton('cart.storage', function ($app) {
             return new CartStorageManager($app);
         });
-        
+
         $this->app->singleton(CartStorageManager::class, function ($app) {
             return $app['cart.storage'];
         });
@@ -101,7 +100,7 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         $this->app->singleton('shopping-cart', function ($app) {
             return new ShoppingCart($app[CartStorageInterface::class]);
         });
-        
+
         $this->app->singleton(ShoppingCart::class, function ($app) {
             return $app['shopping-cart'];
         });
@@ -120,12 +119,12 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
     {
         // 发布配置文件
         $this->publishes([
-            __DIR__ . '/../config/shopping-cart.php' => config_path('shopping-cart.php')
+            __DIR__ . '/../config/shopping-cart.php' => config_path('shopping-cart.php'),
         ], 'config');
 
         // 发布迁移文件
         $this->publishes([
-            __DIR__ . '/../database/migrations' => database_path('migrations')
+            __DIR__ . '/../database/migrations' => database_path('migrations'),
         ], 'migrations');
 
         if ($this->shouldLoadMigrations()) {
@@ -161,22 +160,22 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             \MobileNowGroup\ShoppingCart\Events\CartItemAdded::class,
             \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductAdded'
         );
-        
+
         $this->app['events']->listen(
             \MobileNowGroup\ShoppingCart\Events\CartItemRemoved::class,
             \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductRemoved'
         );
-        
+
         $this->app['events']->listen(
             \MobileNowGroup\ShoppingCart\Events\CartItemUpdated::class,
             \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductUpdated'
         );
-        
+
         $this->app['events']->listen(
             \MobileNowGroup\ShoppingCart\Events\CartCleared::class,
             \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleCartCleared'
         );
-        
+
         $this->app['events']->listen(
             \MobileNowGroup\ShoppingCart\Events\CartTotalCalculated::class,
             \MobileNowGroup\ShoppingCart\Listeners\CollectTotalsListener::class . '@handle'

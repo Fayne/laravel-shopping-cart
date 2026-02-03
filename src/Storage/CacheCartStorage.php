@@ -37,11 +37,11 @@ class CacheCartStorage implements CartStorageInterface
     public function getCart(string $customerId, bool $isCheckout = false): ?CartModel
     {
         $cacheKey = $this->getCartCacheKey($customerId, $isCheckout);
-        
+
         return Cache::store($this->cacheStore)->remember(
             $cacheKey,
             $this->cacheTtl,
-            fn() => $this->storage->getCart($customerId, $isCheckout)
+            fn () => $this->storage->getCart($customerId, $isCheckout)
         );
     }
 
@@ -51,10 +51,10 @@ class CacheCartStorage implements CartStorageInterface
     public function createCart(array $data): CartModel
     {
         $cart = $this->storage->createCart($data);
-        
+
         // 清除相关缓存
         $this->clearCartCache($data['customer_id']);
-        
+
         return $cart;
     }
 
@@ -64,11 +64,11 @@ class CacheCartStorage implements CartStorageInterface
     public function updateCart(CartModel $cart): bool
     {
         $result = $this->storage->updateCart($cart);
-        
+
         if ($result) {
             $this->clearCartCache($cart->customer_id);
         }
-        
+
         return $result;
     }
 
@@ -78,11 +78,11 @@ class CacheCartStorage implements CartStorageInterface
     public function deleteCart(string $customerId): bool
     {
         $result = $this->storage->deleteCart($customerId);
-        
+
         if ($result) {
             $this->clearCartCache($customerId);
         }
-        
+
         return $result;
     }
 
@@ -92,10 +92,10 @@ class CacheCartStorage implements CartStorageInterface
     public function addCartItem(int $cartId, array $itemData): ShoppingCartItem
     {
         $item = $this->storage->addCartItem($cartId, $itemData);
-        
+
         // 清除购物车缓存
         $this->clearCartCacheByCartId($cartId);
-        
+
         return $item;
     }
 
@@ -105,11 +105,11 @@ class CacheCartStorage implements CartStorageInterface
     public function updateCartItem(int $itemId, array $data): bool
     {
         $result = $this->storage->updateCartItem($itemId, $data);
-        
+
         if ($result) {
             $this->clearCartItemCache($itemId);
         }
-        
+
         return $result;
     }
 
@@ -121,12 +121,12 @@ class CacheCartStorage implements CartStorageInterface
         // 先获取项目信息以便清除缓存
         $item = $this->storage->getCartItem($itemId);
         $result = $this->storage->removeCartItem($itemId);
-        
+
         if ($result && $item) {
             $this->clearCartItemCache($itemId);
             $this->clearCartCacheByCartId($item->cart_id);
         }
-        
+
         return $result;
     }
 
@@ -136,11 +136,11 @@ class CacheCartStorage implements CartStorageInterface
     public function getCartItem(int $itemId): ?ShoppingCartItem
     {
         $cacheKey = $this->getCartItemCacheKey($itemId);
-        
+
         return Cache::store($this->cacheStore)->remember(
             $cacheKey,
             $this->cacheTtl,
-            fn() => $this->storage->getCartItem($itemId)
+            fn () => $this->storage->getCartItem($itemId)
         );
     }
 
@@ -150,11 +150,11 @@ class CacheCartStorage implements CartStorageInterface
     public function emptyCart(int $cartId): bool
     {
         $result = $this->storage->emptyCart($cartId);
-        
+
         if ($result) {
             $this->clearCartCacheByCartId($cartId);
         }
-        
+
         return $result;
     }
 
@@ -164,11 +164,11 @@ class CacheCartStorage implements CartStorageInterface
     public function toggleAllItems(int $cartId, bool $selected): bool
     {
         $result = $this->storage->toggleAllItems($cartId, $selected);
-        
+
         if ($result) {
             $this->clearCartCacheByCartId($cartId);
         }
-        
+
         return $result;
     }
 
@@ -178,11 +178,11 @@ class CacheCartStorage implements CartStorageInterface
     public function getCartStats(int $cartId): array
     {
         $cacheKey = $this->getCartStatsCacheKey($cartId);
-        
+
         return Cache::store($this->cacheStore)->remember(
             $cacheKey,
             $this->cacheTtl / 2, // 统计信息缓存时间较短
-            fn() => $this->storage->getCartStats($cartId)
+            fn () => $this->storage->getCartStats($cartId)
         );
     }
 
@@ -192,7 +192,7 @@ class CacheCartStorage implements CartStorageInterface
     public function updateItems(int $cartId, array $items): bool
     {
         $result = $this->storage->updateItems($cartId, $items);
-        
+
         if ($result) {
             // 清除相关缓存
             $this->clearCartCacheByCartId($cartId);
@@ -202,7 +202,7 @@ class CacheCartStorage implements CartStorageInterface
                 }
             }
         }
-        
+
         return $result;
     }
 
@@ -212,6 +212,7 @@ class CacheCartStorage implements CartStorageInterface
     protected function getCartCacheKey(string $customerId, bool $isCheckout = false): string
     {
         $suffix = $isCheckout ? '_checkout' : '';
+
         return "{$this->cachePrefix}:cart:{$customerId}{$suffix}";
     }
 
@@ -241,14 +242,14 @@ class CacheCartStorage implements CartStorageInterface
                 $this->getCartCacheKey($customerId),
                 $this->getCartCacheKey($customerId, true),
             ];
-            
+
             foreach ($keys as $key) {
                 Cache::store($this->cacheStore)->forget($key);
             }
         } catch (\Exception $e) {
             Log::warning('Failed to clear cart cache', [
                 'customer_id' => $customerId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -261,13 +262,13 @@ class CacheCartStorage implements CartStorageInterface
         try {
             // 清除统计缓存
             Cache::store($this->cacheStore)->forget($this->getCartStatsCacheKey($cartId));
-            
+
             // 这里可以根据需要实现更复杂的缓存清除逻辑
             // 比如通过购物车ID找到customer_id然后清除相关缓存
         } catch (\Exception $e) {
             Log::warning('Failed to clear cart cache by cart id', [
                 'cart_id' => $cartId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -282,7 +283,7 @@ class CacheCartStorage implements CartStorageInterface
         } catch (\Exception $e) {
             Log::warning('Failed to clear cart item cache', [
                 'item_id' => $itemId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -293,11 +294,11 @@ class CacheCartStorage implements CartStorageInterface
     public function getItemsCount(string $customerId): int
     {
         $cacheKey = "{$this->cachePrefix}:stats:{$customerId}";
-        
+
         return Cache::store($this->cacheStore)->remember(
             $cacheKey,
             $this->cacheTtl / 2,
-            fn() => $this->storage->getItemsCount($customerId)
+            fn () => $this->storage->getItemsCount($customerId)
         );
     }
 
@@ -307,11 +308,11 @@ class CacheCartStorage implements CartStorageInterface
     public function getItemsQty(string $customerId): int
     {
         $cacheKey = "{$this->cachePrefix}:stats:{$customerId}";
-        
+
         return Cache::store($this->cacheStore)->remember(
             $cacheKey,
             $this->cacheTtl / 2,
-            fn() => $this->storage->getItemsQty($customerId)
+            fn () => $this->storage->getItemsQty($customerId)
         );
     }
 
@@ -321,12 +322,12 @@ class CacheCartStorage implements CartStorageInterface
     public function toggleItemsSelection(int $cartId, array $itemIds, bool $selected): bool
     {
         $result = $this->storage->toggleItemsSelection($cartId, $itemIds, $selected);
-        
+
         if ($result) {
             // 清除购物车项目缓存
             $this->clearCartItemsCache($cartId);
         }
-        
+
         return $result;
     }
 
@@ -340,7 +341,7 @@ class CacheCartStorage implements CartStorageInterface
         } catch (\Exception $e) {
             Log::warning('Failed to clear cart items cache', [
                 'cart_id' => $cartId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
