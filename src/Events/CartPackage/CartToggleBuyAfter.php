@@ -13,7 +13,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 /**
  * 选中部分商品进行结算之后的事件
  */
-class CartToggleBuyAfter implements CollectTotalEvent
+class CartSetSelectionAfter implements CollectTotalEvent
 {
     use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -21,9 +21,8 @@ class CartToggleBuyAfter implements CollectTotalEvent
      * Create a new event instance.
      */
     public function __construct(
-        public string $type,
+        public int $itemId,
         public bool $selected,
-        public ?int $itemId = null,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null
     ) {}

@@ -19,7 +19,7 @@ Route::prefix('modules/shopping-cart')
         Route::delete('remove-item', [CartController::class, 'removeItem']);
         Route::prefix('checkout')
             ->group(function () {
-                Route::post('toggle-buy', [CheckoutController::class, 'toggleBuy']);
+                Route::post('cart-item-selection', [CheckoutController::class, 'setCartItemSelection']);
                 Route::get('', [CheckoutController::class, 'show']);
                 Route::get('one-page', [CheckoutController::class, 'onePage']);
                 Route::get('back-from-one-page', [CheckoutController::class, 'backFromOnePage']);

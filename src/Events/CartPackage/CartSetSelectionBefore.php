@@ -12,7 +12,7 @@ use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
 /**
  * 选中部分商品进行结算之前的事件
  */
-class CartToggleBuyBefore
+class CartSetSelectionBefore
 {
     use CartEvent, Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -20,9 +20,8 @@ class CartToggleBuyBefore
      * Create a new event instance.
      */
     public function __construct(
-        public string $type,
+        public int $itemId,
         public bool $selected,
-        public ?int $itemId = null,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null
     ) {}

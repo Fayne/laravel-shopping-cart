@@ -10,8 +10,8 @@ use MobileNowGroup\ShoppingCart\Events\CartPackage\CartGetAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartGetBefore;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyBefore;
+use MobileNowGroup\ShoppingCart\Events\CartPackage\CartSetSelectionAfter;
+use MobileNowGroup\ShoppingCart\Events\CartPackage\CartSetSelectionAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
 
@@ -161,9 +161,9 @@ describe('CartPackage Events', function () {
             $type = 'item';
             $selected = true;
             $itemId = 789;
-            $event = new CartToggleBuyBefore($type, $selected, $itemId);
+            $event = new CartSetSelectionAfter($type, $selected, $itemId);
             
-            expect($event)->toBeInstanceOf(CartToggleBuyBefore::class);
+            expect($event)->toBeInstanceOf(CartSetSelectionAfter::class);
             
             if (property_exists($event, 'type')) {
                 expect($event->type)->toBe($type);
@@ -180,9 +180,9 @@ describe('CartPackage Events', function () {
             $type = 'buy';
             $selected = true;
             $itemId = 789;
-            $event = new CartToggleBuyAfter($type, $selected, $itemId);
+            $event = new CartSetSelectionAfter($type, $selected, $itemId);
             
-            expect($event)->toBeInstanceOf(CartToggleBuyAfter::class);
+            expect($event)->toBeInstanceOf(CartSetSelectionAfter::class);
             
             if (property_exists($event, 'type')) {
                 expect($event->type)->toBe($type);
@@ -241,8 +241,8 @@ describe('CartPackage Events', function () {
             new CartGetAfter($mockCart),
             new CartRemoveItemBefore(456),
             new CartRemoveItemAfter(456, $mockCart),
-            new CartToggleBuyBefore('buy', true, 789),
-            new CartToggleBuyAfter('buy', true, 789),
+            new CartSetSelectionAfter('buy', true, 789),
+            new CartSetSelectionAfter('buy', true, 789),
             new CartUpdateItemBefore(101, 2),
             new CartUpdateItemAfter($mockCartItem)
         ];

@@ -38,6 +38,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
 3. 部分商品结算时:
     购物车状态为已激活状态，同时部分商品为选中状态，结算页的商品只展示选中商品，下单成功之后，将购物车中的选中的部分商品删除
 ```
+
 ```php
     //查询购物车信息
     ShoppingCart::getCart();
@@ -69,7 +70,7 @@ php artisan vendor:publish --tag="shopping-cart-config"
     ShoppingCart::removeCouponCode();
     
     //购物车中选中部分商品进行结算
-    ShoppingCart::toggleBuy('single', true, $itemId);
+    ShoppingCart::setCartItemSelection('single', true, $itemId);
 
 ```
 ### tips

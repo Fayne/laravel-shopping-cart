@@ -15,8 +15,8 @@ use MobileNowGroup\ShoppingCart\Events\CartPackage\CartGetAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartGetBefore;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartToggleBuyBefore;
+use MobileNowGroup\ShoppingCart\Events\CartPackage\CartSetSelectionAfter;
+use MobileNowGroup\ShoppingCart\Events\CartPackage\CartSetSelectionBefore;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
 use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
 use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
@@ -206,6 +206,50 @@ class ShoppingCart
     }
 
     /**
+     * @param int $itemId
+     * @param bool $selected
+     * @return CartModel
+     *
+     * @throws CartClientException
+     * @throws \Throwable
+     */
+    public function setCartItemSelection(int $itemId, bool $selected = true): CartModel
+    {
+        event(new CartSetSelectionBefore(itemId: $itemId, selected: $selected));
+
+        if (! $cart = $this->getCart()) {
+            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value);
+        }
+
+        if (!$itemId) {
+            throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST->value);
+        }
+
+        $item = $this->storage->getCartItem($itemId);
+        if (! $item) {
+            throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST->value);
+        }
+
+        $this->storage->updateCartItem($itemId, ['selected' => $selected]);
+
+        event(new CartSetSelectionAfter(itemId: $itemId, selected: $selected, cart: $cart));
+
+        return $this->getCart();
+    }
+
+    /**
+     * @param bool $selected
+     * @return \MobileNowGroup\ShoppingCart\Models\ShoppingCart
+     */
+    public function setAllCartItemsSelected(bool $selected = true): CartModel
+    {
+        $cart = $this->getCart();
+        $this->storage->toggleAllItems($cart->id, $selected);
+
+        return $this->getCart();
+    }
+
+    /**
      * Update cart items information.
      *
      * @param int $itemId
@@ -261,46 +305,6 @@ class ShoppingCart
         }
 
         event(new CartEmptyAfter($cart));
-
-        return $this->getCart();
-    }
-
-    /**
-     * @param string $type
-     * @param bool $selected
-     * @param int|null $itemId
-     * @return CartModel|null
-     *
-     * @throws CartClientException
-     * @throws \Throwable
-     */
-    public function toggleBuy(string $type, bool $selected, ?int $itemId)
-    {
-        event(new CartToggleBuyBefore(type: $type, selected: $selected, itemId: $itemId));
-
-        if (!in_array($type, ['single', 'all'])) {
-            throw new CartClientException(ErrorConst::CODE_ERROR->value);
-        }
-        if (! $cart = $this->getCart()) {
-            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value);
-        }
-
-        if ($type === 'single') {
-            if (!$itemId) {
-                throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
-            }
-
-            $item = $this->storage->getCartItem($itemId);
-            if (! $item) {
-                throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
-            }
-
-            $this->storage->updateCartItem($itemId, ['selected' => $selected]);
-        } else {
-            $this->storage->toggleAllItems($cart->id, $selected);
-        }
-
-        event(new CartToggleBuyAfter(type: $type, selected: $selected, itemId: $itemId, cart: $cart));
 
         return $this->getCart();
     }

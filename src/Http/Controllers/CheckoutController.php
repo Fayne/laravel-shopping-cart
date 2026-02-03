@@ -11,7 +11,7 @@ use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowBefore;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\BackFromOnePageRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\OnePageRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\ShowRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\ToggleBuyRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\SetCartItemSelectionRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
@@ -20,14 +20,14 @@ use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
 class CheckoutController extends Controller
 {
     /**
-     * Get customer cart.
-     *
-     * @param ToggleBuyRequest $request
-     * @return JsonResponse
+     * Set cart item selection status.
+     * @param \MobileNowGroup\ShoppingCart\Http\Requests\Checkout\SetCartItemSelectionRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \MobileNowGroup\ShoppingCart\Exceptions\CartClientException
+     * @throws \Throwable
      */
-    public function toggleBuy(ToggleBuyRequest $request): JsonResponse
+    public function setCartItemSelection(SetCartItemSelectionRequest $request): JsonResponse
     {
-
         return $request->handle();
     }
 

@@ -327,7 +327,7 @@ test('it can toggle buy status', function () {
         ->with($itemId, ['selected' => $selected])
         ->andReturn(true);
 
-    $result = $this->cart->toggleBuy($type, $selected, $itemId);
+    $result = $this->cart->setCartItemSelection($type, $selected, $itemId);
 
     expect($result)->toEqual($cartModel);
 });

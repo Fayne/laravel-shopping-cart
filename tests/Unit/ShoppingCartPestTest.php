@@ -245,7 +245,7 @@ test('可以切换购买状态', function () {
         ->with($itemId, ['selected' => $selected])
         ->andReturn(true);
     
-    $result = $this->cart->toggleBuy($type, $selected, $itemId);
+    $result = $this->cart->setCartItemSelection($type, $selected, $itemId);
     
     expect($result)->toBeInstanceOf(CartModel::class);
 });
