@@ -17,7 +17,8 @@ return new class extends Migration
         $cartTableName = config('shopping-cart.models.carts.table');
 
         Schema::create($table, function (Blueprint $table) use ($cartTableName) {
-            $table->id();
+            $table->ulid('id')->primary();
+            $table->foreignUlid('cart_id')->constrained($cartTableName)->cascadeOnDelete();
             $table->integer('quantity')->unsigned()->default(0);
             $table->string('sku')->nullable();
             $table->string('type')->nullable();
@@ -40,10 +41,8 @@ return new class extends Migration
 
             $table->json('additional')->nullable();
 
-            $table->morphs('itemable');
+            $table->ulidMorphs('itemable');
             $table->boolean('selected')->default(false);
-            $table->integer('cart_id')->unsigned();
-            $table->foreign('cart_id')->references('id')->on($cartTableName)->onDelete('cascade');
             $table->timestamps();
         });
     }

@@ -2,6 +2,7 @@
 
 namespace MobileNowGroup\ShoppingCart\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use MobileNowGroup\ShoppingCart\Contracts\Cartable;
@@ -25,6 +26,8 @@ use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
  */
 class ShoppingCart extends Model
 {
+    use HasUlids;
+
     /**
      * The table associated with the model.
      *

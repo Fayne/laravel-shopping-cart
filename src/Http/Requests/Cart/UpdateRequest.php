@@ -25,8 +25,10 @@ class UpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        $cartItemsTable = config('shopping-cart.models.cart_items.table', 'cart_items');
+
         return [
-            'item_id' => 'required|integer|exists:cart_items,id',
+            'item_id' => "required|string|exists:$cartItemsTable,id",
             'quantity' => 'required|integer|min:1',
         ];
     }

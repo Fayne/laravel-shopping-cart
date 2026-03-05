@@ -2,6 +2,7 @@
 
 namespace MobileNowGroup\ShoppingCart\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -23,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class ShoppingCartItem extends Model
 {
+    use HasUlids;
+
     /**
      * The table associated with the model.
      *
@@ -30,6 +33,11 @@ class ShoppingCartItem extends Model
      */
     protected $table = 'shopping_cart_items';
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'cart_id',
         'itemable_id',
@@ -54,6 +62,11 @@ class ShoppingCartItem extends Model
         'coupon_code',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
     protected $casts = [
         'additional' => 'array',
         'selected' => 'bool',
@@ -70,6 +83,7 @@ class ShoppingCartItem extends Model
         'discount_amount' => 'decimal:2',
         'base_discount_amount' => 'decimal:2',
     ];
+
     /**
      * Create a new instance of the model.
      */

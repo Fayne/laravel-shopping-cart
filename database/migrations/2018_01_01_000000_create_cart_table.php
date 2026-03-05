@@ -17,10 +17,8 @@ return new class extends Migration
         $table = config('shopping-cart.models.carts.table');
 
         Schema::create($table, function (Blueprint $table) use ($userTableName) {
-            $table->increments('id');
-
+            $table->ulid('id')->primary();
             $table->text('customer_name')->nullable();
-
             $table->string('shipping_method')->nullable();
             $table->string('coupon_code')->nullable();
             $table->boolean('is_gift')->default(0);

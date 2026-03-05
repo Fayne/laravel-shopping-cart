@@ -14,8 +14,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('checkout', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignIdFor(config('app.user_model', App\Models\User::class))->references('id')->cascadeOnDelete();
+            $table->ulid('id')->primary();
+            $table->foreignIdFor(config('app.user_model', App\Models\User::class))->cascadeOnDelete();
             $table->unsignedTinyInteger('status')->default(0);
             $table->string('currency')->default('CNY');
             $table->decimal('subtotal_amount', 10, 2)->default(0);
@@ -28,11 +28,11 @@ return new class extends Migration
             $table->datetimes();
         });
 
-        Schema::table('checkout_items', function (Blueprint $table) {
-            $table->id();
-            $table->foreignUuid('checkout_id')->references('id')->on('checkout')->cascadeOnDelete();
-            $table->unsignedBigInteger('product_id')->nullable();
-            $table->unsignedBigInteger('sku_id')->nullable();
+        Schema::create('checkout_items', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->foreignUlid('checkout_id')->constrained('checkout')->cascadeOnDelete();
+            $table->foreignUlid('product_id')->constrained('products')->cascadeOnDelete();
+            $table->foreignUlid('sku_id')->constrained('product_skus')->cascadeOnDelete();
             $table->string('name_snapshot');
             $table->decimal('price_snapshot', 10, 2);
             $table->unsignedInteger('quantity');
@@ -47,7 +47,7 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('checkout');
         Schema::dropIfExists('checkout_items');
+        Schema::dropIfExists('checkout');
     }
 };
