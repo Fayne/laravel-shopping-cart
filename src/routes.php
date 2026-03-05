@@ -9,9 +9,9 @@ use MobileNowGroup\ShoppingCart\Http\Controllers\CheckoutController;
 | Auth API Routes -- need token
 |--------------------------------------------------------------------------
 */
-Route::prefix('modules/shopping-cart')
+Route::prefix(config('shopping-cart.routes.prefix'))
     ->middleware(['api', 'auth:sanctum'])
-    ->name('modules.shopping-cart.')
+    ->name(config('shopping-cart.routes.name'))
     ->group(function () {
         Route::apiSingleton('', CartController::class)->creatable();
         Route::post('apply-coupon', [CartController::class, 'applyCoupon'])->name('apply-coupon');

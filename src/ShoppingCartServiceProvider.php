@@ -3,6 +3,7 @@
 namespace MobileNowGroup\ShoppingCart;
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
@@ -98,10 +99,6 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
         }
 
-        if (config('shopping-cart.routes.enabled', true)) {
-            $this->loadRoutesFrom(__DIR__ . '/routes.php');
-        }
-
         // 注册事件监听器
         if (config('shopping-cart.events.enabled', true)) {
             $this->registerEventListeners();
@@ -114,6 +111,11 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
                 CartPerformanceMonitorCommand::class,
             ]);
         }
+
+        // Register routes
+        $this->app->booted(function () {
+            $this->routes();
+        });
     }
 
     /**
@@ -173,5 +175,21 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         $migrationFiles = File::glob($migrationDir . '*_create_cart_table.php');
 
         return ! empty($migrationFiles) ? basename($migrationFiles[0]) : null;
+    }
+
+    /**
+     * @return void
+     */
+    private function routes(): void
+    {
+        if ($this->app->routesAreCached()) {
+            return;
+        }
+
+        if (config('shopping-cart.routes.enabled', true)) {
+            Route::name('modules.shopping-cart.')
+                ->prefix('modules/shopping-cart')
+                ->group(__DIR__ . '/routes.php');
+        }
     }
 }

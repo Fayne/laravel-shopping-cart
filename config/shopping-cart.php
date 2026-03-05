@@ -120,6 +120,7 @@ return [
     'routes' => [
         'enabled' => env('CART_ROUTES_ENABLED', true),
         'prefix' => env('CART_ROUTES_PREFIX', 'api/cart'),
+        'name' => env('CART_ROUTES_NAME', 'api.cart.'),
         'middleware' => ['api'],
     ],
 
