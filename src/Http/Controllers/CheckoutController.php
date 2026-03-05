@@ -2,95 +2,95 @@
 
 namespace MobileNowGroup\ShoppingCart\Http\Controllers;
 
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowBefore;
-use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\BackFromOnePageRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\OnePageRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\ShowRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\SetCartItemSelectionRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
+use MobileNowGroup\ShoppingCart\Models\Checkout;
+use MobileNowGroup\ShoppingCart\Models\CheckoutItem;
 
 class CheckoutController extends Controller
 {
     /**
-     * Set cart item selection status.
-     * @param \MobileNowGroup\ShoppingCart\Http\Requests\Checkout\SetCartItemSelectionRequest $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \MobileNowGroup\ShoppingCart\Exceptions\CartClientException
+     * 创建订单（结账）
+     *
+     * @param Request $request
+     * @return JsonResponse
      * @throws \Throwable
      */
-    public function setCartItemSelection(SetCartItemSelectionRequest $request): JsonResponse
+    public function __invoke(Request $request): JsonResponse
     {
-        return $request->handle();
-    }
-
-    /**
-     * Get customer cart.
-     *
-     * @param ShowRequest $request
-     * @return JsonResponse
-     */
-    public function show(ShowRequest $request): JsonResponse
-    {
-        event(new ShowBefore);
-
-        $cart = $request->cart;
-
-        event(new ShowAfter($cart));
-
-        return response()->json([
-            'code' => 0,
-            'data' => $cart ? new CartResource($cart) : null,
-        ]);
-    }
-
-    /**
-     * Get customer cart for buy now .
-     *
-     * @param OnePageRequest $request
-     * @return JsonResponse
-     */
-    public function onePage(OnePageRequest $request): JsonResponse
-    {
-        event(new OnePageBefore);
-
-        $cart = $request->cart;
-
-        event(new OnePageAfter($cart));
-
-        return response()->json([
-            'code' => 0,
-            'data' => $cart ? new CartResource($cart) : null,
-        ]);
-    }
-
-    /**
-     * Get customer cart for buy now .
-     *
-     * @param BackFromOnePageRequest $request
-     * @return JsonResponse
-     */
-    public function backFromOnePage(BackFromOnePageRequest $request): JsonResponse
-    {
-        event(new BackFromOnePageBefore);
-
-        ShoppingCart::deActivateCart();
-        ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
-
         $cart = ShoppingCart::getCart();
+        if (!$cart || $cart->items->isEmpty()) {
+            return response()->json(['message' => 'Cart is empty'], 400);
+        }
 
-        event(new BackFromOnePageAfter($cart));
+        // 获取选中的购物车项
+        $selectedItems = $cart->items->where('selected', true);
+        if ($selectedItems->isEmpty()) {
+            return response()->json(['message' => 'No items selected for checkout'], 400);
+        }
 
-        return response()->json([
-            'code' => 0,
-            'data' => $cart ? new CartResource($cart) : null,
-        ]);
+        try {
+            return DB::transaction(function () use ($cart, $selectedItems) {
+                // 1. 创建 Checkout 记录
+                $checkout = Checkout::create([
+                    'user_id' => auth()->id(),
+                    'status' => 0, // Pending
+                    'currency' => 'CNY', // 这里可以根据配置或请求动态设置
+                    'subtotal_amount' => $selectedItems->sum('subtotal'),
+                    'discount_amount' => $cart->discount_amount ?? 0, // 需要根据实际逻辑计算分摊后的折扣
+                    'tax_amount' => 0, // 暂不计算税费
+                    'shipping_amount' => 0, // 暂不计算运费
+                    'total_amount' => $selectedItems->sum('total'),
+                    'metadata' => $cart->metadata,
+                    'expires_at' => now()->addMinutes(30), // 订单有效期
+                ]);
+
+                // 2. 创建 Checkout Items
+                foreach ($selectedItems as $item) {
+                    CheckoutItem::create([
+                        'checkout_id' => $checkout->id,
+                        'product_id' => $item->itemable_id, // 假设 itemable_id 就是 product_id
+                        'sku_id' => $item->sku_id ?? null, // 如果有 SKU ID
+                        'name_snapshot' => $item->name,
+                        'price_snapshot' => $item->price,
+                        'quantity' => $item->quantity,
+                    ]);
+                }
+
+                // 3. 从购物车中移除已购买的商品
+                // 注意：这里我们只移除选中的商品，保留未选中的
+                foreach ($selectedItems as $item) {
+                    $item->delete();
+                }
+                
+                // 重新计算购物车总额（如果还有剩余商品）
+                if ($cart->items()->count() > 0) {
+                    ShoppingCart::collectTotals();
+                } else {
+                    // 如果购物车空了，可以考虑清理购物车记录或重置状态
+                    $cart->delete();
+                }
+
+                // 4. 返回结果
+                return response()->json([
+                    'code' => 0,
+                    'message' => '订单创建成功',
+                    'data' => [
+                        'checkout_id' => $checkout->id,
+                        'total_amount' => $checkout->total_amount,
+                        'expires_at' => $checkout->expires_at,
+                    ],
+                ]);
+            });
+        } catch (\Exception $e) {
+            \Log::error('Checkout failed: ' . $e->getTraceAsString());
+            return response()->json([
+                'code' => 500,
+                'message' => '订单创建失败，请稍后重试',
+            ], 500);
+        }
     }
 }
