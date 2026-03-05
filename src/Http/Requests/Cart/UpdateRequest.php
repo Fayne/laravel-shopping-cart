@@ -3,11 +3,7 @@
 namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemUpdateAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemUpdateBefore;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
-use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
 
 class UpdateRequest extends FormRequest
 {
@@ -33,31 +29,5 @@ class UpdateRequest extends FormRequest
             'item_id' => 'required|integer|exists:cart_items,id',
             'quantity' => 'required|integer|min:1',
         ];
-    }
-
-    public function handle()
-    {
-        $requestedQuantity = $this->validated('quantity');
-
-        event(new CartItemUpdateBefore(
-            itemId: $this->validated('item_id'),
-            quantity: $this->validated('quantity')
-        ));
-
-        $cart = ShoppingCart::updateItems($this->validated('item_id'), $requestedQuantity);
-
-        // ShoppingCart::collectTotals();
-
-        event(new CartItemUpdateAfter(
-            itemId: $this->validated('item_id'),
-            quantity: $this->validated('quantity'),
-            cart: $cart
-        ));
-
-        return response()->json([
-            'code' => 0,
-            'message' => '购物车更新成功',
-            'data' => $cart ? new CartResource($cart) : null,
-        ]);
     }
 }
