@@ -24,6 +24,7 @@ use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\ApplyCouponRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\EmptyCartRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\RemoveRequest;
+use MobileNowGroup\ShoppingCart\Http\Requests\Cart\SetCartItemSelectionRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\StoreRequest;
 use MobileNowGroup\ShoppingCart\Http\Requests\Cart\UpdateRequest;
 use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
@@ -198,6 +199,30 @@ class CartController extends Controller
             'code' => 0,
             'message' => '移除商品成功',
             'data' => $cart ? new CartResource($cart) : null,
+        ]);
+    }
+
+    /**
+     * Set cart item selection status.
+     *
+     * @param SetCartItemSelectionRequest $request
+     * @return JsonResponse
+     * @throws \MobileNowGroup\ShoppingCart\Exceptions\CartClientException
+     * @throws \Throwable
+     */
+    public function updateItemSelection(SetCartItemSelectionRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $cart = ShoppingCart::setCartItemSelection(
+            $validated['item_id'],
+            $validated['selected']
+        );
+
+        return response()->json([
+            'code' => 0,
+            'message' => '商品选中状态已更新',
+            'data' => new CartResource($cart),
         ]);
     }
 

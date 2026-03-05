@@ -1,6 +1,6 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Requests\Checkout;
+namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
@@ -24,27 +24,11 @@ class SetCartItemSelectionRequest extends FormRequest
      */
     public function rules(): array
     {
+        $cartItemsTable = config('shopping-cart.models.cart_items.table', 'cart_items');
+        
         return [
             'selected' => 'required|boolean',
-            'item_id' => 'required:exists:cart_items,id',
+            'item_id' => "required|string|exists:$cartItemsTable,id",
         ];
-    }
-
-    /**
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \MobileNowGroup\ShoppingCart\Exceptions\CartClientException
-     * @throws \Throwable
-     */
-    public function handle(): JsonResponse
-    {
-        $cart = ShoppingCart::setCartItemSelection(
-            $this->validated('item_id'),
-            $this->validated('selected')
-        );
-
-        return response()->json([
-            'code' => 0,
-            'data' => new CartResource($cart),
-        ]);
     }
 }
