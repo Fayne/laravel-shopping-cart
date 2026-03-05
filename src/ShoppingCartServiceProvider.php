@@ -14,39 +14,6 @@ use MobileNowGroup\ShoppingCart\Console\Commands\CartPerformanceMonitorCommand;
 
 class ShoppingCartServiceProvider extends PackageServiceProvider
 {
-    /**
-     * Indicates if loading of the provider is deferred.
-     *
-     * @var bool
-     */
-    protected $defer = true;
-
-    /**
-     * Determine if the provider is deferred.
-     *
-     * @return bool
-     */
-    public function isDeferred()
-    {
-        return true;
-    }
-
-    /**
-     * Get the services provided by the provider.
-     *
-     * @return array
-     */
-    public function provides()
-    {
-        return [
-            ShoppingCart::class,
-            CartStorageManager::class,
-            \MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer::class,
-            'shopping-cart',
-            'cart.storage',
-            CartStorageInterface::class,
-        ];
-    }
     public function configurePackage(Package $package): void
     {
         /*

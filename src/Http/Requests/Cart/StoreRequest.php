@@ -23,7 +23,7 @@ class StoreRequest extends FormRequest
     {
         return [
             'is_buy_now' => 'nullable|boolean',
-            'product_sku_id' => 'required|integer|exists:product_skus,id',
+            'code' => 'required|string|exists:product_skus,sku',
             'quantity' => 'required|integer|min:1',
         ];
     }

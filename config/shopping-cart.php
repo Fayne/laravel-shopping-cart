@@ -68,10 +68,10 @@ return [
             'table' => 'shopping_cart_items',
         ],
         'products' => [
-            'model' => 'Modules\Product\Models\Product',
+            'model' => 'MobileNowGroup\Product\Models\Product',
         ],
         'skus' => [
-            'model' => 'Modules\Product\Models\ProductSku',
+            'model' => 'MobileNowGroup\LaravelNovaSku\Models\ProductSku',
         ],
     ],
 

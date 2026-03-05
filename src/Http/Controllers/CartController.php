@@ -47,28 +47,30 @@ class CartController extends Controller
     {
         $validated = $request->validated();
         $isBuyNow = $validated['is_buy_now'] ?? false;
-        $productSkuId = $validated['product_sku_id'];
+        $code = $validated['code'];
         $quantity = $validated['quantity'];
 
-        // 如果是立即购买，先清理之前的立即购买商品
-        if ($isBuyNow) {
-            ShoppingCart::deactivateCurrentCartIfBuyNowIsActive();
-            event(new CartItemIsBuyNow(
+        try {
+            /** @var class-string<\MobileNowGroup\LaravelNovaSku\Models\ProductSku> $productSkuModel */
+            $productSkuModel = config('shopping-cart.models.skus.model');
+            $product = $productSkuModel::findByCodeOrFail($code);
+            $productSkuId = $product->getKey();
+
+            // 如果是立即购买，先清理之前的立即购买商品
+            if ($isBuyNow) {
+                ShoppingCart::deactivateCurrentCartIfBuyNowIsActive();
+                event(new CartItemIsBuyNow(
+                    isBuyNow: $isBuyNow,
+                    productSkuId: $productSkuId,
+                    quantity: $quantity
+                ));
+            }
+
+            event(new CartItemAddBefore(
                 isBuyNow: $isBuyNow,
                 productSkuId: $productSkuId,
                 quantity: $quantity
             ));
-        }
-
-        event(new CartItemAddBefore(
-            isBuyNow: $isBuyNow,
-            productSkuId: $productSkuId,
-            quantity: $quantity
-        ));
-
-        try {
-            $productSkuModel = config('shopping-cart.models.skus.model');
-            $product = $productSkuModel::findOrFail($productSkuId);
 
             $cart = ShoppingCart::addProduct(
                 $product,
