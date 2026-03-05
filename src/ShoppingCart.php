@@ -160,10 +160,10 @@ class ShoppingCart
     /**
      * Remove the item from the cart.
      *
-     * @param int $itemId
+     * @param int|string $itemId
      * @return bool
      */
-    public function removeItem(int $itemId): bool
+    public function removeItem(int|string $itemId): bool
     {
         event(new CartRemoveItemBefore($itemId));
 
@@ -206,14 +206,14 @@ class ShoppingCart
     }
 
     /**
-     * @param int $itemId
+     * @param int|string $itemId
      * @param bool $selected
      * @return CartModel
      *
      * @throws CartClientException
      * @throws \Throwable
      */
-    public function setCartItemSelection(int $itemId, bool $selected = true): CartModel
+    public function setCartItemSelection(int|string $itemId, bool $selected = true): CartModel
     {
         event(new CartSetSelectionBefore(itemId: $itemId, selected: $selected));
 
@@ -252,13 +252,13 @@ class ShoppingCart
     /**
      * Update cart items information.
      *
-     * @param int $itemId
+     * @param int|string $itemId
      * @param int $quantity
      * @return CartModel|null
      *
      * @throws CartClientException
      */
-    public function updateItems(int $itemId, int $quantity): ?CartModel
+    public function updateItems(int|string $itemId, int $quantity): ?CartModel
     {
         event(new CartUpdateItemBefore($itemId, $quantity));
 
