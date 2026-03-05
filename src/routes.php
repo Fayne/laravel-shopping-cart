@@ -14,9 +14,9 @@ Route::prefix('modules/shopping-cart')
     ->name('modules.shopping-cart.')
     ->group(function () {
         Route::apiSingleton('', CartController::class)->creatable();
-        Route::post('apply-coupon', [CartController::class, 'applyCoupon']);
-        Route::delete('remove-coupon', [CartController::class, 'removeCoupon']);
-        Route::delete('remove-item', [CartController::class, 'removeItem']);
+        Route::post('apply-coupon', [CartController::class, 'applyCoupon'])->name('apply-coupon');
+        Route::delete('remove-coupon', [CartController::class, 'removeCoupon'])->name('remove-coupon');
+        Route::delete('remove-item', [CartController::class, 'removeItem'])->name('remove-item');
         Route::prefix('checkout')
             ->group(function () {
                 Route::post('cart-item-selection', [CheckoutController::class, 'setCartItemSelection']);

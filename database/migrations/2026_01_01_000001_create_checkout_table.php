@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('checkout', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignIdFor(config('app.user_model'))->references('id')->cascadeOnDelete();
+            $table->foreignIdFor(config('app.user_model', App\Models\User::class))->references('id')->cascadeOnDelete();
             $table->unsignedTinyInteger('status')->default(0);
             $table->string('currency')->default('CNY');
             $table->decimal('subtotal_amount', 10, 2)->default(0);
