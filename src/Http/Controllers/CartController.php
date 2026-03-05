@@ -219,7 +219,7 @@ class CartController extends Controller
 
                 $cart = ShoppingCart::getCart();
 
-                if ($cart->coupon_code == $couponCode) {
+                if ($cart->coupon_code === $couponCode) {
                     event(new CartApplyCouponAfter(couponCode: $couponCode, cart: $cart));
 
                     return response()->json([

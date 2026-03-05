@@ -2,6 +2,7 @@
 
 namespace MobileNowGroup\ShoppingCart\Traits;
 
+use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
 use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
 use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
 
@@ -21,11 +22,15 @@ trait CartCoupons
      * @param callable|null $callback Optional callback to handle custom coupon validation and discount calculation.
      * @return $this
      *
-     * @throws CartServerException
+     * @throws CartServerException|CartClientException
      */
     public function setCouponCode(string $code, ?callable $callback = null): static
     {
         $cart = $this->getCart();
+
+        if (!$cart) {
+            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value);
+        }
 
         $cart->coupon_code = $code;
 

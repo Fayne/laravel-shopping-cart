@@ -15,6 +15,10 @@ class RemoveRequest extends FormRequest
         //@todo 自行优化
         $cartItem = ShoppingCartItem::with('cart')->find($this->input('item_id'));
 
+        if (!$cartItem) {
+            abort(404, __('shopping_cart::messages.item_not_found'));
+        }
+
         return $cartItem->cart->customer_id === auth()->id() && (bool) $cartItem->cart->is_temp === false;
     }
 
@@ -26,7 +30,7 @@ class RemoveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'item_id' => 'required|exists:cart_items,id',
+            'item_id' => 'required|string',
         ];
     }
 }
