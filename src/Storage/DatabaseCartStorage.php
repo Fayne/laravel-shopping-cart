@@ -72,7 +72,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 添加购物车项目
      */
-    public function addCartItem(int $cartId, array $itemData): ShoppingCartItem
+    public function addCartItem(int|string $cartId, array $itemData): ShoppingCartItem
     {
         $itemData['cart_id'] = $cartId;
         return ShoppingCartItem::create($itemData);
@@ -81,7 +81,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 添加购物车项目 (别名)
      */
-    public function addItem(int $cartId, array $itemData): ShoppingCartItem
+    public function addItem(int|string $cartId, array $itemData): ShoppingCartItem
     {
         return $this->addCartItem($cartId, $itemData);
     }
@@ -89,7 +89,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 更新购物车项目
      */
-    public function updateCartItem(int $itemId, array $data): bool
+    public function updateCartItem(int|string $itemId, array $data): bool
     {
         try {
             return ShoppingCartItem::where('id', $itemId)->update($data) > 0;
@@ -101,7 +101,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 删除购物车项目
      */
-    public function removeCartItem(int $itemId): bool
+    public function removeCartItem(int|string $itemId): bool
     {
         try {
             return ShoppingCartItem::destroy($itemId) > 0;
@@ -113,7 +113,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 获取购物车项目
      */
-    public function getCartItem(int $itemId): ?ShoppingCartItem
+    public function getCartItem(int|string $itemId): ?ShoppingCartItem
     {
         return ShoppingCartItem::find($itemId);
     }
@@ -121,7 +121,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 清空购物车
      */
-    public function emptyCart(int $cartId): bool
+    public function emptyCart(int|string $cartId): bool
     {
         try {
             return ShoppingCartItem::where('cart_id', $cartId)->delete() > 0;
@@ -133,7 +133,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 批量更新购物车项目选中状态
      */
-    public function toggleAllItems(int $cartId, bool $selected): bool
+    public function toggleAllItems(int|string $cartId, bool $selected): bool
     {
         try {
             return DB::transaction(function () use ($cartId, $selected) {
@@ -148,7 +148,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 获取购物车统计信息
      */
-    public function getCartStats(int $cartId): array
+    public function getCartStats(int|string $cartId): array
     {
         $items = ShoppingCartItem::where('cart_id', $cartId)->get();
         
@@ -163,7 +163,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 批量更新购物车项目
      */
-    public function updateItems(int $cartId, array $items): bool
+    public function updateItems(int|string $cartId, array $items): bool
     {
         try {
             return DB::transaction(function () use ($cartId, $items) {
@@ -186,7 +186,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 获取用户购物车商品数量
      */
-    public function getItemsCount(string $customerId): int
+    public function getItemsCount(int|string $customerId): int
     {
         $cart = $this->getCart($customerId);
         return $cart ? $cart->items->count() : 0;
@@ -195,7 +195,7 @@ class DatabaseCartStorage implements CartStorageInterface
     /**
      * 获取用户购物车商品总数量
      */
-    public function getItemsQty(string $customerId): int
+    public function getItemsQty(int|string $customerId): int
     {
         $cart = $this->getCart($customerId);
         return $cart ? $cart->items->sum('quantity') : 0;

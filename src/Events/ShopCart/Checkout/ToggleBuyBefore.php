@@ -22,7 +22,7 @@ class ToggleBuyBefore
     public function __construct(
         public string $type,
         public bool $selected,
-        public ?int $itemId = null,
+        public int|string|null $itemId = null,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null
     ) {}

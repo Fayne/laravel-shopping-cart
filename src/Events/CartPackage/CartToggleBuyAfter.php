@@ -21,7 +21,7 @@ class CartSetSelectionAfter implements CollectTotalEvent
      * Create a new event instance.
      */
     public function __construct(
-        public int $itemId,
+        public int|string $itemId,
         public bool $selected,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null

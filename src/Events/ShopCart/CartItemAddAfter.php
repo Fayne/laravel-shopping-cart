@@ -20,7 +20,7 @@ class CartItemAddAfter
      */
     public function __construct(
         public bool $isBuyNow,
-        public int $productSkuId,
+        public int|string $productSkuId,
         public int $quantity,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null

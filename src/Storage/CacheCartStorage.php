@@ -89,7 +89,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 添加购物车项目
      */
-    public function addCartItem(int $cartId, array $itemData): ShoppingCartItem
+    public function addCartItem(int|string $cartId, array $itemData): ShoppingCartItem
     {
         $item = $this->storage->addCartItem($cartId, $itemData);
 
@@ -102,7 +102,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 更新购物车项目
      */
-    public function updateCartItem(int $itemId, array $data): bool
+    public function updateCartItem(int|string $itemId, array $data): bool
     {
         $result = $this->storage->updateCartItem($itemId, $data);
 
@@ -116,7 +116,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 删除购物车项目
      */
-    public function removeCartItem(int $itemId): bool
+    public function removeCartItem(int|string $itemId): bool
     {
         // 先获取项目信息以便清除缓存
         $item = $this->storage->getCartItem($itemId);
@@ -133,7 +133,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 获取购物车项目
      */
-    public function getCartItem(int $itemId): ?ShoppingCartItem
+    public function getCartItem(int|string $itemId): ?ShoppingCartItem
     {
         $cacheKey = $this->getCartItemCacheKey($itemId);
 
@@ -147,7 +147,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 清空购物车
      */
-    public function emptyCart(int $cartId): bool
+    public function emptyCart(int|string $cartId): bool
     {
         $result = $this->storage->emptyCart($cartId);
 
@@ -161,7 +161,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 批量更新购物车项目选中状态
      */
-    public function toggleAllItems(int $cartId, bool $selected): bool
+    public function toggleAllItems(int|string $cartId, bool $selected): bool
     {
         $result = $this->storage->toggleAllItems($cartId, $selected);
 
@@ -175,7 +175,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 获取购物车统计信息
      */
-    public function getCartStats(int $cartId): array
+    public function getCartStats(int|string $cartId): array
     {
         $cacheKey = $this->getCartStatsCacheKey($cartId);
 
@@ -189,7 +189,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 批量更新购物车项目
      */
-    public function updateItems(int $cartId, array $items): bool
+    public function updateItems(int|string $cartId, array $items): bool
     {
         $result = $this->storage->updateItems($cartId, $items);
 
@@ -219,7 +219,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 生成购物车项目缓存键
      */
-    protected function getCartItemCacheKey(int $itemId): string
+    protected function getCartItemCacheKey(int |string$itemId): string
     {
         return "{$this->cachePrefix}:item:{$itemId}";
     }
@@ -227,7 +227,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 生成购物车统计缓存键
      */
-    protected function getCartStatsCacheKey(int $cartId): string
+    protected function getCartStatsCacheKey(int|string $cartId): string
     {
         return "{$this->cachePrefix}:stats:{$cartId}";
     }
@@ -235,7 +235,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 清除用户购物车相关缓存
      */
-    protected function clearCartCache(string $customerId): void
+    protected function clearCartCache(int|string $customerId): void
     {
         try {
             $keys = [
@@ -257,7 +257,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 根据购物车ID清除缓存
      */
-    protected function clearCartCacheByCartId(int $cartId): void
+    protected function clearCartCacheByCartId(int|string $cartId): void
     {
         try {
             // 清除统计缓存
@@ -276,7 +276,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 清除购物车项目缓存
      */
-    protected function clearCartItemCache(int $itemId): void
+    protected function clearCartItemCache(int|string $itemId): void
     {
         try {
             Cache::store($this->cacheStore)->forget($this->getCartItemCacheKey($itemId));
@@ -291,7 +291,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 获取用户购物车商品数量
      */
-    public function getItemsCount(string $customerId): int
+    public function getItemsCount(int|string $customerId): int
     {
         $cacheKey = "{$this->cachePrefix}:stats:{$customerId}";
 
@@ -305,7 +305,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 获取用户购物车商品总数量
      */
-    public function getItemsQty(string $customerId): int
+    public function getItemsQty(int|string $customerId): int
     {
         $cacheKey = "{$this->cachePrefix}:stats:{$customerId}";
 
@@ -319,7 +319,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 批量更新购物车项目选中状态
      */
-    public function toggleItemsSelection(int $cartId, array $itemIds, bool $selected): bool
+    public function toggleItemsSelection(int|string $cartId, array $itemIds, bool $selected): bool
     {
         $result = $this->storage->toggleItemsSelection($cartId, $itemIds, $selected);
 
@@ -334,7 +334,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 清除购物车项目缓存
      */
-    protected function clearCartItemsCache(int $cartId): void
+    protected function clearCartItemsCache(int|string $cartId): void
     {
         try {
             Cache::store($this->cacheStore)->forget("{$this->cachePrefix}:items:{$cartId}");

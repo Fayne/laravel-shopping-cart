@@ -21,7 +21,7 @@ class CartRemoveItemAfter implements CollectTotalEvent
      * Create a new event instance.
      */
     public function __construct(
-        public int $itemId,
+        public int|string $itemId,
         public ?ShoppingCart $cart = null,
         public ?Authenticatable $user = null
     ) {}
