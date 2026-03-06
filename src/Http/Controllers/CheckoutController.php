@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use MobileNowGroup\LaravelNovaSku\Models\ProductSku;
 use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
 use MobileNowGroup\ShoppingCart\Models\Checkout;
 use MobileNowGroup\ShoppingCart\Models\CheckoutItem;
@@ -50,10 +51,12 @@ class CheckoutController extends Controller
 
                 // 2. 创建 Checkout Items
                 foreach ($selectedItems as $item) {
+                    $sku = ProductSku::find($item->itemable_id);
+
                     CheckoutItem::create([
                         'checkout_id' => $checkout->id,
-                        'product_id' => $item->itemable_id, // 假设 itemable_id 就是 product_id
-                        'sku_id' => $item->sku_id ?? null, // 如果有 SKU ID
+                        'product_id' => $sku->product_id,
+                        'sku_id' => $item->itemable_id,
                         'name_snapshot' => $item->name,
                         'price_snapshot' => $item->price,
                         'quantity' => $item->quantity,

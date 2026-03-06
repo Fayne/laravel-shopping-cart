@@ -18,11 +18,11 @@ class Checkout extends Model
     protected $table = 'checkout';
 
     /**
-     * The attributes that are mass assignable.
+     * The attributes that aren't mass assignable.
      *
-     * @var array
+     * @var array<string>|bool
      */
-    protected $guarded = [];
+    protected $guarded = false;
 
     /**
      * Get the items for the checkout.

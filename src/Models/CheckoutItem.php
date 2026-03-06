@@ -17,7 +17,6 @@ class CheckoutItem extends Model
      */
     protected $table = 'checkout_items';
 
-
     /**
      * The attributes that are mass assignable.
      *

@@ -19,7 +19,7 @@ Route::prefix(config('shopping-cart.routes.prefix'))
         Route::delete('remove-coupon', [CartController::class, 'removeCoupon'])->name('remove-coupon');
         Route::delete('remove-item', [CartController::class, 'removeItem'])->name('remove-item');
         Route::patch('item-selection', [CartController::class, 'updateItemSelection'])->name('update-item-selection');
-        Route::post('checkout', CheckoutController::class)->middleware('auth')->name('checkout.store');
+        Route::post('checkout', CheckoutController::class)->middleware('auth')->name('checkout');
         Route::post('instant-purchase', [InstantPurchaseController::class, 'store'])->name('instant-purchase.store');
         Route::delete('instant-purchase', [InstantPurchaseController::class, 'destroy'])->name('instant-purchase.destroy');
     });
