@@ -234,7 +234,7 @@ return [
     */
     'checkout' => [
         // Checkout session expiration time in minutes
-        'expiration' => 30,
+        'expiration' => env('CART_CHECKOUT_EXPIRATION_MINUTES', 30),
         
         // Rules that must pass before checkout can proceed
         'rules' => [

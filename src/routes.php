@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use MobileNowGroup\ShoppingCart\Http\Controllers\CartController;
 use MobileNowGroup\ShoppingCart\Http\Controllers\CheckoutController;
 use MobileNowGroup\ShoppingCart\Http\Controllers\InstantPurchaseController;
+use MobileNowGroup\ShoppingCart\Http\Controllers\PendingCheckoutsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +21,7 @@ Route::prefix(config('shopping-cart.routes.prefix'))
         Route::delete('remove-item', [CartController::class, 'removeItem'])->name('remove-item');
         Route::patch('item-selection', [CartController::class, 'updateItemSelection'])->name('update-item-selection');
         Route::post('checkout', CheckoutController::class)->middleware('auth')->name('checkout');
+        Route::get('pending-checkouts', [PendingCheckoutsController::class, 'index'])->middleware(['auth'])->name('pending-checkouts.index');
         Route::post('instant-purchase', [InstantPurchaseController::class, 'store'])->name('instant-purchase.store');
         Route::delete('instant-purchase', [InstantPurchaseController::class, 'destroy'])->name('instant-purchase.destroy');
     });

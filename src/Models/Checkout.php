@@ -2,6 +2,7 @@
 
 namespace MobileNowGroup\ShoppingCart\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -30,6 +31,39 @@ class Checkout extends Model
     public function items(): HasMany
     {
         return $this->hasMany(CheckoutItem::class);
+    }
+
+    /**
+     * Scope a query to only include owed checkouts.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeOwn(Builder $query)
+    {
+        return $query->where('user_id', auth()->id());
+    }
+
+    /**
+     * Scope a query to only include pending checkouts.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePending($query)
+    {
+        return $query->where('status', 0);
+    }
+
+    /**
+     * Scope a query to only include active (non-expired) checkouts.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('expires_at', '>', now());
     }
 
     /**
