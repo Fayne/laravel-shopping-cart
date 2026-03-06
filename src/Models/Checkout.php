@@ -114,4 +114,34 @@ class Checkout extends Model
 
         return $class::createFromCheckout($this);
     }
+
+    /**
+     * 将 Checkout 转换为创建 Order 所需的数组数据
+     *
+     * @return array
+     */
+    public function toOrderArray(): array
+    {
+        return [
+            'user_id' => $this->user_id,
+            'currency' => $this->currency,
+            'subtotal_amount' => $this->subtotal_amount,
+            'discount_amount' => $this->discount_amount,
+            'tax_amount' => $this->tax_amount,
+            'shipping_amount' => $this->shipping_amount,
+            'total_amount' => $this->total_amount,
+            'metadata' => $this->metadata,
+            'checkout_id' => $this->id,
+            'items' => $this->items->map(function ($item) {
+                return [
+                    'product_id' => $item->product_id,
+                    'sku_id' => $item->sku_id,
+                    'name_snapshot' => $item->name_snapshot,
+                    'price_snapshot' => $item->price_snapshot,
+                    'quantity' => $item->quantity,
+                    'total_amount' => $item->price_snapshot * $item->quantity,
+                ];
+            })->toArray(),
+        ];
+    }
 }
