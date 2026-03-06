@@ -223,4 +223,23 @@ return [
     ],
 
     'order_class' => env('ORDER_CLASS', \MobileNowGroup\OMS\Models\Order::class),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Checkout Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure the checkout process behavior.
+    |
+    */
+    'checkout' => [
+        // Checkout session expiration time in minutes
+        'expiration' => 30,
+        
+        // Rules that must pass before checkout can proceed
+        'rules' => [
+            // 'check_stock' => true,
+            // 'check_min_amount' => false,
+        ],
+    ],
 ];

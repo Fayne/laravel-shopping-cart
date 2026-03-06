@@ -23,4 +23,11 @@ interface Cartable
      * @return float|int|null
      */
     public function getWeight(): float|int|null;
+
+    /**
+     * Check if the item can be purchased.
+     *
+     * @return bool
+     */
+    public function canBePurchased(): bool;
 }
