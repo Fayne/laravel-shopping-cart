@@ -15,6 +15,7 @@ return new class extends Migration
     {
         Schema::create('checkout', function (Blueprint $table) {
             $table->ulid('id')->primary();
+            $table->string('out_trade_no')->unique()->comment('System order number for payment gateways');
             $table->foreignIdFor(config('app.user_model', App\Models\User::class))->cascadeOnDelete();
             $table->unsignedTinyInteger('status')->default(0);
             $table->string('currency')->default('CNY');

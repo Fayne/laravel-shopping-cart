@@ -26,6 +26,21 @@ class Checkout extends Model
     protected $guarded = false;
 
     /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->out_trade_no)) {
+                $generatorClass = config('shopping-cart.order_number_generator_class');
+                $model->out_trade_no = (new $generatorClass)();
+            }
+        });
+    }
+
+    /**
      * Get the items for the checkout.
      */
     public function items(): HasMany

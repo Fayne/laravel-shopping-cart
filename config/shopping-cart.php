@@ -235,11 +235,13 @@ return [
     'checkout' => [
         // Checkout session expiration time in minutes
         'expiration' => env('CART_CHECKOUT_EXPIRATION_MINUTES', 30),
-        
+
         // Rules that must pass before checkout can proceed
         'rules' => [
             // 'check_stock' => true,
             // 'check_min_amount' => false,
         ],
     ],
+
+    'order_number_generator_class' => \MobileNowGroup\OMS\Support\OrderNumberGenerator::class,
 ];
