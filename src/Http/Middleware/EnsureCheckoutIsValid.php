@@ -9,7 +9,7 @@ class EnsureCheckoutIsValid
     public function handle($request, \Closure $next)
     {
         $checkout = Checkout::where('id', $request->route('checkout'))
-            ->where('user_id', auth()->id())
+            ->own()
             ->firstOrFail();
 
         abort_if($checkout->isExpired(), 410);

@@ -20,7 +20,15 @@ abstract class IntegrationTestCase extends TestCase
         $app['config']->set('database.default', 'testing');
         $app['config']->set('app.user_model', User::class);
         $app['config']->set('database.connections.testing', ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => $this->tablePrefix, 'foreign_key_constraints' => true]);
+        $app->instance(\Fayne\ShoppingCart\Contracts\CartSkuQuery::class, new class implements \Fayne\ShoppingCart\Contracts\CartSkuQuery
+        {
+            public function forTenant(string $model, int|string $tenantId): \Illuminate\Database\Eloquent\Builder
+            {
+                return $model::query();
+            }
+        });
         $app['config']->set('shopping-cart.routes.enabled', true);
+        $app['config']->set('shopping-cart.models.skus.model', Fixtures\Product::class);
         $app['config']->set('shopping-cart.checkout.validator', fn ($sku, $quantity) => true);
     }
     protected function setUp(): void

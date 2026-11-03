@@ -3,6 +3,7 @@
 namespace Fayne\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Fayne\ShoppingCart\Contracts\CartContextResolver;
 use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 class SetCartItemSelectionRequest extends FormRequest
@@ -12,7 +13,7 @@ class SetCartItemSelectionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return ShoppingCartItem::whereKey($this->input('item_id'))->whereHas('cart', fn ($query) => $query->where('customer_id', auth()->id())->where('is_active', true))->exists();
+        return ShoppingCartItem::whereKey($this->input('item_id'))->whereHas('cart', fn ($query) => $query->when(!app()->bound(CartContextResolver::class), fn ($query) => $query->where('customer_id', auth()->id()))->where('is_active', true))->exists();
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace Fayne\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Fayne\ShoppingCart\Contracts\CartContextResolver;
 use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 class RemoveRequest extends FormRequest
@@ -19,7 +20,7 @@ class RemoveRequest extends FormRequest
             abort(404, __('shopping_cart::messages.item_not_found'));
         }
 
-        return $cartItem->cart && (string) $cartItem->cart->customer_id === (string) auth()->id() && $cartItem->cart->is_active && (bool) $cartItem->cart->is_temp === false;
+        return $cartItem->cart && (app()->bound(CartContextResolver::class) || (string) $cartItem->cart->customer_id === (string) auth()->id()) && $cartItem->cart->is_active && (bool) $cartItem->cart->is_temp === false;
     }
 
     /**

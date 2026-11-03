@@ -3,6 +3,7 @@
 namespace Fayne\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Fayne\ShoppingCart\Contracts\CartContextResolver;
 use Fayne\ShoppingCart\Models\ShoppingCartItem;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -16,7 +17,7 @@ class UpdateRequest extends FormRequest
         // @todo 可自行优化
         $cartItem = ShoppingCartItem::with('cart')->find($this->input('item_id'));
 
-        return $cartItem && $cartItem->cart && (string) $cartItem->cart->customer_id === (string) auth()->id() && $cartItem->cart->is_active;
+        return $cartItem && $cartItem->cart && (app()->bound(CartContextResolver::class) || (string) $cartItem->cart->customer_id === (string) auth()->id()) && $cartItem->cart->is_active;
     }
 
     /**

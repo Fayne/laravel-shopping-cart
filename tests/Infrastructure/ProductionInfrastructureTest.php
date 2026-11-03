@@ -3,6 +3,7 @@
 namespace Fayne\ShoppingCart\Tests\Infrastructure;
 
 use Illuminate\Support\Facades\DB;
+use Fayne\ShoppingCart\Contracts\CartContextResolver;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
@@ -32,7 +33,7 @@ class ProductionInfrastructureTest extends IntegrationTestCase
         ]);
         $app['config']->set('database.redis.client', 'phpredis');
         $app['config']->set('database.redis.acceptance', [
-            'host' => '127.0.0.1', 'port' => (int) getenv('CART_ACCEPTANCE_REDIS_PORT'), 'database' => 0,
+            'host' => '127.0.0.1', 'port' => (int) getenv('CART_ACCEPTANCE_REDIS_PORT'), 'database' => (int) (getenv('CART_ACCEPTANCE_REDIS_DB') ?: 0),
         ]);
     }
 
@@ -49,7 +50,7 @@ class ProductionInfrastructureTest extends IntegrationTestCase
     {
         if ($this->schemaReady) {
             Schema::disableForeignKeyConstraints();
-            foreach (['checkout_items', 'checkout', 'shopping_cart_items', 'shopping_carts', 'products', 'product_skus', 'users'] as $table) {
+            foreach (['shopping_cart_order_consumptions', 'shopping_cart_guest_locks', 'checkout_items', 'checkout', 'shopping_cart_items', 'shopping_carts', 'shopping_cart_skus', 'products', 'product_skus', 'users'] as $table) {
                 Schema::dropIfExists($table);
             }
             Schema::enableForeignKeyConstraints();
@@ -70,6 +71,46 @@ class ProductionInfrastructureTest extends IntegrationTestCase
         $this->assertSame(1, ShoppingCartItem::count());
         $this->assertSame(8, ShoppingCartItem::first()->quantity);
         $this->assertEquals(9.84, Cart::first()->grand_total);
+    }
+
+    public function test_parallel_adds_isolate_tenants_with_the_same_customer(): void
+    {
+        $context = new class implements CartContextResolver
+        {
+            public string $tenant = 'first';
+
+            public function tenantId(): string
+            {
+                return $this->tenant;
+            }
+
+            public function customerId(): int
+            {
+                return 1;
+            }
+
+            public function sessionId(): ?string
+            {
+                return null;
+            }
+        };
+        app()->instance(CartContextResolver::class, $context);
+
+        $product = Product::create(['price' => 1.23]);
+        foreach (['first', 'second'] as $tenant) {
+            $context->tenant = $tenant;
+            $this->assertNull(app(ShoppingCart::class)->getCart());
+            $results = $this->parallel(4, function () use ($product) {
+                app(ShoppingCart::class)->addProduct($product, 1);
+
+                return 200;
+            });
+            $this->assertSame(array_fill(0, 4, 200), $results);
+            $this->assertSame(1, Cart::count());
+            $this->assertSame(4, ShoppingCartItem::firstOrFail()->quantity);
+        }
+
+        $this->assertSame(2, DB::table('shopping_carts')->count());
     }
 
     public function test_parallel_checkout_consumes_selected_items_once(): void
@@ -129,6 +170,72 @@ class ProductionInfrastructureTest extends IntegrationTestCase
         $service->emptyCart();
         $this->assertCount(0, $service->getCart()->items);
         $redis->del('cart-acceptance-probe');
+    }
+
+    public function test_parallel_consumption_of_the_same_order_only_removes_quoted_lines(): void
+    {
+        $service = app(ShoppingCart::class);
+        $sku = Product::create(['price' => 2]);
+        $cart = $service->addProduct($sku, 2);
+        $line = $cart->items->sole();
+        $cart = $service->addProduct(Product::create(['price' => 3]), 1);
+        $other = $cart->items->firstWhere('id', '!=', $line->id);
+        $service->setCartItemSelection($other->id, false);
+        $quote = [[
+            'cart_item_id' => $line->id,
+            'sku_id' => $sku->id,
+            'quantity' => 2,
+            'selected' => true,
+        ]];
+
+        $results = $this->parallel(2, function () use ($service, $cart, $quote) {
+            return DB::transaction(function () use ($service, $cart, $quote) {
+                // Establish a read snapshot before waiting for the cart lock.
+                DB::table('shopping_cart_order_consumptions')->count();
+                $service->consumeOrderItems($cart->id, 'parallel-order', $quote);
+
+                return 200;
+            });
+        });
+
+        $this->assertSame([200, 200], $results);
+        $this->assertSame($other->id, $service->getCart()->items->sole()->id);
+        $this->assertDatabaseCount('shopping_cart_order_consumptions', 1);
+    }
+
+    public function test_redis_driver_keeps_tenant_and_session_contexts_isolated_in_one_process(): void
+    {
+        $context = new class implements CartContextResolver
+        {
+            public string $tenant = 'first';
+            public ?int $customer = 1;
+            public string $session = 'one';
+
+            public function tenantId(): string { return $this->tenant; }
+            public function customerId(): ?int { return $this->customer; }
+            public function sessionId(): ?string { return $this->customer === null ? $this->session : null; }
+        };
+        app()->instance(CartContextResolver::class, $context);
+        $service = new ShoppingCart(new RedisCartStorage(new DatabaseCartStorage, 'acceptance', 60, 'acceptance'));
+        $sku = Product::create(['price' => 2]);
+        $customerCart = $service->addProduct($sku, 1);
+        $customerKey = $service->getCacheKeyForDeactivatedCartId();
+
+        $context->tenant = 'second';
+        $this->assertNull($service->getCart());
+        $this->assertNotSame($customerKey, $service->getCacheKeyForDeactivatedCartId());
+        $context->tenant = 'first';
+        $context->customer = null;
+        $guestCart = $service->addProduct($sku, 2);
+        $guestKey = $service->getCacheKeyForDeactivatedCartId();
+
+        $context->session = 'two';
+        $this->assertNull($service->getCart());
+        $this->assertNotSame($guestKey, $service->getCacheKeyForDeactivatedCartId());
+        $context->session = 'one';
+        $this->assertSame($guestCart->id, $service->getCart()?->id);
+        $context->customer = 1;
+        $this->assertSame($customerCart->id, $service->getCart()?->id);
     }
 
     private function parallel(int $count, callable $operation): array

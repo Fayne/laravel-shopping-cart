@@ -26,7 +26,7 @@ class DatabaseCartStorage implements CartStorageInterface
             }
             $query->with('itemable');
         }])->firstWhere([
-            'customer_id' => $customerId,
+            'customer_id' => $customerId === '' ? null : $customerId,
             'is_active' => true,
         ]);
     }
@@ -49,6 +49,11 @@ class DatabaseCartStorage implements CartStorageInterface
     public function updateCart(CartModel $cart): bool
     {
         try {
+            if ($cart->isDirty(['id', 'tenant_id', 'customer_id', 'session_id'])
+                || !CartModel::query()->whereKey($cart->getKey())->exists()) {
+                return false;
+            }
+
             return $cart->save();
         } catch (\Exception $e) {
             return false;
@@ -74,10 +79,11 @@ class DatabaseCartStorage implements CartStorageInterface
      */
     public function addCartItem(int|string $cartId, array $itemData): ShoppingCartItem
     {
+        CartModel::query()->findOrFail($cartId);
+
         $itemData['cart_id'] = $cartId;
 
-        $item = new ShoppingCartItem;
-        $item->fill($itemData);
+        $item = new ShoppingCartItem($itemData);
         $item->save();
 
         return $item;
@@ -96,6 +102,10 @@ class DatabaseCartStorage implements CartStorageInterface
      */
     public function updateCartItem(int|string $itemId, array $data): bool
     {
+        if (array_key_exists('cart_id', $data)) {
+            return false;
+        }
+
         try {
             $item = ShoppingCartItem::find($itemId);
 
@@ -175,6 +185,10 @@ class DatabaseCartStorage implements CartStorageInterface
         try {
             return DB::transaction(function () use ($cartId, $items) {
                 foreach ($items as $itemData) {
+                    if (array_key_exists('cart_id', $itemData)) {
+                        throw new \InvalidArgumentException('Cart item ownership cannot be changed.');
+                    }
+
                     if (isset($itemData['id'])) {
                         $updateData = $itemData;
                         unset($updateData['id']);

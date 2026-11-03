@@ -62,6 +62,7 @@ return [
         'users' => [
             'table' => 'users',
             'foreign_id' => 'user_id',
+            'enforce_cart_foreign_key' => env('CART_ENFORCE_USER_FOREIGN_KEY', true),
         ],
         'carts' => [
             'table' => 'shopping_carts',
@@ -74,7 +75,7 @@ return [
             'model' => 'MobileNowGroup\Product\Models\Product',
         ],
         'skus' => [
-            'model' => 'MobileNowGroup\LaravelNovaSku\Models\ProductSku',
+            'model' => \Fayne\ShoppingCart\Models\CartSku::class,
         ],
     ],
 
@@ -122,6 +123,7 @@ return [
 
     'routes' => [
         'enabled' => env('CART_ROUTES_ENABLED', true),
+        'guests' => false,
         'prefix' => env('CART_ROUTES_PREFIX', 'api/cart'),
         'name' => env('CART_ROUTES_NAME', 'api.cart.'),
         'middleware' => ['api'],

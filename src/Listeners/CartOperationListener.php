@@ -2,6 +2,7 @@
 
 namespace Fayne\ShoppingCart\Listeners;
 
+use Fayne\ShoppingCart\Support\CartCacheKey;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
@@ -226,7 +227,7 @@ class CartOperationListener implements ShouldQueue
     public function updateCartStatistics(string $customerId, string $action): void
     {
         try {
-            $cacheKey = "cart_stats:{$customerId}:" . date('Y-m-d');
+            $cacheKey = CartCacheKey::scoped("cart_stats:{$customerId}:") . date('Y-m-d');
             $stats = Cache::get($cacheKey, []);
 
             $stats[$action] = ($stats[$action] ?? 0) + 1;
@@ -249,7 +250,7 @@ class CartOperationListener implements ShouldQueue
     public function recordUserBehavior(string $customerId, string $action, array $data = []): void
     {
         // 获取现有的用户行为数据
-        $behaviorData = Cache::get("cart:behavior:{$customerId}", []);
+        $behaviorData = Cache::get(CartCacheKey::scoped("cart:behavior:{$customerId}"), []);
         
         // 添加新的行为记录
         $behaviorData['actions'][] = [
@@ -259,7 +260,7 @@ class CartOperationListener implements ShouldQueue
         ];
         
         // 保存到缓存，24小时过期
-        Cache::store('default')->put("cart:behavior:{$customerId}", $behaviorData, 86400);
+        Cache::store('default')->put(CartCacheKey::scoped("cart:behavior:{$customerId}"), $behaviorData, 86400);
         
         // Behavior recorded to cache
     }
@@ -311,11 +312,11 @@ class CartOperationListener implements ShouldQueue
     {
         if (is_string($cartOrId) && $totals !== null) {
             // Called with cartId and totals array (for testing)
-            Cache::store('default')->put("cart:totals:{$cartOrId}", $totals, 1800);
+            Cache::store('default')->put(CartCacheKey::scoped("cart:totals:{$cartOrId}"), $totals, 1800);
         } else {
             // Called with cart object (original implementation)
             $cart = $cartOrId;
-            $cacheKey = "cart_totals:{$cart->customer_id}";
+            $cacheKey = CartCacheKey::scoped("cart_totals:{$cart->customer_id}");
             $calculatedTotals = [
                 'sub_total' => $cart->sub_total,
                 'discount' => $cart->discount,
@@ -361,7 +362,7 @@ class CartOperationListener implements ShouldQueue
             'updated_at' => now()->toISOString(),
         ];
 
-        $cacheKey = "user_preferences:{$cart->customer_id}";
+        $cacheKey = CartCacheKey::scoped("user_preferences:{$cart->customer_id}");
         Cache::put($cacheKey, $preferences, now()->addDays(30));
     }
 
@@ -377,7 +378,7 @@ class CartOperationListener implements ShouldQueue
             'updated_at' => now()->toISOString(),
         ];
         
-        Cache::store('default')->put("cart:preferences:{$customerId}", $preferences, 604800); // 7 days
+        Cache::store('default')->put(CartCacheKey::scoped("cart:preferences:{$customerId}"), $preferences, 604800); // 7 days
     }
 
     /**

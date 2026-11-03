@@ -2,6 +2,7 @@
 
 namespace Fayne\ShoppingCart\Storage;
 
+use Fayne\ShoppingCart\Support\CartCacheKey;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Fayne\ShoppingCart\Contracts\CartStorageInterface;
@@ -201,7 +202,7 @@ class CacheCartStorage implements CartStorageInterface
     {
         $suffix = $isCheckout ? '_checkout' : '';
 
-        return "{$this->cachePrefix}:cart:{$customerId}{$suffix}";
+        return CartCacheKey::scoped("{$this->cachePrefix}:cart:{$customerId}{$suffix}");
     }
 
     /**
@@ -209,7 +210,7 @@ class CacheCartStorage implements CartStorageInterface
      */
     protected function getCartItemCacheKey(int|string $itemId): string
     {
-        return "{$this->cachePrefix}:item:{$itemId}";
+        return CartCacheKey::scoped("{$this->cachePrefix}:item:{$itemId}");
     }
 
     /**
@@ -217,14 +218,18 @@ class CacheCartStorage implements CartStorageInterface
      */
     protected function getCartStatsCacheKey(int|string $cartId): string
     {
-        return "{$this->cachePrefix}:stats:{$cartId}";
+        return CartCacheKey::scoped("{$this->cachePrefix}:stats:{$cartId}");
     }
 
     /**
      * 清除用户购物车相关缓存
      */
-    protected function clearCartCache(int|string $customerId): void
+    protected function clearCartCache(int|string|null $customerId): void
     {
+        if ($customerId === null) {
+            return;
+        }
+
         if (DB::transactionLevel() > 0) {
             DB::afterCommit(fn () => $this->clearCartCache($customerId));
         }

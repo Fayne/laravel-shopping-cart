@@ -2,6 +2,7 @@
 
 namespace Fayne\ShoppingCart\Http\Controllers;
 
+use Fayne\ShoppingCart\Support\CartSku;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Fayne\ShoppingCart\Events\ShopCart\CartApplyCouponAfter;
@@ -32,7 +33,6 @@ use Fayne\ShoppingCart\Exceptions\CartClientException;
 use Fayne\ShoppingCart\Exceptions\CartServerException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
-use Illuminate\Database\Eloquent\Model;
 use Fayne\ShoppingCart\Contracts\Cartable;
 
 /**
@@ -60,10 +60,8 @@ class CartController extends Controller
             $quantity = $validated['quantity'];
 
             try {
-                /** @var class-string<Model> $productSkuModel */
-                $productSkuModel = config('shopping-cart.models.skus.model');
-                $product = call_user_func([$productSkuModel, 'findByCodeOrFail'], $code);
-                abort_unless($product instanceof Model && $product instanceof Cartable, 422, 'Invalid SKU model');
+                $product = CartSku::query()->where('sku', $code)->firstOrFail();
+                abort_unless($product instanceof Cartable, 422, 'Invalid SKU model');
                 $productSkuId = $product->getKey();
 
                 // 如果是立即购买，先清理之前的立即购买商品

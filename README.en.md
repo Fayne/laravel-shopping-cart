@@ -4,7 +4,7 @@
 
 [简体中文](README.md) | English
 
-A Laravel package for managing shopping cart state and checkout snapshots. It supports cart line operations, item selection, buy now, coupon extension points, checkout snapshots, and configurable storage adapters. Requires PHP 8.2+ and Laravel 10+.
+A Laravel package for managing shopping cart state and checkout snapshots. It supports cart line operations, item selection, buy now, coupon extension points, checkout snapshots, and configurable storage adapters. Requires PHP 8.2+ and Laravel 12 or 13 (Laravel 13 requires PHP 8.3+).
 
 ## Features
 
@@ -28,7 +28,7 @@ php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServicePro
 php artisan migrate
 ```
 
-Laravel discovers the service provider and `ShoppingCart` Facade through Composer. Migrations are loaded by the provider. To manage migration files yourself, publish them explicitly:
+Laravel discovers the service provider and `ShoppingCart` Facade through Composer. Migrations are loaded by the provider. To manage migration files yourself, publish them explicitly: The bundled migrations are a fresh-install baseline. Databases with earlier package migrations require a separate upgrade plan.
 
 ```bash
 php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=migrations
@@ -67,7 +67,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductSku extends Model implements Cartable
 {
-    public function getPrice(): float { /* current unit price */ }
+    public function getPriceInMinorUnits(): int { /* current unit amount in minor units */ }
+    public function getCurrency(): string { /* currency code */ }
     public function getSku(): string { /* SKU code */ }
     public function getName(): string { /* display name */ }
     public function getWeight(): float|int|null { /* weight or null */ }
@@ -75,7 +76,7 @@ class ProductSku extends Model implements Cartable
 }
 ```
 
-The model must also be an Eloquent model with a primary key and morph class. Stock checks belong in the checkout validator. Return the current effective price from `getPrice()` and `false` from `canBePurchased()` when the product is unavailable.
+The model must also be an Eloquent model with a primary key and morph class. Stock checks belong in the checkout validator. Return the current effective price from `getPriceInMinorUnits()` and `false` from `canBePurchased()` when the product is unavailable.
 
 ## Usage
 
@@ -107,7 +108,7 @@ Listen to `Fayne\ShoppingCart\Events\CheckoutValidating` for synchronous checkou
 
 ## Production requirements
 
-- Back up the database and rehearse the `2026_11_02_000001_preserve_checkout_history` migration against an anonymized data copy. It adds discount history and changes product/SKU foreign keys to RESTRICT. Archive products referenced by checkout history instead of hard-deleting them.
+- The initial schema includes line discount snapshots and RESTRICT foreign keys for products and SKUs. Archive catalog entries referenced by checkout history.
 - The migration does not reconstruct historical discounts. Reconcile pending checkout history and order header/line amounts; do not recalculate paid transactions.
 - All built-in storage configurations currently use the database as the source of truth. `cache`, `redis`, and `layered` names no longer imply serialized model snapshot caching.
 - Prices are rounded per line to cents. Tax and shipping are currently zero. Order adapters must consume line `discount_amount` and discounted `total_amount`.
@@ -131,3 +132,42 @@ Do not commit this package's `composer.lock`. Real MySQL/Redis acceptance tests 
 Proprietary License. See [LICENSE.md](LICENSE.md).
 
 [Production release checklist (Chinese)](docs/production-release-gates.md)
+
+## Tenant integration preview
+
+Bind `Fayne\ShoppingCart\Contracts\CartContextResolver` to provide tenant and authenticated customer IDs from trusted host context. Enabling `shopping-cart.tenancy.enabled` rejects access without a resolver. Trusted customers and guests are locked by tenant and identity. Existing cart foreign keys may still reference the host user table and must be adapted before using a separate customer table. Host services can use guest carts by resolving a server-side session identity. Carts are isolated by tenant and session and are never merged automatically on login. Set `shopping-cart.routes.guests=true` to enable cart routes with Laravel web sessions and CSRF protection. The resolver must derive identity from the server-side session. Built-in checkout still requires authentication. Commerce order handoff is pending.
+
+### Backfill historical tenant ownership
+
+Run the migrations on an anonymized backup first. Provide authoritative tenant mappings keyed by cart and Checkout ULID. In a transaction, update each parent row by primary key where `tenant_id IS NULL`. Verify affected row counts and check for duplicate active carts per tenant and customer before committing. Customer IDs alone cannot establish tenant ownership. Keep unresolved rows unassigned so tenant mode excludes them. Reconcile the data and rehearse recovery before switching traffic.
+
+An offline upgrade script can call `Fayne\ShoppingCart\Storage\TenantOwnershipBackfill::apply($carts, $checkouts)` with tenant mappings keyed by historical cart and Checkout ULID. Unknown or assigned rows and duplicate active carts roll back the batch. Pause writes during cutover and use the pre-migration backup to restore the original ownership data.
+
+For an independent customer table, set `CART_ENFORCE_USER_FOREIGN_KEY=false` before running the initial cart migration. The host owns cart cleanup on customer deletion. The customer key remains an integer.
+
+### Commerce quote handoff
+
+Call `ShoppingCart::selectedItemsForQuote()` to project selected lines from the current cart. SKU models must implement `Fayne\ShoppingCart\Contracts\Cartable`. Each line contains `cart_item_id`, `sku_id`, `quantity`, and `selected`. Commerce uses the SKU and quantity to quote again and validate tenant ownership, pricing, currency, stock, and promotions.
+
+After creating the order inside a transaction on the same database connection, call `ShoppingCart::consumeOrderItems($cartId, $orderId, $quotedItems)`. It verifies selection, SKU, and quantity. If the cart changed, roll back the order and quote again. Consumption can be retried with the same order and quote.
+
+
+Commerce currently accepts integer `variant_id` values in `QuoteProducts::execute()`. Map the projection as shown below. The host supplies shipping and the customer ID.
+
+```php
+$selected = ShoppingCart::selectedItemsForQuote();
+$requestedLines = array_map(static fn (array $line): array => [
+    'variant_id' => $line['sku_id'],
+    'quantity' => $line['quantity'],
+], $selected);
+$quote = app(\Fayne\Commerce\Pricing\Actions\QuoteProducts::class)
+    ->execute($requestedLines, $shippingAmount, customerId: $customerId);
+```
+
+Set the trusted tenant and customer context in the host and call `consumeOrderItems()` inside the order transaction. Commerce uses its own order entry point.
+
+The host can wrap selection, Commerce quoting and order creation, and cart consumption in `ShoppingCart::transaction()`. This acquires the cart ownership lock before accessing orders and inventory. Use the same connection for the entire flow and let conflicts abort the transaction.
+
+For tenant pricing, bind `CartCurrencyResolver` to the host currency service and bind `CartSkuQuery` to constrain SKU queries to the trusted tenant. Cart display columns currently assume currencies with two decimal places. Commerce order amounts remain integers.
+
+The default SKU model is `Fayne\ShoppingCart\Models\CartSku`, backed by `shopping_cart_skus`. Override `shopping-cart.models.skus.model` with your own Eloquent model implementing `Cartable` if needed. The built-in API looks up SKU codes in the `sku` column. Tenant mode also requires a `CartSkuQuery` binding.

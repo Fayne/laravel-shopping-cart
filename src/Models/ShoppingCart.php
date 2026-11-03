@@ -32,6 +32,13 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class ShoppingCart extends Model
 {
+    use \Fayne\ShoppingCart\Traits\HasCartOwnership;
+
+    protected static function cartOwnerColumn(): string
+    {
+        return 'customer_id';
+    }
+
     use HasUlids;
 
     /**
@@ -40,6 +47,8 @@ class ShoppingCart extends Model
      * @var string
      */
     protected $table = 'shopping_carts';
+
+    protected $hidden = ['active_owner'];
 
     /**
      * The attributes that are mass assignable.
@@ -85,6 +94,8 @@ class ShoppingCart extends Model
 
     /**
      * To get relevant associated items with the cart instance
+     *
+
      */
     public function items(): HasMany
     {
@@ -122,8 +133,8 @@ class ShoppingCart extends Model
         if ($cartItem) {
             $cartItem->quantity += $quantity;
 
-            $cartItem->total = $cartItem->latest_price * $cartItem->quantity;
-            $cartItem->base_total = $cartItem->latest_price * $cartItem->quantity;
+            $cartItem->total = $cartItem->lineAmount((int) $cartItem->quantity);
+            $cartItem->base_total = $cartItem->lineAmount((int) $cartItem->quantity);
             $cartItem->total_weight = $cartItem->weight * $cartItem->quantity;
             $cartItem->base_total_weight = $cartItem->weight * $cartItem->quantity;
 
@@ -135,12 +146,12 @@ class ShoppingCart extends Model
             'itemable_id' => $item->getKey(),
             'itemable_type' => get_class($item),
             'quantity' => $quantity,
-            'price' => $item->getPrice(),
+            'price' => ($item->getPriceInMinorUnits() / 100),
             'sku' => $item->getSku(),
             'name' => $item->getName(),
-            'base_price' => $item->getPrice(),
-            'total' => $item->getPrice() * $quantity,
-            'base_total' => $item->getPrice() * $quantity,
+            'base_price' => ($item->getPriceInMinorUnits() / 100),
+            'total' => ($item->getPriceInMinorUnits() * $quantity) / 100,
+            'base_total' => ($item->getPriceInMinorUnits() * $quantity) / 100,
             'weight' => $item->getWeight() ?? 0,
             'selected' => true,
             'total_weight' => ($item->getWeight() ?? 0) * $quantity,

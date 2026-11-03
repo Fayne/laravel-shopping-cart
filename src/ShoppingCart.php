@@ -2,8 +2,11 @@
 
 namespace Fayne\ShoppingCart;
 
+use Fayne\ShoppingCart\Support\CartSku;
+use Fayne\ShoppingCart\Support\CartCurrency;
 use Illuminate\Support\Facades\DB;
 use Fayne\ShoppingCart\Contracts\Cartable;
+use Fayne\ShoppingCart\Contracts\CartContextResolver;
 use Fayne\ShoppingCart\Contracts\CartStorageInterface;
 use Fayne\ShoppingCart\Events\CartPackage\CartAddProductAfter;
 use Fayne\ShoppingCart\Events\CartPackage\CartAddProductBefore;
@@ -51,16 +54,100 @@ class ShoppingCart
     {
         event(new CartGetBefore($isCheckout));
 
-        $customerId = auth()->id();
-        if (!$customerId) {
+        $customerId = $this->customerId();
+        if ($customerId === null && !app()->bound(CartContextResolver::class)) {
             return null;
         }
 
-        $cart = $this->storage->getCart($customerId, $isCheckout);
+        $cart = $this->storage->getCart((string) $customerId, $isCheckout);
 
         event(new CartGetAfter($cart));
 
         return $cart;
+    }
+
+    /**
+     * @return list<array{cart_item_id: string, sku_id: int|string, quantity: int, selected: bool}>
+     */
+    public function selectedItemsForQuote(): array
+    {
+        $cart = $this->getCart(isCheckout: true);
+        if ($cart === null) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($cart->items as $item) {
+            $sku = CartSku::query()->find($item->itemable_id);
+            abort_unless($sku instanceof Cartable && $sku->getMorphClass() === $item->itemable_type, 422);
+            $price = $this->validatedUnitPrice($sku);
+            $quantity = (int) $item->quantity;
+            abort_if($quantity < 1 || $price < 0 || $price > intdiv(PHP_INT_MAX, $quantity), 422);
+
+            $items[] = [
+                'cart_item_id' => (string) $item->getKey(),
+                'sku_id' => $sku->getKey(),
+                'quantity' => $quantity,
+                'selected' => true,
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * Consume quoted lines in the same database transaction as the host order.
+     *
+     * @param list<array{cart_item_id: string, sku_id: int|string, quantity: int, selected: bool}> $quotedItems
+     */
+    public function consumeOrderItems(string $cartId, int|string $orderId, array $quotedItems): void
+    {
+        abort_unless(DB::transactionLevel() > 0, 409, 'An order transaction is required.');
+        abort_if(trim((string) $orderId) === '' || $quotedItems === [], 422);
+
+        $lines = array_column($quotedItems, null, 'cart_item_id');
+        abort_unless(count($lines) === count($quotedItems), 422);
+        ksort($lines);
+
+        $this->transaction(function () use ($cartId, $orderId, $lines): void {
+            $identity = $this->getCacheKeyForDeactivatedCartId();
+            $key = hash('sha256', serialize([$identity, (string) $orderId]));
+            $fingerprint = hash('sha256', serialize([$cartId, $lines]));
+            $receipts = DB::table('shopping_cart_order_consumptions');
+
+            if ($receipt = $receipts->where('id', $key)->lockForUpdate()->first()) {
+                abort_unless($receipt->fingerprint === $fingerprint, 409);
+
+                return;
+            }
+
+            $cart = CartModel::query()->without('items')
+                ->where('customer_id', $this->customerId())
+                ->where('is_active', true)
+                ->lockForUpdate()->find($cartId);
+            abort_if($cart === null, 404);
+            $items = ShoppingCartItem::query()->where("cart_id", $cartId)->whereKey(array_keys($lines))->lockForUpdate()->get();
+            abort_unless($items->count() === count($lines), 409);
+
+            foreach ($items as $item) {
+                $quoted = $lines[$item->getKey()];
+                abort_unless($item->selected && $quoted['selected'] === true
+                    && (string) $item->itemable_id === (string) $quoted['sku_id']
+                    && (int) $item->quantity === $quoted['quantity'], 409);
+            }
+
+            $cart->items()->whereKey(array_keys($lines))->delete();
+            $this->collectTotals();
+            if ($cart->is_temp && !$cart->items()->exists()) {
+                $this->deActivateCart();
+                $this->activateCartIfCacheHasDeactivatedCartId();
+            }
+
+            DB::table('shopping_cart_order_consumptions')->insert([
+                'id' => $key,
+                'fingerprint' => $fingerprint,
+            ]);
+        });
     }
 
     /**
@@ -76,7 +163,13 @@ class ShoppingCart
     public function addProduct(Cartable $item, int $quantity, bool $isBuyNow = false): CartModel
     {
         return $this->transaction(function () use ($item, $quantity, $isBuyNow) {
-            if ($quantity < 1 || !is_finite($item->getPrice()) || $item->getPrice() < 0 || !$item->canBePurchased()) {
+            $skuClass = CartSku::model();
+            abort_unless($item instanceof $skuClass, 422, 'Invalid SKU');
+            $item = CartSku::query()->whereKey($item->getKey())->first();
+            abort_unless($item instanceof Cartable, 422, 'SKU is unavailable');
+
+            $price = $this->validatedUnitPrice($item);
+            if ($quantity < 1 || $price > intdiv(PHP_INT_MAX, $quantity) || !$item->canBePurchased()) {
                 throw new CartClientException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE->value, httpCode: 422);
             }
             event(new CartAddProductBefore(item: $item, quantity: $quantity, isBuyNow: $isBuyNow));
@@ -113,31 +206,34 @@ class ShoppingCart
 
             event(new CartCollectTotalBefore($cart));
             DB::transaction(function () use ($cart) {
-                $cart->sub_total = $cart->base_sub_total = 0;
-                $cart->discount = $cart->base_discount = 0;
+                $subtotal = $discount = $baseDiscount = 0;
 
                 foreach ($cart->items as $item) {
                     if (($cart->is_temp === false && $item->selected === true) || $cart->is_temp === true) {
 
-                        $cart->discount += $item->discount_amount;
-                        $cart->base_discount += $item->base_discount_amount;
-
-                        $item->total = round($item->latest_price * 100) * $item->quantity / 100;
-                        $item->base_total = $item->total;
-                        if ($item->discount_amount < 0 || $item->discount_amount > $item->total) {
+                        $lineTotal = $item->lineAmountInMinorUnits((int) $item->quantity);
+                        $lineDiscount = (int) round($item->discount_amount * 100);
+                        $lineBaseDiscount = (int) round($item->base_discount_amount * 100);
+                        if ($lineDiscount < 0 || $lineDiscount > $lineTotal
+                            || $lineBaseDiscount < 0 || $lineBaseDiscount > $lineTotal) {
                             throw new CartClientException(ErrorConst::ERROR_COUPON_INVALID->value, httpCode: 422);
                         }
+                        abort_if($lineTotal > PHP_INT_MAX - $subtotal, 422, 'Amount exceeds supported range');
+
+                        $item->total = $item->base_total = $lineTotal / 100;
                         $item->save();
 
-                        $cart->sub_total = (float) $cart->sub_total + $item->total;
-                        $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
+                        $subtotal += $lineTotal;
+                        $discount += $lineDiscount;
+                        $baseDiscount += $lineBaseDiscount;
                     }
                 }
 
-                $cart->grand_total = $cart->sub_total - $cart->discount;
-                $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount;
-
-                $cart = $this->finalizeCartTotals($cart);
+                $cart->sub_total = $cart->base_sub_total = $subtotal / 100;
+                $cart->discount = $discount / 100;
+                $cart->base_discount = $baseDiscount / 100;
+                $cart->grand_total = ($subtotal - $discount) / 100;
+                $cart->base_grand_total = ($subtotal - $baseDiscount) / 100;
 
                 $cart->items_count = $cart->items->count();
 
@@ -151,26 +247,6 @@ class ShoppingCart
             event(new CartCollectTotalAfter($cart));
 
         });
-    }
-
-    /**
-     * Round cart totals.
-     *
-     * @param CartModel $cart
-     * @return CartModel
-     */
-    private function finalizeCartTotals(CartModel $cart): CartModel
-    {
-        $cart->discount = round($cart->discount, 2);
-        $cart->base_discount = round($cart->base_discount, 2);
-
-        $cart->sub_total = round($cart->sub_total, 2);
-        $cart->base_sub_total = round($cart->base_sub_total, 2);
-
-        $cart->grand_total = round($cart->grand_total, 2);
-        $cart->base_grand_total = round($cart->base_grand_total, 2);
-
-        return $cart;
     }
 
     /**
@@ -218,8 +294,9 @@ class ShoppingCart
                 }
                 $cartData = [
                     'items_count' => 0,
-                    'customer_id' => auth()->id(),
-                    'customer_name' => auth()->user()->name ?? '',
+                    'customer_id' => $this->customerId(),
+                    'customer_name' => app()->bound(CartContextResolver::class)
+                        ? null : (auth()->user()->name ?? ''),
                 ] + $data;
 
                 $cart = $this->storage->createCart($cartData);
@@ -306,8 +383,8 @@ class ShoppingCart
 
             $updateData = [
                 'quantity' => $quantity,
-                'total' => $item->latest_price * $quantity,
-                'base_total' => $item->latest_price * $quantity,
+                'total' => $item->lineAmount($quantity),
+                'base_total' => $item->lineAmount($quantity),
                 'total_weight' => $item->weight * $quantity,
                 'base_total_weight' => $item->weight * $quantity,
             ];
@@ -390,15 +467,47 @@ class ShoppingCart
      */
     public function transaction(callable $callback): mixed
     {
-        abort_unless(auth()->id() !== null, 401);
+        if (app()->bound(CartContextResolver::class)) {
+            $context = app(CartContextResolver::class);
+            $customerId = $this->customerId();
+            $sessionId = $customerId === null ? $context->sessionId() : null;
+            abort_if($customerId === null && trim((string) $sessionId) === '', 401);
+            $key = hash('sha256', serialize([
+                (string) $context->tenantId(),
+                $customerId === null ? 'guest' : 'customer',
+                $customerId === null ? $sessionId : (string) $customerId,
+            ]));
+
+            return DB::transaction(function () use ($key, $callback) {
+                DB::table('shopping_cart_guest_locks')->upsert(['id' => $key], ['id'], ['id']);
+
+                return $callback();
+            }, 3);
+        }
+
+        abort_unless($this->customerId() !== null, 401);
 
         return DB::transaction(function () use ($callback) {
             $customer = DB::table(config('shopping-cart.models.users.table', 'users'))
-                ->where('id', auth()->id())->lockForUpdate()->first();
+                ->where('id', $this->customerId())->lockForUpdate()->first();
             abort_unless($customer !== null, 401);
 
             return $callback();
         }, 3);
+    }
+
+    protected function customerId(): int|string|null
+    {
+        if (app()->bound(CartContextResolver::class)) {
+            $context = app(CartContextResolver::class);
+            abort_if(trim((string) $context->tenantId()) === '', 503);
+
+            return $context->customerId();
+        }
+
+        abort_if(config('shopping-cart.tenancy.enabled', false), 503);
+
+        return auth()->id();
     }
 
     protected function ownedItem(int|string $itemId): ShoppingCartItem
@@ -411,6 +520,14 @@ class ShoppingCart
         }
 
         return $item;
+    }
+
+    private function validatedUnitPrice(Cartable $item): int
+    {
+        $price = $item->getPriceInMinorUnits();
+        abort_if($price < 0 || $item->getCurrency() !== CartCurrency::current(), 422, 'Invalid SKU price or currency');
+
+        return $price;
     }
 
     protected function addItemToCart(CartModel $cart, Cartable $item, int $quantity): void
@@ -429,8 +546,8 @@ class ShoppingCart
             $newQuantity = $existingItem->quantity + $quantity;
             $updateData = [
                 'quantity' => $newQuantity,
-                'total' => $existingItem->latest_price * $newQuantity,
-                'base_total' => $existingItem->latest_price * $newQuantity,
+                'total' => $existingItem->lineAmount($newQuantity),
+                'base_total' => $existingItem->lineAmount($newQuantity),
                 'total_weight' => $existingItem->weight * $newQuantity,
                 'base_total_weight' => $existingItem->weight * $newQuantity,
             ];
@@ -441,12 +558,12 @@ class ShoppingCart
                 'itemable_id' => $item->getKey(),
                 'itemable_type' => $item->getMorphClass(),
                 'quantity' => $quantity,
-                'price' => $item->getPrice(),
+                'price' => ($item->getPriceInMinorUnits() / 100),
                 'sku' => $item->getSku(),
                 'name' => $item->getName(),
-                'base_price' => $item->getPrice(),
-                'total' => $item->getPrice() * $quantity,
-                'base_total' => $item->getPrice() * $quantity,
+                'base_price' => ($item->getPriceInMinorUnits() / 100),
+                'total' => ($item->getPriceInMinorUnits() * $quantity) / 100,
+                'base_total' => ($item->getPriceInMinorUnits() * $quantity) / 100,
                 'weight' => $item->getWeight() ?? 0,
                 'selected' => true,
                 'total_weight' => ($item->getWeight() ?? 0) * $quantity,

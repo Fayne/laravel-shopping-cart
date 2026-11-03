@@ -17,7 +17,8 @@ class Product extends Model implements Cartable
         return static::where('sku', $code)->firstOrFail();
     }
 
-    public function getPrice(): float { return (float) $this->price; }
+    public function getPriceInMinorUnits(): int { return (int) round($this->price * 100); }
+    public function getCurrency(): string { return 'CNY'; }
     public function getSku(): string { return 'sku'; }
     public function getName(): string { return 'Product'; }
     public function getWeight(): float|int|null { return 1; }

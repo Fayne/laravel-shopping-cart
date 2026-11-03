@@ -2,6 +2,7 @@
 
 namespace Fayne\ShoppingCart\Models;
 
+use Fayne\ShoppingCart\Support\CartCurrency;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -30,6 +31,13 @@ use Fayne\ShoppingCart\Contracts\Cartable;
  */
 class ShoppingCartItem extends Model
 {
+    protected static function booted(): void
+    {
+        static::addGlobalScope('cartOwnership', function ($query): void {
+            $query->whereIn($query->qualifyColumn('cart_id'), ShoppingCart::query()->select('id'));
+        });
+    }
+
     use HasUlids;
 
     /**
@@ -132,12 +140,31 @@ class ShoppingCartItem extends Model
      */
     public function getLatestPriceAttribute(): float
     {
-        if ($this->itemable && method_exists($this->itemable, 'getPrice')) {
-            return $this->itemable->getPrice();
+        if ($this->itemable instanceof \Fayne\ShoppingCart\Contracts\Cartable) {
+            return $this->itemable->getPriceInMinorUnits() / 100;
         }
 
         // 如果没有关联对象或方法，返回当前价格
         return $this->price ?? 0.0;
+    }
+
+    public function lineAmount(int $quantity): float
+    {
+        return $this->lineAmountInMinorUnits($quantity) / 100;
+    }
+
+    public function lineAmountInMinorUnits(int $quantity): int
+    {
+        $sku = $this->itemable;
+        $price = $sku instanceof \Fayne\ShoppingCart\Contracts\Cartable
+            ? $sku->getPriceInMinorUnits()
+            : (int) round($this->latest_price * 100);
+        abort_if($quantity < 1 || $price < 0 || $price > intdiv(PHP_INT_MAX, $quantity), 422);
+        if ($sku instanceof \Fayne\ShoppingCart\Contracts\Cartable) {
+            abort_unless($sku->getCurrency() === CartCurrency::current(), 422);
+        }
+
+        return $price * $quantity;
     }
 
     /**

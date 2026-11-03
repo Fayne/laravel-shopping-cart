@@ -2,6 +2,7 @@
 
 namespace Fayne\ShoppingCart\Models;
 
+use Fayne\ShoppingCart\Support\CartSku;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,13 @@ use Illuminate\Database\Eloquent\Collection;
  */
 class Checkout extends Model
 {
+    use \Fayne\ShoppingCart\Traits\HasCartOwnership;
+
+    protected static function cartOwnerColumn(): string
+    {
+        return 'user_id';
+    }
+
     use HasUlids;
 
     /**
@@ -74,7 +82,7 @@ class Checkout extends Model
      */
     public function scopeOwn(Builder $query)
     {
-        return $query->where('user_id', auth()->id());
+        return $query->where('user_id', (static::cartContext()?->customerId() ?? auth()->id()));
     }
 
     /**
@@ -124,10 +132,9 @@ class Checkout extends Model
             // Assuming itemable relationship exists or can be resolved via product_id/sku_id
             // For now, let's assume we can resolve the SKU via sku_id
             if ($item->sku_id) {
-                $skuClass = config('shopping-cart.models.skus.model');
-                $sku = $skuClass::find($item->sku_id);
+                $sku = CartSku::query()->find($item->sku_id);
 
-                if (!$sku || !$sku->canBePurchased()) {
+                if (!($sku instanceof \Fayne\ShoppingCart\Contracts\Cartable) || !$sku->canBePurchased()) {
                     return false;
                 }
             }

@@ -8,10 +8,9 @@ namespace Fayne\ShoppingCart\Contracts;
  */
 interface Cartable
 {
-    /**
-     * @return float
-     */
-    public function getPrice(): float;
+    public function getPriceInMinorUnits(): int;
+
+    public function getCurrency(): string;
 
     /**
      * @return string

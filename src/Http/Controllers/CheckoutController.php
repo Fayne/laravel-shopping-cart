@@ -2,7 +2,10 @@
 
 namespace Fayne\ShoppingCart\Http\Controllers;
 
+use Fayne\ShoppingCart\Support\CartSku;
+use Fayne\ShoppingCart\Support\CartCurrency;
 use Illuminate\Http\JsonResponse;
+use Fayne\ShoppingCart\Contracts\CartContextResolver;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Fayne\ShoppingCart\Contracts\Cartable;
@@ -20,7 +23,8 @@ class CheckoutController extends Controller
     {
         return ShoppingCart::transaction(function () {
             // Read after acquiring the same customer lock used by cart mutations.
-            $cart = CartModel::where('customer_id', auth()->id())
+            $cart = CartModel::query()
+                ->when(!app()->bound(CartContextResolver::class), fn ($query) => $query->where('customer_id', auth()->id()))
                 ->where('is_active', true)->lockForUpdate()->first();
             if (!$cart || $cart->items->isEmpty()) {
                 return response()->json(['message' => 'Cart is empty'], 400);
@@ -36,16 +40,17 @@ class CheckoutController extends Controller
             }
             $subtotal = $discount = 0;
             $snapshots = [];
-            $skuClass = config('shopping-cart.models.skus.model');
             foreach ($items as $item) {
-                $sku = $item->itemable;
-                abort_unless($sku instanceof Cartable && $sku instanceof $skuClass && $sku->canBePurchased(), 422, 'Item cannot be purchased');
+                $sku = CartSku::query()->find($item->itemable_id);
+                abort_unless($sku instanceof Cartable && $sku->getMorphClass() === $item->itemable_type
+                    && $sku->canBePurchased(), 422, 'Item cannot be purchased');
                 abort_unless($item->quantity > 0, 422, 'Invalid quantity');
-                abort_unless(is_finite($sku->getPrice()) && $sku->getPrice() >= 0, 422, 'Invalid price');
-                $price = (int) round($sku->getPrice() * 100);
+                $price = $sku->getPriceInMinorUnits();
+                abort_unless($price >= 0 && $sku->getCurrency() === CartCurrency::current(), 422, 'Invalid price or currency');
                 $lineDiscount = (int) round($item->discount_amount * 100);
+                abort_if($price > intdiv(9999999999, (int) $item->quantity), 422, 'Amount exceeds supported range');
                 $lineTotal = $price * $item->quantity;
-                abort_unless($price >= 0 && $lineDiscount >= 0 && $lineDiscount <= $lineTotal, 422, 'Invalid amount');
+                abort_unless($lineDiscount >= 0 && $lineDiscount <= $lineTotal, 422, 'Invalid amount');
                 $validator = config('shopping-cart.checkout.validator');
                 if (is_string($validator) && class_exists($validator)) {
                     $validator = app($validator);
@@ -68,7 +73,7 @@ class CheckoutController extends Controller
             abort_if($subtotal > 9999999999 || $discount > $subtotal, 422, 'Amount exceeds supported range');
             $checkout = Checkout::create([
                 'user_id' => auth()->id(), 'status' => 0,
-                'currency' => config('shopping-cart.checkout.currency', 'CNY'),
+                'currency' => CartCurrency::current(),
                 'subtotal_amount' => $subtotal / 100, 'discount_amount' => $discount / 100,
                 'tax_amount' => 0, 'shipping_amount' => 0,
                 'total_amount' => ($subtotal - $discount) / 100,

@@ -2,6 +2,7 @@
 
 namespace Fayne\ShoppingCart\Cache;
 
+use Fayne\ShoppingCart\Support\CartCacheKey;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
@@ -54,7 +55,7 @@ class CartCacheOptimizer
      */
     public function getCacheKey(string $type, string $identifier): string
     {
-        return "{$this->prefix}:{$type}:{$identifier}";
+        return CartCacheKey::scoped("{$this->prefix}:{$type}:{$identifier}");
     }
 
     /**
