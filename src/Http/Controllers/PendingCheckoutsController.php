@@ -1,11 +1,11 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Controllers;
+namespace Fayne\ShoppingCart\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use MobileNowGroup\ShoppingCart\Models\Checkout;
+use Fayne\ShoppingCart\Models\Checkout;
 
 class PendingCheckoutsController extends Controller
 {

@@ -1,8 +1,8 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Listeners;
+namespace Fayne\ShoppingCart\Listeners;
 
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
+use Fayne\ShoppingCart\Facades\ShoppingCart;
 
 class CollectTotalsListener
 {

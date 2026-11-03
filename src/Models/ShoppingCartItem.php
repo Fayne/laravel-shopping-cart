@@ -1,11 +1,12 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Models;
+namespace Fayne\ShoppingCart\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Fayne\ShoppingCart\Contracts\Cartable;
 
 /**
  * @property bool $selected
@@ -21,6 +22,11 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property int $cart_id
  * @property int $itemable_id
  * @property string $itemable_type
+ * @property string $id
+ * @property (Model&Cartable)|null $itemable
+ * @property ShoppingCart|null $cart
+ * @property float $latest_price
+ * @property array|null $additional
  */
 class ShoppingCartItem extends Model
 {
@@ -36,7 +42,7 @@ class ShoppingCartItem extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $fillable = [
         'cart_id',
@@ -65,7 +71,7 @@ class ShoppingCartItem extends Model
     /**
      * The attributes that should be cast.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'additional' => 'array',
@@ -129,7 +135,7 @@ class ShoppingCartItem extends Model
         if ($this->itemable && method_exists($this->itemable, 'getPrice')) {
             return $this->itemable->getPrice();
         }
-        
+
         // 如果没有关联对象或方法，返回当前价格
         return $this->price ?? 0.0;
     }
@@ -308,12 +314,12 @@ class ShoppingCartItem extends Model
     public function toArray()
     {
         $array = parent::toArray();
-        
+
         // 确保 selected 字段包含在数组中
         if (!isset($array['selected'])) {
             $array['selected'] = $this->selected;
         }
-        
+
         return $array;
     }
 }

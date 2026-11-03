@@ -1,8 +1,7 @@
 <?php
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use MobileNowGroup\ShoppingCart\Traits\CartPerformanceMonitoring;
-use Mockery;
+use Fayne\ShoppingCart\Traits\CartPerformanceMonitoring;
 
 
 

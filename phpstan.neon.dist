@@ -7,7 +7,11 @@ parameters:
         - src
         - config
         - database
+        - tests/Fixtures
     checkOctaneCompatibility: true
     checkModelProperties: true
-    checkMissingIterableValueType: false
 
+    configDirectories:
+        - %currentWorkingDirectory%/config
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php

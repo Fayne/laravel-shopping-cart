@@ -1,6 +1,6 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Requests;
+namespace Fayne\ShoppingCart\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 

@@ -1,9 +1,9 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Events;
+namespace Fayne\ShoppingCart\Events;
 
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 /**
  * 购物车商品添加事件

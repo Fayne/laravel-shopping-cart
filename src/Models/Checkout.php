@@ -1,12 +1,28 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Models;
+namespace Fayne\ShoppingCart\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 
+/**
+ * @property string $id
+ * @property int $user_id
+ * @property int $status
+ * @property string $currency
+ * @property float $subtotal_amount
+ * @property float $discount_amount
+ * @property float $tax_amount
+ * @property float $shipping_amount
+ * @property float $total_amount
+ * @property array|null $metadata
+ * @property CarbonImmutable|null $expires_at
+ * @property Collection<int, CheckoutItem> $items
+ */
 class Checkout extends Model
 {
     use HasUlids;
@@ -21,9 +37,11 @@ class Checkout extends Model
     /**
      * The attributes that aren't mass assignable.
      *
-     * @var array<string>|bool
+     * @var list<string>
      */
-    protected $guarded = false;
+    protected $guarded = [];
+
+    protected $casts = ['metadata' => 'array', 'expires_at' => 'immutable_datetime', 'status' => 'integer'];
 
     /**
      * Boot the model.
@@ -51,8 +69,8 @@ class Checkout extends Model
     /**
      * Scope a query to only include owed checkouts.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeOwn(Builder $query)
     {
@@ -62,8 +80,8 @@ class Checkout extends Model
     /**
      * Scope a query to only include pending checkouts.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopePending($query)
     {
@@ -73,8 +91,8 @@ class Checkout extends Model
     /**
      * Scope a query to only include active (non-expired) checkouts.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param  Builder  $query
+     * @return Builder
      */
     public function scopeActive($query)
     {
@@ -86,19 +104,17 @@ class Checkout extends Model
      */
     public function isExpired(): bool
     {
-        $expirationMinutes = config('shopping-cart.checkout.expiration', 30);
-
-        return $this->created_at->addMinutes($expirationMinutes)->isPast();
+        return !$this->expires_at || $this->expires_at->isPast();
     }
 
     /**
      * Check if checkout can proceed to payment/order creation.
-     * 
+     *
      * @return bool
      */
     public function canProceed(): bool
     {
-        if ($this->isExpired()) {
+        if ($this->status !== 0 || $this->isExpired()) {
             return false;
         }
 
@@ -110,7 +126,7 @@ class Checkout extends Model
             if ($item->sku_id) {
                 $skuClass = config('shopping-cart.models.skus.model');
                 $sku = $skuClass::find($item->sku_id);
-                
+
                 if (!$sku || !$sku->canBePurchased()) {
                     return false;
                 }
@@ -154,7 +170,8 @@ class Checkout extends Model
                     'name_snapshot' => $item->name_snapshot,
                     'price_snapshot' => $item->price_snapshot,
                     'quantity' => $item->quantity,
-                    'total_amount' => $item->price_snapshot * $item->quantity,
+                    'discount_amount' => $item->discount_amount,
+                    'total_amount' => round($item->price_snapshot * $item->quantity - $item->discount_amount, 2),
                 ];
             })->toArray(),
         ];

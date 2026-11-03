@@ -1,10 +1,10 @@
 <?php
 use Illuminate\Support\Facades\Config;
-use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
-use MobileNowGroup\ShoppingCart\Storage\DatabaseCartStorage;
-use MobileNowGroup\ShoppingCart\Storage\CacheCartStorage;
-use MobileNowGroup\ShoppingCart\Storage\RedisCartStorage;
-use MobileNowGroup\ShoppingCart\Storage\CartStorageInterface;
+use Fayne\ShoppingCart\Storage\CartStorageManager;
+use Fayne\ShoppingCart\Storage\DatabaseCartStorage;
+use Fayne\ShoppingCart\Storage\CacheCartStorage;
+use Fayne\ShoppingCart\Storage\RedisCartStorage;
+use Fayne\ShoppingCart\Storage\CartStorageInterface;
 
 
 

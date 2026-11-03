@@ -1,99 +1,94 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Controllers;
+namespace Fayne\ShoppingCart\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
-use MobileNowGroup\LaravelNovaSku\Models\ProductSku;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\Checkout;
-use MobileNowGroup\ShoppingCart\Models\CheckoutItem;
+use Fayne\ShoppingCart\Contracts\Cartable;
+use Fayne\ShoppingCart\Facades\ShoppingCart;
+use Fayne\ShoppingCart\Models\Checkout;
+use Fayne\ShoppingCart\Models\ShoppingCart as CartModel;
+use Fayne\ShoppingCart\Contracts\CartStorageInterface;
+use Fayne\ShoppingCart\Events\CheckoutValidating;
+use Illuminate\Database\Eloquent\Collection;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 class CheckoutController extends Controller
 {
-    /**
-     * 创建订单（结账）
-     *
-     * @param Request $request
-     * @return JsonResponse
-     * @throws \Throwable
-     */
     public function __invoke(Request $request): JsonResponse
     {
-        $cart = ShoppingCart::getCart();
-        if (!$cart || $cart->items->isEmpty()) {
-            return response()->json(['message' => 'Cart is empty'], 400);
-        }
-
-        // 获取选中的购物车项
-        $selectedItems = $cart->items->where('selected', true);
-        if ($selectedItems->isEmpty()) {
-            return response()->json(['message' => 'No items selected for checkout'], 400);
-        }
-
-        try {
-            return DB::transaction(function () use ($cart, $selectedItems) {
-                // 1. 创建 Checkout 记录
-                $checkout = Checkout::create([
-                    'user_id' => auth()->id(),
-                    'status' => 0, // Pending
-                    'currency' => 'CNY', // 这里可以根据配置或请求动态设置
-                    'subtotal_amount' => $selectedItems->sum('subtotal'),
-                    'discount_amount' => $cart->discount_amount ?? 0, // 需要根据实际逻辑计算分摊后的折扣
-                    'tax_amount' => 0, // 暂不计算税费
-                    'shipping_amount' => 0, // 暂不计算运费
-                    'total_amount' => $selectedItems->sum('total'),
-                    'metadata' => $cart->metadata,
-                    'expires_at' => now()->addMinutes(30), // 订单有效期
-                ]);
-
-                // 2. 创建 Checkout Items
-                foreach ($selectedItems as $item) {
-                    $sku = ProductSku::find($item->itemable_id);
-
-                    CheckoutItem::create([
-                        'checkout_id' => $checkout->id,
-                        'product_id' => $sku->product_id,
-                        'sku_id' => $item->itemable_id,
-                        'name_snapshot' => $item->name,
-                        'price_snapshot' => $item->price,
-                        'quantity' => $item->quantity,
-                    ]);
+        return ShoppingCart::transaction(function () {
+            // Read after acquiring the same customer lock used by cart mutations.
+            $cart = CartModel::where('customer_id', auth()->id())
+                ->where('is_active', true)->lockForUpdate()->first();
+            if (!$cart || $cart->items->isEmpty()) {
+                return response()->json(['message' => 'Cart is empty'], 400);
+            }
+            if ($cart->coupon_code) {
+                ShoppingCart::setCouponCode($cart->coupon_code);
+                $cart->refresh();
+            }
+            /** @var Collection<int, ShoppingCartItem> $items */
+            $items = $cart->items()->where('selected', true)->lockForUpdate()->get();
+            if ($items->isEmpty()) {
+                return response()->json(['message' => 'No items selected for checkout'], 400);
+            }
+            $subtotal = $discount = 0;
+            $snapshots = [];
+            $skuClass = config('shopping-cart.models.skus.model');
+            foreach ($items as $item) {
+                $sku = $item->itemable;
+                abort_unless($sku instanceof Cartable && $sku instanceof $skuClass && $sku->canBePurchased(), 422, 'Item cannot be purchased');
+                abort_unless($item->quantity > 0, 422, 'Invalid quantity');
+                abort_unless(is_finite($sku->getPrice()) && $sku->getPrice() >= 0, 422, 'Invalid price');
+                $price = (int) round($sku->getPrice() * 100);
+                $lineDiscount = (int) round($item->discount_amount * 100);
+                $lineTotal = $price * $item->quantity;
+                abort_unless($price >= 0 && $lineDiscount >= 0 && $lineDiscount <= $lineTotal, 422, 'Invalid amount');
+                $validator = config('shopping-cart.checkout.validator');
+                if (is_string($validator) && class_exists($validator)) {
+                    $validator = app($validator);
                 }
+                abort_unless(is_callable($validator), 503, 'Checkout stock validator is not configured');
+                abort_unless($validator($sku, $item->quantity, $cart), 422, 'Insufficient stock');
+                // Synchronous listeners may reserve stock in this same transaction.
+                event(new CheckoutValidating($cart, $item, $sku));
+                $subtotal += $lineTotal;
+                $discount += $lineDiscount;
+                $snapshots[] = [
+                    'product_id' => $sku->getAttribute('product_id'),
+                    'sku_id' => $sku->getKey(),
+                    'name_snapshot' => $sku->getName(),
+                    'price_snapshot' => $price / 100,
+                    'quantity' => $item->quantity,
+                    'discount_amount' => $lineDiscount / 100,
+                ];
+            }
+            abort_if($subtotal > 9999999999 || $discount > $subtotal, 422, 'Amount exceeds supported range');
+            $checkout = Checkout::create([
+                'user_id' => auth()->id(), 'status' => 0,
+                'currency' => config('shopping-cart.checkout.currency', 'CNY'),
+                'subtotal_amount' => $subtotal / 100, 'discount_amount' => $discount / 100,
+                'tax_amount' => 0, 'shipping_amount' => 0,
+                'total_amount' => ($subtotal - $discount) / 100,
+                'metadata' => $cart->metadata,
+                'expires_at' => now()->addMinutes(config('shopping-cart.checkout.expiration', 30)),
+            ]);
+            $checkout->items()->createMany($snapshots);
+            foreach ($items as $item) {
+                abort_unless(app(CartStorageInterface::class)->removeCartItem($item->id), 409, 'Cart changed');
+            }
+            ShoppingCart::collectTotals();
+            if ($cart->is_temp) {
+                ShoppingCart::deActivateCart();
+                ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
+            }
 
-                // 3. 从购物车中移除已购买的商品
-                // 注意：这里我们只移除选中的商品，保留未选中的
-                foreach ($selectedItems as $item) {
-                    $item->delete();
-                }
-                
-                // 重新计算购物车总额（如果还有剩余商品）
-                if ($cart->items()->count() > 0) {
-                    ShoppingCart::collectTotals();
-                } else {
-                    // 如果购物车空了，可以考虑清理购物车记录或重置状态
-                    $cart->delete();
-                }
-
-                // 4. 返回结果
-                return response()->json([
-                    'code' => 0,
-                    'message' => '订单创建成功',
-                    'data' => [
-                        'checkout_id' => $checkout->id,
-                        'total_amount' => $checkout->total_amount,
-                        'expires_at' => $checkout->expires_at,
-                    ],
-                ]);
-            });
-        } catch (\Exception $e) {
-            \Log::error('Checkout failed: ' . $e->getTraceAsString());
-            return response()->json([
-                'code' => 500,
-                'message' => '订单创建失败，请稍后重试',
-            ], 500);
-        }
+            return response()->json(['code' => 0, 'message' => '订单创建成功', 'data' => [
+                'checkout_id' => $checkout->id, 'total_amount' => $checkout->total_amount,
+                'expires_at' => $checkout->expires_at,
+            ]]);
+        });
     }
 }

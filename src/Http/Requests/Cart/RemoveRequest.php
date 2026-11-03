@@ -1,9 +1,9 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
+namespace Fayne\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 class RemoveRequest extends FormRequest
 {
@@ -12,14 +12,14 @@ class RemoveRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        //@todo 自行优化
+        // @todo 自行优化
         $cartItem = ShoppingCartItem::with('cart')->find($this->input('item_id'));
 
         if (!$cartItem) {
             abort(404, __('shopping_cart::messages.item_not_found'));
         }
 
-        return $cartItem->cart->customer_id === auth()->id() && (bool) $cartItem->cart->is_temp === false;
+        return $cartItem->cart && (string) $cartItem->cart->customer_id === (string) auth()->id() && $cartItem->cart->is_active && (bool) $cartItem->cart->is_temp === false;
     }
 
     /**

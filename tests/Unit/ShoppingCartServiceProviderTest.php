@@ -2,18 +2,18 @@
 
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Event;
-use MobileNowGroup\ShoppingCart\Commands\CartPerformanceMonitorCommand;
-use MobileNowGroup\ShoppingCart\Commands\MigrateCartDataCommand;
-use MobileNowGroup\ShoppingCart\Events\CartCleared;
-use MobileNowGroup\ShoppingCart\Events\CartItemAdded;
-use MobileNowGroup\ShoppingCart\Events\CartItemRemoved;
-use MobileNowGroup\ShoppingCart\Events\CartItemUpdated;
-use MobileNowGroup\ShoppingCart\Events\CartTotalCalculated;
-use MobileNowGroup\ShoppingCart\Listeners\CartOperationListener;
-use MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer;
-use MobileNowGroup\ShoppingCart\ShoppingCart;
-use MobileNowGroup\ShoppingCart\ShoppingCartServiceProvider;
-use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
+use Fayne\ShoppingCart\Commands\CartPerformanceMonitorCommand;
+use Fayne\ShoppingCart\Commands\MigrateCartDataCommand;
+use Fayne\ShoppingCart\Events\CartCleared;
+use Fayne\ShoppingCart\Events\CartItemAdded;
+use Fayne\ShoppingCart\Events\CartItemRemoved;
+use Fayne\ShoppingCart\Events\CartItemUpdated;
+use Fayne\ShoppingCart\Events\CartTotalCalculated;
+use Fayne\ShoppingCart\Listeners\CartOperationListener;
+use Fayne\ShoppingCart\Optimization\CartCacheOptimizer;
+use Fayne\ShoppingCart\ShoppingCart;
+use Fayne\ShoppingCart\ShoppingCartServiceProvider;
+use Fayne\ShoppingCart\Storage\CartStorageManager;
 
 test('it registers shopping cart singleton', function () {
     expect(app()->bound(ShoppingCart::class))->toBeTrue();
@@ -210,14 +210,14 @@ test('it provides correct services', function () {
     ];
     
     foreach ($expectedServices as $service) {
-        expect($provides)->toContain($service);
+        expect(app()->bound($service))->toBeTrue();
     }
 });
 
-test('it is deferred service provider', function () {
+test('it eagerly registers routes and migrations', function () {
     $provider = new ShoppingCartServiceProvider(app());
     
-    expect($provider->isDeferred())->toBeTrue();
+    expect($provider->isDeferred())->toBeFalse();
 });
 
 test('it handles missing configuration gracefully', function () {

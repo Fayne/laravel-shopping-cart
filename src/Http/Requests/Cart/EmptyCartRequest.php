@@ -1,9 +1,9 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
+namespace Fayne\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
+use Fayne\ShoppingCart\Facades\ShoppingCart;
 
 class EmptyCartRequest extends FormRequest
 {

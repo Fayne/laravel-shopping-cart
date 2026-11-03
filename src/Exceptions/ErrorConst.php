@@ -1,6 +1,6 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Exceptions;
+namespace Fayne\ShoppingCart\Exceptions;
 
 enum ErrorConst: int
 {

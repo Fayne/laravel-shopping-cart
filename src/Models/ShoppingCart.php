@@ -1,13 +1,14 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Models;
+namespace Fayne\ShoppingCart\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use MobileNowGroup\ShoppingCart\Contracts\Cartable;
-use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
-use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
+use Fayne\ShoppingCart\Contracts\Cartable;
+use Fayne\ShoppingCart\Exceptions\CartClientException;
+use Fayne\ShoppingCart\Exceptions\CartServerException;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * ShoppingCart
@@ -20,9 +21,14 @@ use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
  * @property float $base_grand_total
  * @property int $items_count
  * @property int $items_qty
- * @property string $coupon_code
+ * @property string|null $coupon_code
  * @property string $customer_id
  * @property bool $is_temp
+ * @property string $id
+ * @property bool $is_active
+ * @property array|null $metadata
+ * @property string|null $coupon_code
+ * @property Collection<int, ShoppingCartItem> $items
  */
 class ShoppingCart extends Model
 {
@@ -38,7 +44,7 @@ class ShoppingCart extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<string>
+     * @var list<string>
      */
     protected $fillable = [
         'customer_id',
@@ -47,6 +53,8 @@ class ShoppingCart extends Model
         'metadata',
         'coupon_code',
         'is_active',
+        'is_temp',
+        'items_count',
     ];
 
     /**
@@ -54,11 +62,12 @@ class ShoppingCart extends Model
      */
     protected $casts = [
         'is_temp' => 'bool',
+        'is_active' => 'bool',
         'metadata' => 'array',
     ];
 
     /**
-     * @var array<int, string>
+     * @var list<string>
      */
     protected $with = [
         'items',
@@ -85,11 +94,13 @@ class ShoppingCart extends Model
     /**
      * Calculate price by quantity of items.
      */
-    public function calculatedPriceByQuantity(): int
+    public function calculatedPriceByQuantity(): float
     {
         $totalPrice = 0;
-        foreach ($this->items()->get() as $item) {
-            $totalPrice += (int) $item->quantity * (int) $item->itemable->getPrice();
+        /** @var Collection<int, ShoppingCartItem> $items */
+        $items = $this->items()->get();
+        foreach ($items as $item) {
+            $totalPrice += (int) $item->quantity * $item->latest_price;
         }
 
         return $totalPrice;
@@ -106,6 +117,7 @@ class ShoppingCart extends Model
      */
     public function storeItem(Cartable $item, int $quantity): static
     {
+        /** @var ShoppingCartItem|null $cartItem */
         $cartItem = $this->items()->firstWhere('itemable_id', $item->getKey());
         if ($cartItem) {
             $cartItem->quantity += $quantity;
@@ -141,7 +153,7 @@ class ShoppingCart extends Model
     /**
      * Check if cart has a product with given ID.
      */
-    public function hasProduct(int $productId): bool
+    public function hasProduct(int|string $productId): bool
     {
         return $this->items()->where('itemable_id', $productId)->exists();
     }
@@ -151,7 +163,7 @@ class ShoppingCart extends Model
      */
     public function getTotalAmount(): float
     {
-        return $this->items()->sum('total') ?? 0.0;
+        return $this->items()->sum('total');
     }
 
     /**
@@ -175,7 +187,7 @@ class ShoppingCart extends Model
      */
     public function getTotalItems(): int
     {
-        return $this->items()->sum('quantity') ?? 0;
+        return $this->items()->sum('quantity');
     }
 
     /**
@@ -189,20 +201,26 @@ class ShoppingCart extends Model
     /**
      * Find item by product ID.
      */
-    public function findItemByProductId(int $productId): ?ShoppingCartItem
+    public function findItemByProductId(int|string $productId): ?ShoppingCartItem
     {
-        return $this->items()->where('itemable_id', $productId)->first();
+        /** @var ShoppingCartItem|null $item */
+        $item = $this->items()->where('itemable_id', $productId)->first();
+
+        return $item;
     }
 
     /**
      * Find item by product ID and options.
      */
-    public function findItemByProductIdAndOptions(int $productId, array $options): ?ShoppingCartItem
+    public function findItemByProductIdAndOptions(int|string $productId, array $options): ?ShoppingCartItem
     {
-        return $this->items()
+        /** @var ShoppingCartItem|null $item */
+        $item = $this->items()
             ->where('itemable_id', $productId)
             ->where('additional', json_encode($options))
             ->first();
+
+        return $item;
     }
 
     /**
@@ -212,6 +230,7 @@ class ShoppingCart extends Model
     {
         $array = parent::toArray();
         $array['items'] = $this->items->toArray();
+
         return $array;
     }
 

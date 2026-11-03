@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
-use MobileNowGroup\ShoppingCart\Listeners\CartOperationListener;
+use Fayne\ShoppingCart\Listeners\CartOperationListener;
 
 beforeEach(function () {
     $this->listener = new CartOperationListener();

@@ -1,38 +1,36 @@
 <?php
+
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
-
-use MobileNowGroup\ShoppingCart\Console\Commands\CartPerformanceMonitorCommand;
-use MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer;
-use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
-
-
+use Fayne\ShoppingCart\Console\Commands\CartPerformanceMonitorCommand;
+use Fayne\ShoppingCart\Optimization\CartCacheOptimizer;
+use Fayne\ShoppingCart\Storage\CartStorageManager;
 
 beforeEach(function () {
     $this->mockOptimizer = Mockery::mock(CartCacheOptimizer::class);
     $this->mockStorageManager = Mockery::mock(CartStorageManager::class);
     app()->instance(CartCacheOptimizer::class, $this->mockOptimizer);
     app()->instance(CartStorageManager::class, $this->mockStorageManager);
-    
+
     // Mock ShoppingCart model for all tests
-    $this->mockCart = Mockery::mock('MobileNowGroup\\ShoppingCart\\Models\\ShoppingCart');
-    
+    $this->mockCart = Mockery::mock('Fayne\\ShoppingCart\\Models\\ShoppingCart');
+
     // 设置基础方法期望
     $this->mockCart->shouldReceive('count')->andReturn(10)->byDefault();
     $this->mockCart->shouldReceive('avg')->with('items_count')->andReturn(2.5)->byDefault();
     $this->mockCart->shouldReceive('avg')->with('grand_total')->andReturn(150.0)->byDefault();
-    
+
     // 设置where查询链式调用期望
     $whereActiveMock = Mockery::mock();
     $whereActiveMock->shouldReceive('count')->andReturn(8)->byDefault();
     $this->mockCart->shouldReceive('where')->with('is_active', true)->andReturn($whereActiveMock)->byDefault();
-    
+
     $whereRecentMock = Mockery::mock();
     $whereRecentMock->shouldReceive('count')->andReturn(5)->byDefault();
     $this->mockCart->shouldReceive('where')->with('updated_at', '>=', Mockery::any())->andReturn($whereRecentMock)->byDefault();
-    
+
     $this->command = new CartPerformanceMonitorCommand($this->mockOptimizer, $this->mockStorageManager, $this->mockCart);
-    
+
     // Register the command for testing
     app('Illuminate\Contracts\Console\Kernel')->registerCommand($this->command);
 });
@@ -167,34 +165,33 @@ test('it shows no issues when performance is good', function () {
 
 test('it cleans old monitoring data', function () {
     $this->mockOptimizer
-        ->shouldReceive('cleanupExpiredMonitoringData')
+        ->shouldReceive('cleanupMonitoringData')
         ->once()
-        ->andReturn(50);
+        ->andReturn(true);
 
     $this->artisan('cart:monitor', ['--action' => 'cleanup'])
         ->expectsOutput('Cleaning up old monitoring data...')
-        ->expectsOutput('Removed 50 expired monitoring records.')
         ->expectsOutput('Cleanup completed successfully!')
         ->assertExitCode(0);
 });
 
 test('it runs benchmark tests', function () {
     Config::set('shopping-cart.storage.default', 'database');
-    
+
     // Mock storage driver for benchmark
     $mockDriver = Mockery::mock();
     $mockCart = (object) ['id' => 'test-cart-id'];
-    
+
     $mockDriver->shouldReceive('createCart')->andReturn($mockCart);
     $mockDriver->shouldReceive('getCart')->andReturn($mockCart);
     $mockDriver->shouldReceive('addItem')->andReturn(true);
     $mockDriver->shouldReceive('updateItems')->andReturn(true);
     $mockDriver->shouldReceive('removeItem')->andReturn(true);
-    
+
     $this->mockStorageManager
         ->shouldReceive('driver')
         ->andReturn($mockDriver);
-    
+
     $this->artisan('cart:monitor', ['--action' => 'benchmark'])
         ->expectsOutput('Running Cart Performance Benchmark')
         ->expectsOutput('Testing cart operations...')
@@ -230,9 +227,9 @@ test('it handles custom days parameter', function () {
         '--action' => 'report',
         '--period' => '7d',
     ])
-    ->expectsOutput('Cart Performance Report (Last 7 days)')
-    ->expectsOutput('Cache Statistics:')
-    ->assertExitCode(0);
+        ->expectsOutput('Cart Performance Report (Last 7 days)')
+        ->expectsOutput('Cache Statistics:')
+        ->assertExitCode(0);
 });
 
 test('it validates days parameter', function () {
@@ -240,15 +237,15 @@ test('it validates days parameter', function () {
         '--action' => 'report',
         '--period' => '0d',
     ])
-    ->expectsOutput('Error: Days must be a positive integer.')
-    ->assertExitCode(1);
+        ->expectsOutput('Error: Days must be a positive integer.')
+        ->assertExitCode(1);
 
     $this->artisan('cart:monitor', [
-          '--action' => 'report',
-          '--period' => '366d',
-      ])
-    ->expectsOutput('Error: Days cannot exceed 90.')
-    ->assertExitCode(1);
+        '--action' => 'report',
+        '--period' => '366d',
+    ])
+        ->expectsOutput('Error: Days cannot exceed 90.')
+        ->assertExitCode(1);
 });
 
 test('it requires at least one option', function () {
@@ -275,27 +272,27 @@ test('it handles empty performance data', function () {
 test('it formats execution time correctly', function () {
     // 清理之前的 Cache mock
     Mockery::close();
-    
+
     // 重新设置 ShoppingCart mock
-    $this->mockCart = Mockery::mock('MobileNowGroup\\ShoppingCart\\Models\\ShoppingCart');
-    
+    $this->mockCart = Mockery::mock('Fayne\\ShoppingCart\\Models\\ShoppingCart');
+
     // 设置基础方法期望
     $this->mockCart->shouldReceive('count')->andReturn(10)->byDefault();
     $this->mockCart->shouldReceive('avg')->with('items_count')->andReturn(2.5)->byDefault();
     $this->mockCart->shouldReceive('avg')->with('grand_total')->andReturn(150.0)->byDefault();
-    
+
     // 设置where查询链式调用期望
     $whereActiveMock = Mockery::mock();
     $whereActiveMock->shouldReceive('count')->andReturn(8)->byDefault();
     $this->mockCart->shouldReceive('where')->with('is_active', true)->andReturn($whereActiveMock)->byDefault();
-    
+
     $whereRecentMock = Mockery::mock();
     $whereRecentMock->shouldReceive('count')->andReturn(5)->byDefault();
     $this->mockCart->shouldReceive('where')->with('updated_at', '>=', Mockery::any())->andReturn($whereRecentMock)->byDefault();
-    
+
     // 重新创建命令实例
     $this->command = new CartPerformanceMonitorCommand($this->mockOptimizer, $this->mockStorageManager, $this->mockCart);
-    
+
     $stats = [
         'cache_hits' => 100,
         'cache_misses' => 0,
@@ -334,7 +331,7 @@ test('it formats execution time correctly', function () {
 
 test('it handles benchmark errors gracefully', function () {
     Config::set('shopping-cart.storage.default', 'invalid_driver');
-    
+
     $this->artisan('cart:monitor', ['--action' => 'benchmark'])
         ->expectsOutput('Running Cart Performance Benchmark')
         ->expectsOutputToContain('Error during benchmark:')

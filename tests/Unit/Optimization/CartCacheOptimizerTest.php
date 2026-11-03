@@ -3,9 +3,9 @@
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-use MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Optimization\CartCacheOptimizer;
+use Fayne\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 beforeEach(function () {
     $this->optimizer = new CartCacheOptimizer();

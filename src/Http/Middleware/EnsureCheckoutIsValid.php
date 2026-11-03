@@ -1,8 +1,8 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Middleware;
+namespace Fayne\ShoppingCart\Http\Middleware;
 
-use MobileNowGroup\ShoppingCart\Models\Checkout;
+use Fayne\ShoppingCart\Models\Checkout;
 
 class EnsureCheckoutIsValid
 {

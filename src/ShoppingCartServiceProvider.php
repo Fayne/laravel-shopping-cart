@@ -1,17 +1,25 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart;
+namespace Fayne\ShoppingCart;
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
-use MobileNowGroup\ShoppingCart\Storage\CartStorageManager;
-use MobileNowGroup\ShoppingCart\Cache\CartCacheOptimizer as CacheOptimizer;
-use MobileNowGroup\ShoppingCart\Optimization\CartCacheOptimizer;
-use MobileNowGroup\ShoppingCart\Console\Commands\MigrateCartDataCommand;
-use MobileNowGroup\ShoppingCart\Console\Commands\CartPerformanceMonitorCommand;
+use Fayne\ShoppingCart\Contracts\CartStorageInterface;
+use Fayne\ShoppingCart\Storage\CartStorageManager;
+use Fayne\ShoppingCart\Cache\CartCacheOptimizer as CacheOptimizer;
+use Fayne\ShoppingCart\Optimization\CartCacheOptimizer;
+use Fayne\ShoppingCart\Console\Commands\MigrateCartDataCommand;
+use Fayne\ShoppingCart\Console\Commands\CartPerformanceMonitorCommand;
+use Illuminate\Contracts\Foundation\CachesConfiguration;
+use Fayne\ShoppingCart\Events\CartCleared;
+use Fayne\ShoppingCart\Events\CartItemAdded;
+use Fayne\ShoppingCart\Events\CartItemRemoved;
+use Fayne\ShoppingCart\Events\CartItemUpdated;
+use Fayne\ShoppingCart\Events\CartTotalCalculated;
+use Fayne\ShoppingCart\Listeners\CartOperationListener;
+use Fayne\ShoppingCart\Listeners\CollectTotalsListener;
 
 class ShoppingCartServiceProvider extends PackageServiceProvider
 {
@@ -39,7 +47,7 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             $configPath = __DIR__ . '/../config/shopping-cart.php';
             $key = 'shopping-cart';
 
-            if (! ($this->app instanceof \Illuminate\Contracts\Foundation\CachesConfiguration && $this->app->configurationIsCached())) {
+            if (! ($this->app instanceof CachesConfiguration && $this->app->configurationIsCached())) {
                 $existingConfig = $config->get($key, []);
                 if (!is_array($existingConfig)) {
                     $existingConfig = [];
@@ -51,11 +59,11 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         }
 
         // 注册存储管理器
-        $this->app->singleton('cart.storage', function ($app) {
+        $this->app->scoped('cart.storage', function ($app) {
             return new CartStorageManager($app);
         });
 
-        $this->app->singleton(CartStorageManager::class, function ($app) {
+        $this->app->scoped(CartStorageManager::class, function ($app) {
             return $app['cart.storage'];
         });
 
@@ -65,16 +73,16 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         });
 
         // 注册购物车服务
-        $this->app->singleton('shopping-cart', function ($app) {
+        $this->app->scoped('shopping-cart', function ($app) {
             return new ShoppingCart($app[CartStorageInterface::class]);
         });
 
-        $this->app->singleton(ShoppingCart::class, function ($app) {
+        $this->app->scoped(ShoppingCart::class, function ($app) {
             return $app['shopping-cart'];
         });
 
         // 注册缓存优化器
-        $this->app->singleton(CartCacheOptimizer::class);
+        $this->app->singleton(CartCacheOptimizer::class, fn () => new CartCacheOptimizer);
         $this->app->singleton(CacheOptimizer::class, function ($app) {
             return $app[CartCacheOptimizer::class];
         });
@@ -95,8 +103,11 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
             __DIR__ . '/../database/migrations' => database_path('migrations'),
         ], 'migrations');
 
-        if ($this->shouldLoadMigrations()) {
-            $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        foreach (glob(__DIR__ . '/../database/migrations/*.php') as $migration) {
+            $name = explode('_', basename($migration), 5)[4];
+            if (!File::glob(database_path('migrations/*_' . $name))) {
+                $this->loadMigrationsFrom($migration);
+            }
         }
 
         // 注册事件监听器
@@ -126,28 +137,28 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
     protected function registerEventListeners(): void
     {
         $this->app['events']->listen(
-            \MobileNowGroup\ShoppingCart\Events\CartItemAdded::class,
-            \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductAdded'
+            CartItemAdded::class,
+            CartOperationListener::class . '@handleProductAdded'
         );
 
         $this->app['events']->listen(
-            \MobileNowGroup\ShoppingCart\Events\CartItemRemoved::class,
-            \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductRemoved'
+            CartItemRemoved::class,
+            CartOperationListener::class . '@handleProductRemoved'
         );
 
         $this->app['events']->listen(
-            \MobileNowGroup\ShoppingCart\Events\CartItemUpdated::class,
-            \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleProductUpdated'
+            CartItemUpdated::class,
+            CartOperationListener::class . '@handleProductUpdated'
         );
 
         $this->app['events']->listen(
-            \MobileNowGroup\ShoppingCart\Events\CartCleared::class,
-            \MobileNowGroup\ShoppingCart\Listeners\CartOperationListener::class . '@handleCartCleared'
+            CartCleared::class,
+            CartOperationListener::class . '@handleCartCleared'
         );
 
         $this->app['events']->listen(
-            \MobileNowGroup\ShoppingCart\Events\CartTotalCalculated::class,
-            \MobileNowGroup\ShoppingCart\Listeners\CollectTotalsListener::class . '@handle'
+            CartTotalCalculated::class,
+            CollectTotalsListener::class . '@handle'
         );
     }
 

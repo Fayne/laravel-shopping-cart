@@ -1,11 +1,9 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Requests\Cart;
+namespace Fayne\ShoppingCart\Http\Requests\Cart;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\JsonResponse;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 class SetCartItemSelectionRequest extends FormRequest
 {
@@ -14,7 +12,7 @@ class SetCartItemSelectionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return ShoppingCartItem::whereKey($this->input('item_id'))->whereHas('cart', fn ($query) => $query->where('customer_id', auth()->id())->where('is_active', true))->exists();
     }
 
     /**
@@ -25,7 +23,7 @@ class SetCartItemSelectionRequest extends FormRequest
     public function rules(): array
     {
         $cartItemsTable = config('shopping-cart.models.cart_items.table', 'cart_items');
-        
+
         return [
             'selected' => 'required|boolean',
             'item_id' => "required|string|exists:$cartItemsTable,id",

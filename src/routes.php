@@ -1,10 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use MobileNowGroup\ShoppingCart\Http\Controllers\CartController;
-use MobileNowGroup\ShoppingCart\Http\Controllers\CheckoutController;
-use MobileNowGroup\ShoppingCart\Http\Controllers\InstantPurchaseController;
-use MobileNowGroup\ShoppingCart\Http\Controllers\PendingCheckoutsController;
+use Fayne\ShoppingCart\Http\Controllers\CartController;
+use Fayne\ShoppingCart\Http\Controllers\CheckoutController;
+use Fayne\ShoppingCart\Http\Controllers\InstantPurchaseController;
+use Fayne\ShoppingCart\Http\Controllers\PendingCheckoutsController;
 
 /*
 |--------------------------------------------------------------------------

@@ -1,13 +1,13 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Storage;
+namespace Fayne\ShoppingCart\Storage;
 
 use Illuminate\Support\Facades\DB;
-use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
-use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
-use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
+use Fayne\ShoppingCart\Contracts\CartStorageInterface;
+use Fayne\ShoppingCart\Models\ShoppingCart as CartModel;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Exceptions\CartServerException;
+use Fayne\ShoppingCart\Exceptions\ErrorConst;
 
 /**
  * 数据库存储层实现
@@ -20,12 +20,12 @@ class DatabaseCartStorage implements CartStorageInterface
      */
     public function getCart(string $customerId, bool $isCheckout = false): ?CartModel
     {
-        return CartModel::withWhereHas('items', function ($query) use ($isCheckout) {
+        return CartModel::with(['items' => function ($query) use ($isCheckout) {
             if ($isCheckout) {
                 $query->where('selected', true);
             }
             $query->with('itemable');
-        })->firstWhere([
+        }])->firstWhere([
             'customer_id' => $customerId,
             'is_active' => true,
         ]);
@@ -75,7 +75,12 @@ class DatabaseCartStorage implements CartStorageInterface
     public function addCartItem(int|string $cartId, array $itemData): ShoppingCartItem
     {
         $itemData['cart_id'] = $cartId;
-        return ShoppingCartItem::create($itemData);
+
+        $item = new ShoppingCartItem;
+        $item->fill($itemData);
+        $item->save();
+
+        return $item;
     }
 
     /**
@@ -92,7 +97,9 @@ class DatabaseCartStorage implements CartStorageInterface
     public function updateCartItem(int|string $itemId, array $data): bool
     {
         try {
-            return ShoppingCartItem::where('id', $itemId)->update($data) > 0;
+            $item = ShoppingCartItem::find($itemId);
+
+            return $item ? $item->fill($data)->save() : false;
         } catch (\Exception $e) {
             return false;
         }
@@ -151,7 +158,7 @@ class DatabaseCartStorage implements CartStorageInterface
     public function getCartStats(int|string $cartId): array
     {
         $items = ShoppingCartItem::where('cart_id', $cartId)->get();
-        
+
         return [
             'items_count' => $items->count(),
             'items_qty' => $items->sum('quantity'),
@@ -176,6 +183,7 @@ class DatabaseCartStorage implements CartStorageInterface
                             ->update($updateData);
                     }
                 }
+
                 return true;
             });
         } catch (\Exception $e) {
@@ -189,6 +197,7 @@ class DatabaseCartStorage implements CartStorageInterface
     public function getItemsCount(int|string $customerId): int
     {
         $cart = $this->getCart($customerId);
+
         return $cart ? $cart->items->count() : 0;
     }
 
@@ -198,6 +207,7 @@ class DatabaseCartStorage implements CartStorageInterface
     public function getItemsQty(int|string $customerId): int
     {
         $cart = $this->getCart($customerId);
+
         return $cart ? $cart->items->sum('quantity') : 0;
     }
 }

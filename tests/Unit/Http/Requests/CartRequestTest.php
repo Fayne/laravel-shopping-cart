@@ -1,6 +1,6 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Http\Requests\CartRequest;
+use Fayne\ShoppingCart\Http\Requests\CartRequest;
 use Illuminate\Support\Facades\Validator;
 
 

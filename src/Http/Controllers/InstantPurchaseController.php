@@ -1,21 +1,21 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Controllers;
+namespace Fayne\ShoppingCart\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageBefore;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\BackFromOnePageRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Checkout\OnePageRequest;
-use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageAfter;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageBefore;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\OnePageAfter;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\OnePageBefore;
+use Fayne\ShoppingCart\Facades\ShoppingCart;
+use Fayne\ShoppingCart\Http\Requests\Checkout\BackFromOnePageRequest;
+use Fayne\ShoppingCart\Http\Requests\Checkout\OnePageRequest;
+use Fayne\ShoppingCart\Http\Resources\CartResource;
 
 /**
  * 立即购买控制器
- * 
+ *
  * 处理“立即购买”相关的逻辑，包括挂起当前购物车并创建临时购买会话，
  * 以及从临时会话恢复原来的购物车。
  */
@@ -50,19 +50,22 @@ class InstantPurchaseController extends Controller
      */
     public function destroy(BackFromOnePageRequest $request): JsonResponse
     {
-        event(new BackFromOnePageBefore);
+        return ShoppingCart::transaction(function () {
+            event(new BackFromOnePageBefore);
 
-        ShoppingCart::deActivateCart();
-        ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
+            ShoppingCart::deActivateCart();
+            ShoppingCart::activateCartIfCacheHasDeactivatedCartId();
 
-        $cart = ShoppingCart::getCart();
+            $cart = ShoppingCart::getCart();
 
-        event(new BackFromOnePageAfter($cart));
+            event(new BackFromOnePageAfter($cart));
 
-        return response()->json([
-            'code' => 0,
-            'message' => '已恢复购物车',
-            'data' => $cart ? new CartResource($cart) : null,
-        ]);
+            return response()->json([
+                'code' => 0,
+                'message' => '已恢复购物车',
+                'data' => $cart ? new CartResource($cart) : null,
+            ]);
+
+        });
     }
 }

@@ -1,14 +1,14 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\OnePageBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ShowBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ToggleBuyAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout\ToggleBuyBefore;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageAfter;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\BackFromOnePageBefore;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\OnePageAfter;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\OnePageBefore;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\ShowAfter;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\ShowBefore;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\ToggleBuyAfter;
+use Fayne\ShoppingCart\Events\ShopCart\Checkout\ToggleBuyBefore;
+use Fayne\ShoppingCart\Models\ShoppingCart;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 

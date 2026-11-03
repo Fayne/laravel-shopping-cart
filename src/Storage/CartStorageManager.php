@@ -1,9 +1,9 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Storage;
+namespace Fayne\ShoppingCart\Storage;
 
 use Illuminate\Support\Manager;
-use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
+use Fayne\ShoppingCart\Contracts\CartStorageInterface;
 
 /**
  * 购物车存储管理器

@@ -1,8 +1,8 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Http\Resources\CartResource;
+use Fayne\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 use Illuminate\Http\Request;
 
 

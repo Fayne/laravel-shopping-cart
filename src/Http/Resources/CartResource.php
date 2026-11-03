@@ -1,6 +1,6 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Resources;
+namespace Fayne\ShoppingCart\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

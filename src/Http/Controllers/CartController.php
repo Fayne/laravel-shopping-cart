@@ -1,33 +1,39 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Controllers;
+namespace Fayne\ShoppingCart\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartApplyCouponAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartApplyCouponBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartEmptyAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartEmptyBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemAddAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemAddBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemIsBuyNow;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemUpdateAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemUpdateBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowBefore;
-use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Http\Requests\Cart\ApplyCouponRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Cart\EmptyCartRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Cart\RemoveRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Cart\SetCartItemSelectionRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Cart\StoreRequest;
-use MobileNowGroup\ShoppingCart\Http\Requests\Cart\UpdateRequest;
-use MobileNowGroup\ShoppingCart\Http\Resources\CartResource;
+use Fayne\ShoppingCart\Events\ShopCart\CartApplyCouponAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartApplyCouponBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartEmptyAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartEmptyBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemAddAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemAddBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemIsBuyNow;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemRemoveAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemRemoveBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemUpdateAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemUpdateBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartRemoveCouponAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartRemoveCouponBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartShowAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartShowBefore;
+use Fayne\ShoppingCart\Exceptions\ErrorConst;
+use Fayne\ShoppingCart\Facades\ShoppingCart;
+use Fayne\ShoppingCart\Http\Requests\Cart\ApplyCouponRequest;
+use Fayne\ShoppingCart\Http\Requests\Cart\EmptyCartRequest;
+use Fayne\ShoppingCart\Http\Requests\Cart\RemoveRequest;
+use Fayne\ShoppingCart\Http\Requests\Cart\SetCartItemSelectionRequest;
+use Fayne\ShoppingCart\Http\Requests\Cart\StoreRequest;
+use Fayne\ShoppingCart\Http\Requests\Cart\UpdateRequest;
+use Fayne\ShoppingCart\Http\Resources\CartResource;
+use Fayne\ShoppingCart\Exceptions\CartClientException;
+use Fayne\ShoppingCart\Exceptions\CartServerException;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
+use Illuminate\Database\Eloquent\Model;
+use Fayne\ShoppingCart\Contracts\Cartable;
 
 /**
  * 购物车控制器
@@ -41,63 +47,64 @@ class CartController extends Controller
      *
      * @param StoreRequest $request
      * @return JsonResponse
-     * @throws \Psr\Container\ContainerExceptionInterface
-     * @throws \Psr\Container\NotFoundExceptionInterface
+     *
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     public function store(StoreRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-        $isBuyNow = $validated['is_buy_now'] ?? false;
-        $code = $validated['code'];
-        $quantity = $validated['quantity'];
+        return ShoppingCart::transaction(function () use ($request) {
+            $validated = $request->validated();
+            $isBuyNow = $validated['is_buy_now'] ?? false;
+            $code = $validated['code'];
+            $quantity = $validated['quantity'];
 
-        try {
-            /** @var class-string<\MobileNowGroup\LaravelNovaSku\Models\ProductSku> $productSkuModel */
-            $productSkuModel = config('shopping-cart.models.skus.model');
-            $product = $productSkuModel::findByCodeOrFail($code);
-            $productSkuId = $product->getKey();
+            try {
+                /** @var class-string<Model> $productSkuModel */
+                $productSkuModel = config('shopping-cart.models.skus.model');
+                $product = call_user_func([$productSkuModel, 'findByCodeOrFail'], $code);
+                abort_unless($product instanceof Model && $product instanceof Cartable, 422, 'Invalid SKU model');
+                $productSkuId = $product->getKey();
 
-            // 如果是立即购买，先清理之前的立即购买商品
-            if ($isBuyNow) {
-                ShoppingCart::deactivateCurrentCartIfBuyNowIsActive();
-                event(new CartItemIsBuyNow(
+                // 如果是立即购买，先清理之前的立即购买商品
+                if ($isBuyNow) {
+                    ShoppingCart::deactivateCurrentCartIfBuyNowIsActive();
+                    event(new CartItemIsBuyNow(
+                        isBuyNow: $isBuyNow,
+                        productSkuId: $productSkuId,
+                        quantity: $quantity
+                    ));
+                }
+
+                event(new CartItemAddBefore(
                     isBuyNow: $isBuyNow,
                     productSkuId: $productSkuId,
                     quantity: $quantity
                 ));
+
+                $cart = ShoppingCart::addProduct(
+                    $product,
+                    $quantity,
+                    $isBuyNow
+                );
+
+                event(new CartItemAddAfter(
+                    isBuyNow: $isBuyNow,
+                    productSkuId: $productSkuId,
+                    quantity: $quantity,
+                    cart: $cart
+                ));
+
+                return response()->json([
+                    'code' => 0,
+                    'message' => '商品已成功添加到购物车。',
+                    'data' => new CartResource($cart),
+                ]);
+            } catch (\Exception $e) {
+                throw $e;
             }
 
-            event(new CartItemAddBefore(
-                isBuyNow: $isBuyNow,
-                productSkuId: $productSkuId,
-                quantity: $quantity
-            ));
-
-            $cart = ShoppingCart::addProduct(
-                $product,
-                $quantity,
-                $isBuyNow
-            );
-
-            event(new CartItemAddAfter(
-                isBuyNow: $isBuyNow,
-                productSkuId: $productSkuId,
-                quantity: $quantity,
-                cart: $cart
-            ));
-
-            return response()->json([
-                'code' => 0,
-                'message' => '商品已成功添加到购物车。',
-                'data' => new CartResource($cart),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'data' => null,
-                'message' => $e->getMessage(),
-                'code' => ErrorConst::ERROR_ADD_PRODUCT->value,
-            ]);
-        }
+        });
     }
 
     /**
@@ -126,7 +133,8 @@ class CartController extends Controller
      *
      * @param UpdateRequest $request
      * @return JsonResponse
-     * @throws \MobileNowGroup\ShoppingCart\Exceptions\CartClientException
+     *
+     * @throws CartClientException
      */
     public function update(UpdateRequest $request): JsonResponse
     {
@@ -207,7 +215,8 @@ class CartController extends Controller
      *
      * @param SetCartItemSelectionRequest $request
      * @return JsonResponse
-     * @throws \MobileNowGroup\ShoppingCart\Exceptions\CartClientException
+     *
+     * @throws CartClientException
      * @throws \Throwable
      */
     public function updateItemSelection(SetCartItemSelectionRequest $request): JsonResponse
@@ -270,7 +279,8 @@ class CartController extends Controller
      * 移除优惠券
      *
      * @return JsonResponse
-     * @throws \MobileNowGroup\ShoppingCart\Exceptions\CartServerException
+     *
+     * @throws CartServerException
      */
     public function removeCoupon(): JsonResponse
     {

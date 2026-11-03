@@ -1,7 +1,11 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Contracts;
+namespace Fayne\ShoppingCart\Contracts;
 
+/**
+ * @method int|string getKey()
+ * @method string getMorphClass()
+ */
 interface Cartable
 {
     /**

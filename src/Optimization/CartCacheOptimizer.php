@@ -1,8 +1,8 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Optimization;
+namespace Fayne\ShoppingCart\Optimization;
 
-use MobileNowGroup\ShoppingCart\Cache\CartCacheOptimizer as BaseCartCacheOptimizer;
+use Fayne\ShoppingCart\Cache\CartCacheOptimizer as BaseCartCacheOptimizer;
 
 /**
  * 购物车缓存优化器

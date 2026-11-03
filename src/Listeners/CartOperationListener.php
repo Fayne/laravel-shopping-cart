@@ -1,15 +1,15 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Listeners;
+namespace Fayne\ShoppingCart\Listeners;
 
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartEmptyAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartCollectTotalAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartAddProductAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartEmptyAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartCollectTotalAfter;
 
 /**
  * 购物车操作监听器
@@ -303,7 +303,7 @@ class CartOperationListener implements ShouldQueue
     /**
      * Cache cart totals for quick access
      *
-     * @param string|\MobileNowGroup\ShoppingCart\Models\ShoppingCart $cartOrId
+     * @param string|\Fayne\ShoppingCart\Models\ShoppingCart $cartOrId
      * @param array|null $totals
      * @return void
      */

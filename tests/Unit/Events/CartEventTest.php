@@ -1,12 +1,12 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Events\CartItemAdded;
-use MobileNowGroup\ShoppingCart\Events\CartItemRemoved;
-use MobileNowGroup\ShoppingCart\Events\CartItemUpdated;
-use MobileNowGroup\ShoppingCart\Events\CartCleared;
-use MobileNowGroup\ShoppingCart\Events\CartTotalCalculated;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Events\CartItemAdded;
+use Fayne\ShoppingCart\Events\CartItemRemoved;
+use Fayne\ShoppingCart\Events\CartItemUpdated;
+use Fayne\ShoppingCart\Events\CartCleared;
+use Fayne\ShoppingCart\Events\CartTotalCalculated;
+use Fayne\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 beforeEach(function () {
     $this->cart = new ShoppingCart([

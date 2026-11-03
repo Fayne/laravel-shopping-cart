@@ -1,13 +1,13 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Events\ShopCart;
+namespace Fayne\ShoppingCart\Events\ShopCart;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Events\Traits\CartEvent;
+use Fayne\ShoppingCart\Models\ShoppingCart;
 
 //controller:更新购物车商品数量之后的事件
 

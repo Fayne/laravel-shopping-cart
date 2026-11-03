@@ -1,8 +1,8 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
-use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
-use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
+use Fayne\ShoppingCart\Exceptions\CartClientException;
+use Fayne\ShoppingCart\Exceptions\CartServerException;
+use Fayne\ShoppingCart\Exceptions\ErrorConst;
 
 describe('Cart Exceptions', function () {
     describe('CartClientException', function () {

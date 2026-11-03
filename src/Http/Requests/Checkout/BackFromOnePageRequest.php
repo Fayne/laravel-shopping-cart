@@ -1,10 +1,10 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Http\Requests\Checkout;
+namespace Fayne\ShoppingCart\Http\Requests\Checkout;
 
 use Illuminate\Foundation\Http\FormRequest;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
+use Fayne\ShoppingCart\Facades\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCart as CartModel;
 
 class BackFromOnePageRequest extends FormRequest
 {

@@ -1,6 +1,6 @@
 <?php
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 
 

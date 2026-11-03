@@ -1,6 +1,6 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
+use Fayne\ShoppingCart\Events\Traits\CartEvent;
 
 
 describe('CartEvent Trait', function () {

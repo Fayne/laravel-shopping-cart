@@ -1,10 +1,10 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Events\Traits;
+namespace Fayne\ShoppingCart\Events\Traits;
 
 use Illuminate\Contracts\Auth\Authenticatable;
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart as CartPackage;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Facades\ShoppingCart as CartPackage;
+use Fayne\ShoppingCart\Models\ShoppingCart;
 
 trait CartEvent
 {

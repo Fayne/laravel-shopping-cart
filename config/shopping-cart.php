@@ -13,6 +13,9 @@ return [
 
     'tax' => 0,
 
+    // Callable(code, cart, service): bool; reject coupons until a host validator is provided.
+    'coupon_validator' => null,
+
     /*
     |--------------------------------------------------------------------------
     | ShoppingCart database settings
@@ -222,7 +225,7 @@ return [
         ],
     ],
 
-    'order_class' => env('ORDER_CLASS', \MobileNowGroup\OMS\Models\Order::class),
+    'order_class' => env('ORDER_CLASS', 'MobileNowGroup\\OMS\\Models\\Order'),
 
     /*
     |--------------------------------------------------------------------------
@@ -233,6 +236,9 @@ return [
     |
     */
     'checkout' => [
+        // Callable(sku, quantity, cart): bool. Required before checkout is enabled.
+        'validator' => null,
+        'currency' => 'CNY',
         // Checkout session expiration time in minutes
         'expiration' => env('CART_CHECKOUT_EXPIRATION_MINUTES', 30),
 
@@ -243,5 +249,5 @@ return [
         ],
     ],
 
-    'order_number_generator_class' => \MobileNowGroup\OMS\Support\OrderNumberGenerator::class,
+    'order_number_generator_class' => 'MobileNowGroup\\OMS\\Support\\OrderNumberGenerator',
 ];

@@ -1,9 +1,9 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Events;
+namespace Fayne\ShoppingCart\Events;
 
 use Illuminate\Support\Collection;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCart;
 
 /**
  * 购物车清空事件

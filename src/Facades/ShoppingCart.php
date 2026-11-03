@@ -1,11 +1,13 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Facades;
+namespace Fayne\ShoppingCart\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @see \MobileNowGroup\ShoppingCart\ShoppingCart
+ * @mixin \Fayne\ShoppingCart\ShoppingCart
+ *
+ * @see \Fayne\ShoppingCart\ShoppingCart
  */
 class ShoppingCart extends Facade
 {

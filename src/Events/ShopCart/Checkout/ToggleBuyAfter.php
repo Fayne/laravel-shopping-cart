@@ -1,13 +1,13 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Events\ShopCart\Checkout;
+namespace Fayne\ShoppingCart\Events\ShopCart\Checkout;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Events\Traits\CartEvent;
+use Fayne\ShoppingCart\Models\ShoppingCart;
 
 /**
  * controller(结算):选中部分商品进行结算之后的事件

@@ -1,5 +1,5 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Contracts;
+namespace Fayne\ShoppingCart\Contracts;
 
 interface CollectTotalEvent {}

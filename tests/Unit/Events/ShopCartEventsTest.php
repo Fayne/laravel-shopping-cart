@@ -1,20 +1,20 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartApplyCouponAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartApplyCouponBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartEmptyAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartEmptyBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemAddAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemAddBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemIsBuyNow;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemRemoveBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemUpdateAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartItemUpdateBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartRemoveCouponBefore;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowAfter;
-use MobileNowGroup\ShoppingCart\Events\ShopCart\CartShowBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartApplyCouponAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartApplyCouponBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartEmptyAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartEmptyBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemAddAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemAddBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemIsBuyNow;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemRemoveAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemRemoveBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemUpdateAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartItemUpdateBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartRemoveCouponAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartRemoveCouponBefore;
+use Fayne\ShoppingCart\Events\ShopCart\CartShowAfter;
+use Fayne\ShoppingCart\Events\ShopCart\CartShowBefore;
 
 
 describe('ShopCart Events', function () {

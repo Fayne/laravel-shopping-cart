@@ -4,8 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      *
@@ -16,7 +15,7 @@ return new class extends Migration
         Schema::create('checkout', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('out_trade_no')->unique()->comment('System order number for payment gateways');
-            $table->foreignIdFor(config('app.user_model', App\Models\User::class))->cascadeOnDelete();
+            $table->foreignIdFor(config('app.user_model', 'App\\Models\\User'));
             $table->unsignedTinyInteger('status')->default(0);
             $table->string('currency')->default('CNY');
             $table->decimal('subtotal_amount', 10, 2)->default(0);

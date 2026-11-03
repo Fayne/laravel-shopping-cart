@@ -1,12 +1,11 @@
 {
-    "name": "mobilenowgroup/shopping-cart",
+    "name": "fayne/shopping-cart",
     "description": "This is a custom shopping cart package for Laravel projects",
     "keywords": [
-        "Mobile Now Group",
         "laravel",
         "Shopping cart"
     ],
-    "homepage": "https://github.com/mobilenowgroup/laravel-shopping-cart",
+    "homepage": "https://github.com/Fayne/laravel-shopping-cart",
     "license": "Proprietary",
     "authors": [
         {
@@ -34,13 +33,13 @@
     },
     "autoload": {
         "psr-4": {
-            "MobileNowGroup\\ShoppingCart\\": "src/",
-            "MobileNowGroup\\ShoppingCart\\Database\\Factories\\": "database/factories/"
+            "Fayne\\ShoppingCart\\": "src/",
+            "Fayne\\ShoppingCart\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MobileNowGroup\\ShoppingCart\\Tests\\": "tests/",
+            "Fayne\\ShoppingCart\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -72,10 +71,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "MobileNowGroup\\ShoppingCart\\ShoppingCartServiceProvider"
+                "Fayne\\ShoppingCart\\ShoppingCartServiceProvider"
             ],
             "aliases": {
-                "ShoppingCart": "MobileNowGroup\\ShoppingCart\\Facades\\ShoppingCart"
+                "ShoppingCart": "Fayne\\ShoppingCart\\Facades\\ShoppingCart"
             }
         }
     },

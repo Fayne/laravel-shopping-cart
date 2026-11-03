@@ -1,6 +1,6 @@
 <?php
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 
 
@@ -29,6 +29,8 @@ test('it has fillable attributes', function () {
         'metadata',
         'coupon_code',
         'is_active',
+        'is_temp',
+        'items_count',
     ];
 
     expect($cart->getFillable())->toBe($expectedFillable);

@@ -1,8 +1,8 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Events;
+namespace Fayne\ShoppingCart\Events;
 
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCart;
 
 /**
  * 购物车总价计算事件

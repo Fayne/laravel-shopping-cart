@@ -1,6 +1,6 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Traits;
+namespace Fayne\ShoppingCart\Traits;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;

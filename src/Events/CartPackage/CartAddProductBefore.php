@@ -1,14 +1,14 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Events\CartPackage;
+namespace Fayne\ShoppingCart\Events\CartPackage;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use MobileNowGroup\ShoppingCart\Contracts\Cartable;
-use MobileNowGroup\ShoppingCart\Events\Traits\CartEvent;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Contracts\Cartable;
+use Fayne\ShoppingCart\Events\Traits\CartEvent;
+use Fayne\ShoppingCart\Models\ShoppingCart;
 
 /**
  * 将产品添加进购物车之前的事件

@@ -238,7 +238,7 @@ CART_REDIS_TTL=7200
 提供智能缓存管理功能：
 
 ```php
-use MobileNowGroup\ShoppingCart\Cache\CartCacheOptimizer;
+use Fayne\ShoppingCart\Cache\CartCacheOptimizer;
 
 $optimizer = app(CartCacheOptimizer::class);
 
@@ -263,7 +263,7 @@ $stats = $optimizer->getCacheStats();
 使用性能监控trait：
 
 ```php
-use MobileNowGroup\ShoppingCart\Traits\CartPerformanceMonitoring;
+use Fayne\ShoppingCart\Traits\CartPerformanceMonitoring;
 
 class CustomCartStorage implements CartStorageInterface
 {
@@ -348,7 +348,7 @@ php artisan cart:monitor --action=report --format=json --export=report.json
 ### 基本使用
 
 ```php
-use MobileNowGroup\ShoppingCart\ShoppingCart;
+use Fayne\ShoppingCart\ShoppingCart;
 
 // 获取购物车实例
 $cart = app('shopping-cart');

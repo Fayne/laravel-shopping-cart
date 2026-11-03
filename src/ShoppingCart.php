@@ -1,30 +1,31 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart;
+namespace Fayne\ShoppingCart;
 
 use Illuminate\Support\Facades\DB;
-use MobileNowGroup\ShoppingCart\Contracts\Cartable;
-use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartCollectTotalAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartCollectTotalBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartEmptyAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartEmptyBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartGetAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartGetBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartSetSelectionAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartSetSelectionBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
-use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
-use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
-use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
-use MobileNowGroup\ShoppingCart\Traits\CartCoupons;
-use MobileNowGroup\ShoppingCart\Traits\CartTools;
+use Fayne\ShoppingCart\Contracts\Cartable;
+use Fayne\ShoppingCart\Contracts\CartStorageInterface;
+use Fayne\ShoppingCart\Events\CartPackage\CartAddProductAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartAddProductBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartCollectTotalAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartCollectTotalBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartEmptyAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartEmptyBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartGetAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartGetBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartRemoveItemBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartSetSelectionAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartSetSelectionBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
+use Fayne\ShoppingCart\Exceptions\CartClientException;
+use Fayne\ShoppingCart\Exceptions\CartServerException;
+use Fayne\ShoppingCart\Exceptions\ErrorConst;
+use Fayne\ShoppingCart\Models\ShoppingCart as CartModel;
+use Fayne\ShoppingCart\Traits\CartCoupons;
+use Fayne\ShoppingCart\Traits\CartTools;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 class ShoppingCart
 {
@@ -74,20 +75,27 @@ class ShoppingCart
      */
     public function addProduct(Cartable $item, int $quantity, bool $isBuyNow = false): CartModel
     {
-        event(new CartAddProductBefore(item: $item, quantity: $quantity, isBuyNow: $isBuyNow));
+        return $this->transaction(function () use ($item, $quantity, $isBuyNow) {
+            if ($quantity < 1 || !is_finite($item->getPrice()) || $item->getPrice() < 0 || !$item->canBePurchased()) {
+                throw new CartClientException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE->value, httpCode: 422);
+            }
+            event(new CartAddProductBefore(item: $item, quantity: $quantity, isBuyNow: $isBuyNow));
 
-        $cart = $this->getCart();
+            $cart = $this->getCart();
 
-        if (! $cart && ! $cart = $this->create(['is_temp' => $isBuyNow])) {
-            throw new CartServerException(ErrorConst::ERROR_CART_NOT_CREATED->value);
-        }
+            if (! $cart && ! $cart = $this->create(['is_temp' => $isBuyNow])) {
+                throw new CartServerException(ErrorConst::ERROR_CART_NOT_CREATED->value);
+            }
 
-        // 使用存储层添加商品
-        $this->addItemToCart($cart, $item, $quantity);
+            // 使用存储层添加商品
+            $this->addItemToCart($cart, $item, $quantity);
 
-        event(new CartAddProductAfter(item: $item, cart: $cart));
+            $this->collectTotals();
+            event(new CartAddProductAfter(item: $item, cart: $cart));
 
-        return $this->getCart();
+            return $this->getCart();
+
+        });
     }
 
     /**
@@ -97,44 +105,52 @@ class ShoppingCart
      */
     public function collectTotals(): void
     {
+        $this->transaction(function () {
 
-        if (! $cart = $this->getCart()) {
-            return;
-        }
-
-        event(new CartCollectTotalBefore($cart));
-        DB::transaction(function () use ($cart) {
-            $cart->sub_total = $cart->base_sub_total = 0;
-            $cart->discount = $cart->base_discount = 0;
-
-            foreach ($cart->items as $item) {
-                if (($cart->is_temp === false && $item->selected === true) || $cart->is_temp === true) {
-
-                    $cart->discount += $item->discount_amount;
-                    $cart->base_discount += $item->base_discount_amount;
-
-                    $item->total = $item->latest_price * $item->quantity;
-                    $item->base_total = $item->latest_price * $item->quantity;
-                    $item->save();
-
-                    $cart->sub_total = (float) $cart->sub_total + $item->total;
-                    $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
-                }
+            if (! $cart = $this->getCart()) {
+                return;
             }
 
-            $cart->grand_total = $cart->sub_total - $cart->discount;
-            $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount;
+            event(new CartCollectTotalBefore($cart));
+            DB::transaction(function () use ($cart) {
+                $cart->sub_total = $cart->base_sub_total = 0;
+                $cart->discount = $cart->base_discount = 0;
 
-            $cart = $this->finalizeCartTotals($cart);
+                foreach ($cart->items as $item) {
+                    if (($cart->is_temp === false && $item->selected === true) || $cart->is_temp === true) {
 
-            $cart->items_count = $cart->items->count();
+                        $cart->discount += $item->discount_amount;
+                        $cart->base_discount += $item->base_discount_amount;
 
-            $cart->items_qty = $cart->items->sum('quantity');
+                        $item->total = round($item->latest_price * 100) * $item->quantity / 100;
+                        $item->base_total = $item->total;
+                        if ($item->discount_amount < 0 || $item->discount_amount > $item->total) {
+                            throw new CartClientException(ErrorConst::ERROR_COUPON_INVALID->value, httpCode: 422);
+                        }
+                        $item->save();
 
-            $cart->save();
+                        $cart->sub_total = (float) $cart->sub_total + $item->total;
+                        $cart->base_sub_total = (float) $cart->base_sub_total + $item->base_total;
+                    }
+                }
+
+                $cart->grand_total = $cart->sub_total - $cart->discount;
+                $cart->base_grand_total = $cart->base_sub_total - $cart->base_discount;
+
+                $cart = $this->finalizeCartTotals($cart);
+
+                $cart->items_count = $cart->items->count();
+
+                $cart->items_qty = $cart->items->sum('quantity');
+
+                if (!$this->storage->updateCart($cart)) {
+                    throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE->value);
+                }
+            });
+
+            event(new CartCollectTotalAfter($cart));
+
         });
-
-        event(new CartCollectTotalAfter($cart));
     }
 
     /**
@@ -165,19 +181,24 @@ class ShoppingCart
      */
     public function removeItem(int|string $itemId): bool
     {
-        event(new CartRemoveItemBefore($itemId));
+        return $this->transaction(function () use ($itemId) {
+            event(new CartRemoveItemBefore($itemId));
 
-        if (! $this->getCart()) {
-            return false;
-        }
+            if (! $this->getCart()) {
+                return false;
+            }
 
-        $result = $this->storage->removeCartItem($itemId);
+            $this->ownedItem($itemId);
+            $result = $this->storage->removeCartItem($itemId);
 
-        if ($result) {
-            event(new CartRemoveItemAfter($itemId));
-        }
+            if ($result) {
+                $this->collectTotals();
+                event(new CartRemoveItemAfter($itemId));
+            }
 
-        return $result;
+            return $result;
+
+        });
     }
 
     /**
@@ -190,19 +211,25 @@ class ShoppingCart
      */
     public function create(?array $data = []): mixed
     {
-        try {
-            $cartData = [
-                'items_count' => 0,
-                'customer_id' => auth()->id(),
-                'customer_name' => auth()->user()?->name ?? '',
-            ] + $data;
+        return $this->transaction(function () use ($data) {
+            try {
+                if ($existing = $this->getCart()) {
+                    return $existing;
+                }
+                $cartData = [
+                    'items_count' => 0,
+                    'customer_id' => auth()->id(),
+                    'customer_name' => auth()->user()->name ?? '',
+                ] + $data;
 
-            $cart = $this->storage->createCart($cartData);
-        } catch (\Exception $e) {
-            throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE->value);
-        }
+                $cart = $this->storage->createCart($cartData);
+            } catch (\Exception $e) {
+                throw new CartServerException(ErrorConst::ERROR_CREATE_CART_INSTANCE->value);
+            }
 
-        return $cart;
+            return $cart;
+
+        });
     }
 
     /**
@@ -215,38 +242,46 @@ class ShoppingCart
      */
     public function setCartItemSelection(int|string $itemId, bool $selected = true): CartModel
     {
-        event(new CartSetSelectionBefore(itemId: $itemId, selected: $selected));
+        return $this->transaction(function () use ($itemId, $selected) {
+            event(new CartSetSelectionBefore(itemId: $itemId, selected: $selected));
 
-        if (! $cart = $this->getCart()) {
-            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value);
-        }
+            if (! $cart = $this->getCart()) {
+                throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value);
+            }
 
-        if (!$itemId) {
-            throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST->value);
-        }
+            if (!$itemId) {
+                throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST->value);
+            }
 
-        $item = $this->storage->getCartItem($itemId);
-        if (! $item) {
-            throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST->value);
-        }
+            $item = $this->ownedItem($itemId);
 
-        $this->storage->updateCartItem($itemId, ['selected' => $selected]);
+            abort_unless($this->storage->updateCartItem($itemId, ['selected' => $selected]), 409, 'Cart changed');
 
-        event(new CartSetSelectionAfter(itemId: $itemId, selected: $selected, cart: $cart));
+            $this->collectTotals();
+            event(new CartSetSelectionAfter(itemId: $itemId, selected: $selected, cart: $cart));
 
-        return $this->getCart();
+            return $this->getCart();
+
+        });
     }
 
     /**
      * @param bool $selected
-     * @return \MobileNowGroup\ShoppingCart\Models\ShoppingCart
+     * @return CartModel
      */
     public function setAllCartItemsSelected(bool $selected = true): CartModel
     {
-        $cart = $this->getCart();
-        $this->storage->toggleAllItems($cart->id, $selected);
+        return $this->transaction(function () use ($selected) {
+            $cart = $this->getCart();
+            if (!$cart) {
+                throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value, httpCode: 404);
+            }
+            abort_unless($this->storage->toggleAllItems($cart->id, $selected), 409, 'Cart changed');
+            $this->collectTotals();
 
-        return $this->getCart();
+            return $this->getCart();
+
+        });
     }
 
     /**
@@ -260,33 +295,33 @@ class ShoppingCart
      */
     public function updateItems(int|string $itemId, int $quantity): ?CartModel
     {
-        event(new CartUpdateItemBefore($itemId, $quantity));
+        return $this->transaction(function () use ($itemId, $quantity) {
+            event(new CartUpdateItemBefore($itemId, $quantity));
 
-        $item = $this->storage->getCartItem($itemId);
+            $item = $this->ownedItem($itemId);
 
-        if (!$item) {
-            throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST);
-        }
+            if ($quantity <= 0) {
+                throw new CartClientException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE->value, httpCode: 422);
+            }
 
-        if ($quantity <= 0) {
-            throw new CartClientException(ErrorConst::ERROR_QUANTITY_NOT_AVAILABLE->value);
-        }
+            $updateData = [
+                'quantity' => $quantity,
+                'total' => $item->latest_price * $quantity,
+                'base_total' => $item->latest_price * $quantity,
+                'total_weight' => $item->weight * $quantity,
+                'base_total_weight' => $item->weight * $quantity,
+            ];
 
-        $updateData = [
-            'quantity' => $quantity,
-            'total' => $item->latest_price * $quantity,
-            'base_total' => $item->latest_price * $quantity,
-            'total_weight' => $item->weight * $quantity,
-            'base_total_weight' => $item->weight * $quantity,
-        ];
+            abort_unless($this->storage->updateCartItem($itemId, $updateData), 409, 'Cart changed');
 
-        $this->storage->updateCartItem($itemId, $updateData);
+            // 重新获取更新后的项目用于事件
+            $updatedItem = $this->storage->getCartItem($itemId);
+            $this->collectTotals();
+            event(new CartUpdateItemAfter($updatedItem));
 
-        // 重新获取更新后的项目用于事件
-        $updatedItem = $this->storage->getCartItem($itemId);
-        event(new CartUpdateItemAfter($updatedItem));
+            return $this->getCart();
 
-        return $this->getCart();
+        });
     }
 
     /**
@@ -296,17 +331,23 @@ class ShoppingCart
      */
     public function emptyCart(): ?CartModel
     {
-        $cart = $this->getCart() ?? null;
+        return $this->transaction(function () {
+            $cart = $this->getCart() ?? null;
 
-        event(new CartEmptyBefore($cart));
+            event(new CartEmptyBefore($cart));
 
-        if ($cart) {
-            $this->storage->emptyCart($cart->id);
-        }
+            if ($cart) {
+                if ($cart->items->isNotEmpty()) {
+                    abort_unless($this->storage->emptyCart($cart->id), 409, 'Cart changed');
+                }
+                $this->collectTotals();
+            }
 
-        event(new CartEmptyAfter($cart));
+            event(new CartEmptyAfter($cart));
 
-        return $this->getCart();
+            return $this->getCart();
+
+        });
     }
 
     /**
@@ -342,19 +383,42 @@ class ShoppingCart
     }
 
     /**
-     * 添加商品到购物车的内部方法
+     * @template T
      *
-     * @param CartModel $cart
-     * @param Cartable $item
-     * @param int $quantity
-     * @return void
+     * @param callable(): T $callback
+     * @return T
      */
+    public function transaction(callable $callback): mixed
+    {
+        abort_unless(auth()->id() !== null, 401);
+
+        return DB::transaction(function () use ($callback) {
+            $customer = DB::table(config('shopping-cart.models.users.table', 'users'))
+                ->where('id', auth()->id())->lockForUpdate()->first();
+            abort_unless($customer !== null, 401);
+
+            return $callback();
+        }, 3);
+    }
+
+    protected function ownedItem(int|string $itemId): ShoppingCartItem
+    {
+        $cart = $this->getCart();
+        /** @var ShoppingCartItem|null $item */
+        $item = $cart?->items()->whereKey($itemId)->first();
+        if (!$item) {
+            throw new CartClientException(ErrorConst::ERROR_PRODUCT_NOT_EXIST->value, httpCode: 404);
+        }
+
+        return $item;
+    }
+
     protected function addItemToCart(CartModel $cart, Cartable $item, int $quantity): void
     {
         // 检查是否已存在相同商品
         $existingItem = null;
         foreach ($cart->items as $cartItem) {
-            if ($cartItem->itemable_id == $item->getKey() && $cartItem->itemable_type == get_class($item)) {
+            if ($cartItem->itemable_id == $item->getKey() && $cartItem->itemable_type == $item->getMorphClass()) {
                 $existingItem = $cartItem;
                 break;
             }
@@ -370,12 +434,12 @@ class ShoppingCart
                 'total_weight' => $existingItem->weight * $newQuantity,
                 'base_total_weight' => $existingItem->weight * $newQuantity,
             ];
-            $this->storage->updateCartItem($existingItem->id, $updateData);
+            abort_unless($this->storage->updateCartItem($existingItem->id, $updateData), 409, 'Cart changed');
         } else {
             // 添加新商品
             $itemData = [
                 'itemable_id' => $item->getKey(),
-                'itemable_type' => get_class($item),
+                'itemable_type' => $item->getMorphClass(),
                 'quantity' => $quantity,
                 'price' => $item->getPrice(),
                 'sku' => $item->getSku(),

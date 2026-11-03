@@ -2,14 +2,14 @@
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use MobileNowGroup\ShoppingCart\Storage\DatabaseCartStorage;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Storage\DatabaseCartStorage;
+use Fayne\ShoppingCart\Models\ShoppingCart;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 beforeEach(function () {
     // 设置 morph 映射
     Relation::morphMap([
-        'Product' => \MobileNowGroup\ShoppingCart\Tests\Product::class,
+        'Product' => \Fayne\ShoppingCart\Tests\Product::class,
     ]);
     
     $this->storage = new DatabaseCartStorage();
@@ -38,7 +38,7 @@ test('it can get existing cart', function () {
     ]);
     
     // 创建一个测试产品
-    $product = new \MobileNowGroup\ShoppingCart\Tests\Product();
+    $product = new \Fayne\ShoppingCart\Tests\Product();
     $product->fill([
         'name' => 'Test Product',
         'price' => 10.00,

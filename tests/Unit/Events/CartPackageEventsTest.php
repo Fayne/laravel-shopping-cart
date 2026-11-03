@@ -1,19 +1,19 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartAddProductBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartCollectTotalAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartCollectTotalBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartEmptyAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartEmptyBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartGetAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartGetBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartRemoveItemBefore;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartSetSelectionAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartSetSelectionAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
-use MobileNowGroup\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartAddProductAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartAddProductBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartCollectTotalAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartCollectTotalBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartEmptyAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartEmptyBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartGetAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartGetBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartRemoveItemAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartRemoveItemBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartSetSelectionAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartSetSelectionBefore;
+use Fayne\ShoppingCart\Events\CartPackage\CartUpdateItemAfter;
+use Fayne\ShoppingCart\Events\CartPackage\CartUpdateItemBefore;
 
 describe('CartPackage Events', function () {
     afterEach(function () {
@@ -22,7 +22,7 @@ describe('CartPackage Events', function () {
     
     describe('CartAddProduct Events', function () {
         it('可以创建CartAddProductBefore事件', function () {
-            $mockCartable = Mockery::mock(\MobileNowGroup\ShoppingCart\Contracts\Cartable::class);
+            $mockCartable = Mockery::mock(\Fayne\ShoppingCart\Contracts\Cartable::class);
             $quantity = 2;
             $isBuyNow = false;
             $event = new CartAddProductBefore($mockCartable, $quantity, $isBuyNow);
@@ -38,7 +38,7 @@ describe('CartPackage Events', function () {
         });
         
         it('可以创建CartAddProductAfter事件', function () {
-            $mockCartable = Mockery::mock(\MobileNowGroup\ShoppingCart\Contracts\Cartable::class);
+            $mockCartable = Mockery::mock(\Fayne\ShoppingCart\Contracts\Cartable::class);
             $event = new CartAddProductAfter($mockCartable);
             
             expect($event)->toBeInstanceOf(CartAddProductAfter::class);
@@ -51,7 +51,7 @@ describe('CartPackage Events', function () {
     
     describe('CartCollectTotal Events', function () {
         it('可以创建CartCollectTotalBefore事件', function () {
-            $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $mockCart = Mockery::mock(\Fayne\ShoppingCart\Models\ShoppingCart::class);
             $event = new CartCollectTotalBefore($mockCart);
             
             expect($event)->toBeInstanceOf(CartCollectTotalBefore::class);
@@ -62,7 +62,7 @@ describe('CartPackage Events', function () {
         });
         
         it('可以创建CartCollectTotalAfter事件', function () {
-            $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $mockCart = Mockery::mock(\Fayne\ShoppingCart\Models\ShoppingCart::class);
             $event = new CartCollectTotalAfter($mockCart);
             
             expect($event)->toBeInstanceOf(CartCollectTotalAfter::class);
@@ -75,7 +75,7 @@ describe('CartPackage Events', function () {
     
     describe('CartEmpty Events', function () {
         it('可以创建CartEmptyBefore事件', function () {
-            $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $mockCart = Mockery::mock(\Fayne\ShoppingCart\Models\ShoppingCart::class);
             $event = new CartEmptyBefore($mockCart);
             
             expect($event)->toBeInstanceOf(CartEmptyBefore::class);
@@ -86,7 +86,7 @@ describe('CartPackage Events', function () {
         });
         
         it('可以创建CartEmptyAfter事件', function () {
-            $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $mockCart = Mockery::mock(\Fayne\ShoppingCart\Models\ShoppingCart::class);
             $event = new CartEmptyAfter($mockCart);
             
             expect($event)->toBeInstanceOf(CartEmptyAfter::class);
@@ -110,7 +110,7 @@ describe('CartPackage Events', function () {
         });
         
         it('可以创建CartGetAfter事件', function () {
-            $cart = new \MobileNowGroup\ShoppingCart\Models\ShoppingCart([
+            $cart = new \Fayne\ShoppingCart\Models\ShoppingCart([
                 'id' => 1,
                 'customer_id' => 123
             ]);
@@ -142,7 +142,7 @@ describe('CartPackage Events', function () {
         
         it('可以创建CartRemoveItemAfter事件', function () {
             $itemId = 456;
-            $cart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+            $cart = Mockery::mock(\Fayne\ShoppingCart\Models\ShoppingCart::class);
             $event = new CartRemoveItemAfter($itemId, $cart);
             
             expect($event)->toBeInstanceOf(CartRemoveItemAfter::class);
@@ -161,7 +161,7 @@ describe('CartPackage Events', function () {
             $type = 'item';
             $selected = true;
             $itemId = 789;
-            $event = new CartSetSelectionAfter($type, $selected, $itemId);
+            $event = new CartSetSelectionAfter($itemId, $selected);
             
             expect($event)->toBeInstanceOf(CartSetSelectionAfter::class);
             
@@ -180,7 +180,7 @@ describe('CartPackage Events', function () {
             $type = 'buy';
             $selected = true;
             $itemId = 789;
-            $event = new CartSetSelectionAfter($type, $selected, $itemId);
+            $event = new CartSetSelectionAfter($itemId, $selected);
             
             expect($event)->toBeInstanceOf(CartSetSelectionAfter::class);
             
@@ -213,7 +213,7 @@ describe('CartPackage Events', function () {
         });
         
         it('可以创建CartUpdateItemAfter事件', function () {
-            $mockCartItem = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCartItem::class);
+            $mockCartItem = Mockery::mock(\Fayne\ShoppingCart\Models\ShoppingCartItem::class);
             $event = new CartUpdateItemAfter($mockCartItem);
             
             expect($event)->toBeInstanceOf(CartUpdateItemAfter::class);
@@ -226,9 +226,9 @@ describe('CartPackage Events', function () {
     
     it('事件可以被实例化', function () {
         // 创建模拟对象
-        $mockCartable = Mockery::mock(\MobileNowGroup\ShoppingCart\Contracts\Cartable::class);
-        $mockCartItem = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCartItem::class);
-        $mockCart = Mockery::mock(\MobileNowGroup\ShoppingCart\Models\ShoppingCart::class);
+        $mockCartable = Mockery::mock(\Fayne\ShoppingCart\Contracts\Cartable::class);
+        $mockCartItem = Mockery::mock(\Fayne\ShoppingCart\Models\ShoppingCartItem::class);
+        $mockCart = Mockery::mock(\Fayne\ShoppingCart\Models\ShoppingCart::class);
         
         $events = [
             new CartAddProductBefore($mockCartable, 1, false),
@@ -241,8 +241,8 @@ describe('CartPackage Events', function () {
             new CartGetAfter($mockCart),
             new CartRemoveItemBefore(456),
             new CartRemoveItemAfter(456, $mockCart),
-            new CartSetSelectionAfter('buy', true, 789),
-            new CartSetSelectionAfter('buy', true, 789),
+            new CartSetSelectionAfter(789, true),
+            new CartSetSelectionAfter(789, true),
             new CartUpdateItemBefore(101, 2),
             new CartUpdateItemAfter($mockCartItem)
         ];

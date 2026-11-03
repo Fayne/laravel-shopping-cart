@@ -1,79 +1,50 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Traits;
+namespace Fayne\ShoppingCart\Traits;
 
-use MobileNowGroup\ShoppingCart\Exceptions\CartClientException;
-use MobileNowGroup\ShoppingCart\Exceptions\CartServerException;
-use MobileNowGroup\ShoppingCart\Exceptions\ErrorConst;
+use Fayne\ShoppingCart\Exceptions\CartClientException;
+use Fayne\ShoppingCart\Exceptions\ErrorConst;
 
-/**
- * Cart coupons. In this trait, you will get all sorted collections of
- * methods which can be use for coupon in cart.
- *
- * Note: This trait will only work with the Cart facade. Unless and until,
- * you have all the required repositories in the parent class.
- */
 trait CartCoupons
 {
-    /**
-     * Set coupon code to the cart.
-     *
-     * @param string $code
-     * @param callable|null $callback Optional callback to handle custom coupon validation and discount calculation.
-     * @return $this
-     *
-     * @throws CartServerException|CartClientException
-     */
     public function setCouponCode(string $code, ?callable $callback = null): static
     {
-        $cart = $this->getCart();
-
-        if (!$cart) {
-            throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value);
-        }
-
-        $cart->coupon_code = $code;
-
-        if (is_callable($callback)) {
-            // 调用回调函数并传递优惠券代码和当前购物车实例
-            $isValid = $callback($code, $cart, $this);
-
-            if (!$isValid) {
-                throw new CartServerException(ErrorConst::ERROR_COUPON_INVALID->value);
+        return $this->transaction(function () use ($code, $callback) {
+            $cart = $this->getCart();
+            if (!$cart) {
+                throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value, httpCode: 404);
             }
-        }
+            $callback ??= config('shopping-cart.coupon_validator');
+            if (is_string($callback) && class_exists($callback)) {
+                $callback = app($callback);
+            }
+            if (!is_callable($callback) || !$callback($code, $cart, $this)) {
+                throw new CartClientException(ErrorConst::ERROR_COUPON_INVALID->value, httpCode: 422);
+            }
+            $cart->coupon_code = $code;
+            $this->storage->updateCart($cart);
+            $this->collectTotals();
 
-        $cart->save();
-
-        return $this;
+            return $this;
+        });
     }
 
-    /**
-     * Remove coupon code from the cart.
-     *
-     * @param callable|null $callback
-     * @return $this
-     *
-     * @throws CartServerException
-     */
     public function removeCouponCode(?callable $callback = null): static
     {
-        $cart = $this->getCart();
-
-        if (is_callable($callback)) {
-            // 调用回调函数并传递优惠券代码和当前购物车实例
-            $isValid = $callback($cart, $this);
-
-            if (!$isValid) {
-                throw new CartServerException(ErrorConst::ERROR_REMOVE_COUPON->value);
+        return $this->transaction(function () use ($callback) {
+            $cart = $this->getCart();
+            if (!$cart) {
+                throw new CartClientException(ErrorConst::ERROR_CART_NOT_EXIST->value, httpCode: 404);
             }
-        }
-        // 移除优惠券代码
-        $cart->coupon_code = null;
+            if ($callback && !$callback($cart, $this)) {
+                throw new CartClientException(ErrorConst::ERROR_REMOVE_COUPON->value, httpCode: 422);
+            }
+            $cart->items()->update(['discount_amount' => 0, 'base_discount_amount' => 0, 'discount_percent' => 0, 'coupon_code' => null]);
+            $cart->coupon_code = null;
+            $this->storage->updateCart($cart);
+            $this->collectTotals();
 
-        // 保存购物车状态
-        $cart->save();
-
-        return $this;
+            return $this;
+        });
     }
 }

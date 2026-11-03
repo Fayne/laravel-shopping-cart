@@ -1,9 +1,9 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Contracts;
+namespace Fayne\ShoppingCart\Contracts;
 
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Models\ShoppingCart as CartModel;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
 
 /**
  * 购物车存储层接口

@@ -1,11 +1,12 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Cache;
+namespace Fayne\ShoppingCart\Cache;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
-use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
+use Fayne\ShoppingCart\Contracts\CartStorageInterface;
+use Carbon\Carbon;
 
 /**
  * 购物车缓存优化器
@@ -68,28 +69,28 @@ class CartCacheOptimizer
     {
         $key = $this->getCacheKey('cart', $customerId);
         $ttl = $ttl ?? $this->calculateDynamicTtl($customerId);
-        
+
         $startTime = microtime(true);
-        
+
         try {
             $result = Cache::store($this->store)->remember($key, $ttl, $callback);
-            
+
             if ($this->enableMonitoring) {
                 $this->recordCacheHit($key, microtime(true) - $startTime, 'hit');
             }
-            
+
             return $result;
-            
+
         } catch (\Exception $e) {
             if ($this->enableMonitoring) {
                 $this->recordCacheHit($key, microtime(true) - $startTime, 'miss');
             }
-            
+
             Log::warning('Cache operation failed, falling back to direct call', [
                 'key' => $key,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return $callback();
         }
     }
@@ -106,7 +107,7 @@ class CartCacheOptimizer
     {
         $key = $this->getCacheKey('items', $cartId);
         $ttl = $ttl ?? $this->defaultTtl;
-        
+
         return Cache::store($this->store)->remember($key, $ttl, $callback);
     }
 
@@ -122,7 +123,7 @@ class CartCacheOptimizer
     {
         $key = $this->getCacheKey('stats', $customerId);
         $ttl = $ttl ?? ($this->defaultTtl / 2); // 统计信息缓存时间较短
-        
+
         return Cache::store($this->store)->remember($key, $ttl, $callback);
     }
 
@@ -137,14 +138,14 @@ class CartCacheOptimizer
     {
         $results = [];
         $startTime = microtime(true);
-        
+
         foreach ($customerIds as $customerId) {
             try {
                 // 预热购物车缓存
                 $this->rememberCart($customerId, function () use ($storage, $customerId) {
                     return $storage->getCart($customerId);
                 });
-                
+
                 // 预热统计信息缓存
                 $this->rememberCartStats($customerId, function () use ($storage, $customerId) {
                     return [
@@ -152,28 +153,28 @@ class CartCacheOptimizer
                         'items_qty' => $storage->getItemsQty($customerId),
                     ];
                 });
-                
+
                 $results[$customerId] = 'success';
-                
+
             } catch (\Exception $e) {
                 $results[$customerId] = 'failed: ' . $e->getMessage();
-                
+
                 Log::warning('Cache warmup failed for customer', [
                     'customer_id' => $customerId,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
-        
+
         if ($this->enableMonitoring) {
             Log::info('Cache warmup completed', [
                 'customers_count' => count($customerIds),
-                'success_count' => count(array_filter($results, fn($r) => $r === 'success')),
+                'success_count' => count(array_filter($results, fn ($r) => $r === 'success')),
                 'duration' => microtime(true) - $startTime,
-                'results' => $results
+                'results' => $results,
             ]);
         }
-        
+
         return $results;
     }
 
@@ -190,13 +191,13 @@ class CartCacheOptimizer
             $this->getCacheKey('cart', $customerId),
             $this->getCacheKey('stats', $customerId),
         ];
-        
+
         if ($cartId) {
             $keys[] = $this->getCacheKey('items', $cartId);
         }
-        
+
         $success = true;
-        
+
         foreach ($keys as $key) {
             try {
                 Cache::store($this->store)->forget($key);
@@ -204,11 +205,11 @@ class CartCacheOptimizer
                 $success = false;
                 Log::warning('Failed to clear cache key', [
                     'key' => $key,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
-        
+
         return $success;
     }
 
@@ -221,11 +222,11 @@ class CartCacheOptimizer
     public function clearBatchCache(array $customerIds): array
     {
         $results = [];
-        
+
         foreach ($customerIds as $customerId) {
             $results[$customerId] = $this->clearCartCache($customerId);
         }
-        
+
         return $results;
     }
 
@@ -243,14 +244,14 @@ class CartCacheOptimizer
             $lastActivity = Cache::store($this->store)->get(
                 $this->getCacheKey('last_activity', $customerId)
             );
-            
+
             if (!$lastActivity) {
                 return $this->defaultTtl;
             }
-            
-            $lastActivityTime = \Carbon\Carbon::parse($lastActivity);
+
+            $lastActivityTime = Carbon::parse($lastActivity);
             $hoursSinceActivity = $lastActivityTime->diffInHours(now());
-            
+
             // 根据活跃度调整TTL
             if ($hoursSinceActivity < 1) {
                 // 非常活跃：延长缓存时间
@@ -262,13 +263,13 @@ class CartCacheOptimizer
                 // 不活跃：缩短缓存时间
                 return max($this->defaultTtl / 2, 300); // 最少5分钟
             }
-            
+
         } catch (\Exception $e) {
             Log::debug('Failed to calculate dynamic TTL, using default', [
                 'customer_id' => $customerId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return $this->defaultTtl;
         }
     }
@@ -285,7 +286,7 @@ class CartCacheOptimizer
     {
         try {
             $store = Cache::store($this->store);
-            
+
             if ($type === 'hit') {
                 $store->increment('cart:monitor:hits');
                 // 根据缓存键类型增加特定计数器
@@ -303,11 +304,11 @@ class CartCacheOptimizer
                     $store->increment('cart:monitor:misses:items');
                 }
             }
-            
+
         } catch (\Exception $e) {
             Log::debug('Failed to record cache hit stats', [
                 'key' => $key,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -320,14 +321,14 @@ class CartCacheOptimizer
     public function getCacheStats(): array
     {
         try {
-            $totalHits = Cache::store($this->store)->get('cart:monitor:hits', 0);
-            $totalMisses = Cache::store($this->store)->get('cart:monitor:misses', 0);
-            $cartHits = Cache::store($this->store)->get('cart:monitor:hits:cart', 0);
-            $itemsHits = Cache::store($this->store)->get('cart:monitor:hits:items', 0);
-            
+            $totalHits = (int) Cache::store($this->store)->get('cart:monitor:hits', 0);
+            $totalMisses = (int) Cache::store($this->store)->get('cart:monitor:misses', 0);
+            $cartHits = (int) Cache::store($this->store)->get('cart:monitor:hits:cart', 0);
+            $itemsHits = (int) Cache::store($this->store)->get('cart:monitor:hits:items', 0);
+
             $totalOperations = $totalHits + $totalMisses;
             $hitRate = $totalOperations > 0 ? ($totalHits / $totalOperations) * 100 : 0;
-            
+
             return [
                 'total_hits' => $totalHits,
                 'total_misses' => $totalMisses,
@@ -338,6 +339,7 @@ class CartCacheOptimizer
             ];
         } catch (\Exception $e) {
             Log::error('Failed to get cache stats', ['error' => $e->getMessage()]);
+
             return [
                 'total_hits' => 0,
                 'total_misses' => 0,
@@ -358,7 +360,7 @@ class CartCacheOptimizer
     {
         try {
             $pattern = $this->getCacheKey('monitoring', '*');
-            
+
             if ($this->store === 'redis') {
                 $keys = Redis::connection()->keys($pattern);
                 if (!empty($keys)) {
@@ -370,19 +372,19 @@ class CartCacheOptimizer
                     $this->getCacheKey('monitoring', 'cache_stats'),
                     $this->getCacheKey('monitoring', 'performance_data'),
                 ];
-                
+
                 foreach ($monitoringKeys as $key) {
                     Cache::store($this->store)->forget($key);
                 }
             }
-            
+
             return true;
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to cleanup monitoring data', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return false;
         }
     }
@@ -396,13 +398,13 @@ class CartCacheOptimizer
     public function updateLastActivity(string $customerId): void
     {
         $key = $this->getCacheKey('last_activity', $customerId);
-        
+
         try {
             Cache::store($this->store)->put($key, now()->toISOString(), now()->addDays(7));
         } catch (\Exception $e) {
             Log::debug('Failed to update last activity', [
                 'customer_id' => $customerId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -416,31 +418,31 @@ class CartCacheOptimizer
     public function preloadCartData(array $customerIds): array
     {
         $result = ['preloaded' => 0, 'failed' => 0];
-        
+
         foreach ($customerIds as $customerId) {
             try {
                 $cacheKeys = [
                     $this->getCacheKey('cart', $customerId),
                     $this->getCacheKey('items', $customerId),
-                    $this->getCacheKey('metadata', $customerId)
+                    $this->getCacheKey('metadata', $customerId),
                 ];
-                
+
                 foreach ($cacheKeys as $key) {
                     Cache::store($this->store)->remember($key, $this->defaultTtl, function () {
                         return null; // Placeholder for actual data loading
                     });
                 }
-                
+
                 $result['preloaded']++;
             } catch (\Exception $e) {
                 $result['failed']++;
                 Log::debug('Failed to preload cart data', [
                     'customer_id' => $customerId,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
-        
+
         return $result;
     }
 
@@ -453,25 +455,25 @@ class CartCacheOptimizer
     public function bulkClearCache(array $customerIds): array
     {
         $result = ['cleared' => 0, 'failed' => 0];
-        
+
         foreach ($customerIds as $customerId) {
             try {
                 // 为每个用户清理cart和stats缓存
                 Cache::store($this->store)->forget($this->getCacheKey('cart', $customerId));
                 Cache::store($this->store)->forget($this->getCacheKey('stats', $customerId));
-                
+
                 $result['cleared']++;
             } catch (\Exception $e) {
                 $result['failed']++;
                 Log::debug('Failed to clear cache for customer', [
                     'customer_id' => $customerId,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
-        
+
         return $result;
-     }
+    }
 
     /**
      * 缓存购物车数据
@@ -484,14 +486,14 @@ class CartCacheOptimizer
     {
         try {
             $key = $this->getCacheKey('cart', $customerId);
-            
+
             return Cache::store($this->store)->put($key, $cart, $this->defaultTtl);
         } catch (\Exception $e) {
             Log::error('Failed to cache cart data', [
                 'customer_id' => $customerId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return false;
         }
     }
@@ -507,17 +509,17 @@ class CartCacheOptimizer
     {
         try {
             $key = $this->getCacheKey('stats', $customerId);
-            
+
             return Cache::store($this->store)->put($key, $stats, $this->defaultTtl);
         } catch (\Exception $e) {
             Log::error('Failed to cache cart stats', [
                 'customer_id' => $customerId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return false;
-         }
-     }
+        }
+    }
 
     /**
      * 清理过期的监控数据
@@ -530,22 +532,22 @@ class CartCacheOptimizer
             // 清理4个监控相关的缓存键
             $monitoringKeys = [
                 'cart:monitor:hits',
-                'cart:monitor:misses', 
+                'cart:monitor:misses',
                 'cart:monitor:performance',
-                'cart:monitor:stats'
+                'cart:monitor:stats',
             ];
-            
+
             foreach ($monitoringKeys as $key) {
                 Cache::store($this->store)->forget($key);
             }
-            
+
             return true;
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to cleanup monitoring data', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return false;
         }
     }
@@ -561,17 +563,17 @@ class CartCacheOptimizer
         try {
             $key = $this->getCacheKey('activity', $customerId);
             $timestamp = now()->timestamp;
-            
+
             return Cache::store($this->store)->put($key, $timestamp, 86400);
         } catch (\Exception $e) {
             Log::error('Failed to update user activity', [
                 'customer_id' => $customerId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return false;
-         }
-     }
+        }
+    }
 
     /**
      * 缓存购物车商品
@@ -585,15 +587,15 @@ class CartCacheOptimizer
         try {
             $key = $this->getCacheKey('items', $cartId);
             $ttl = $this->defaultTtl;
-            
+
             return Cache::store($this->store)->put($key, $items, $ttl);
         } catch (\Exception $e) {
             Log::error('Failed to cache cart items', [
                 'cart_id' => $cartId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return false;
         }
     }
-   }
+}

@@ -1,16 +1,17 @@
 <?php
 
-namespace MobileNowGroup\ShoppingCart\Storage;
+namespace Fayne\ShoppingCart\Storage;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use MobileNowGroup\ShoppingCart\Contracts\CartStorageInterface;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCart as CartModel;
-use MobileNowGroup\ShoppingCart\Models\ShoppingCartItem;
+use Fayne\ShoppingCart\Contracts\CartStorageInterface;
+use Fayne\ShoppingCart\Models\ShoppingCart as CartModel;
+use Fayne\ShoppingCart\Models\ShoppingCartItem;
+use Illuminate\Support\Facades\DB;
 
 /**
  * 缓存存储层实现
- * 在数据库存储基础上增加缓存层，提高性能
+ * 保留缓存驱动接口；可变购物车状态始终读取权威存储
  */
 class CacheCartStorage implements CartStorageInterface
 {
@@ -36,13 +37,9 @@ class CacheCartStorage implements CartStorageInterface
      */
     public function getCart(string $customerId, bool $isCheckout = false): ?CartModel
     {
-        $cacheKey = $this->getCartCacheKey($customerId, $isCheckout);
-
-        return Cache::store($this->cacheStore)->remember(
-            $cacheKey,
-            $this->cacheTtl,
-            fn () => $this->storage->getCart($customerId, $isCheckout)
-        );
+        // Model snapshots cannot be trusted after failed invalidation or catalog changes.
+        // Keep the driver API, but read mutable state from its authoritative storage.
+        return $this->storage->getCart($customerId, $isCheckout);
     }
 
     /**
@@ -108,6 +105,9 @@ class CacheCartStorage implements CartStorageInterface
 
         if ($result) {
             $this->clearCartItemCache($itemId);
+            if ($item = $this->storage->getCartItem($itemId)) {
+                $this->clearCartCacheByCartId($item->cart_id);
+            }
         }
 
         return $result;
@@ -135,13 +135,7 @@ class CacheCartStorage implements CartStorageInterface
      */
     public function getCartItem(int|string $itemId): ?ShoppingCartItem
     {
-        $cacheKey = $this->getCartItemCacheKey($itemId);
-
-        return Cache::store($this->cacheStore)->remember(
-            $cacheKey,
-            $this->cacheTtl,
-            fn () => $this->storage->getCartItem($itemId)
-        );
+        return $this->storage->getCartItem($itemId);
     }
 
     /**
@@ -177,13 +171,7 @@ class CacheCartStorage implements CartStorageInterface
      */
     public function getCartStats(int|string $cartId): array
     {
-        $cacheKey = $this->getCartStatsCacheKey($cartId);
-
-        return Cache::store($this->cacheStore)->remember(
-            $cacheKey,
-            $this->cacheTtl / 2, // 统计信息缓存时间较短
-            fn () => $this->storage->getCartStats($cartId)
-        );
+        return $this->storage->getCartStats($cartId);
     }
 
     /**
@@ -219,7 +207,7 @@ class CacheCartStorage implements CartStorageInterface
     /**
      * 生成购物车项目缓存键
      */
-    protected function getCartItemCacheKey(int |string$itemId): string
+    protected function getCartItemCacheKey(int|string $itemId): string
     {
         return "{$this->cachePrefix}:item:{$itemId}";
     }
@@ -237,10 +225,15 @@ class CacheCartStorage implements CartStorageInterface
      */
     protected function clearCartCache(int|string $customerId): void
     {
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit(fn () => $this->clearCartCache($customerId));
+        }
         try {
             $keys = [
                 $this->getCartCacheKey($customerId),
                 $this->getCartCacheKey($customerId, true),
+                "{$this->cachePrefix}:count:{$customerId}",
+                "{$this->cachePrefix}:qty:{$customerId}",
             ];
 
             foreach ($keys as $key) {
@@ -263,8 +256,9 @@ class CacheCartStorage implements CartStorageInterface
             // 清除统计缓存
             Cache::store($this->cacheStore)->forget($this->getCartStatsCacheKey($cartId));
 
-            // 这里可以根据需要实现更复杂的缓存清除逻辑
-            // 比如通过购物车ID找到customer_id然后清除相关缓存
+            if ($cart = CartModel::find($cartId)) {
+                $this->clearCartCache($cart->customer_id);
+            }
         } catch (\Exception $e) {
             Log::warning('Failed to clear cart cache by cart id', [
                 'cart_id' => $cartId,
@@ -293,13 +287,7 @@ class CacheCartStorage implements CartStorageInterface
      */
     public function getItemsCount(int|string $customerId): int
     {
-        $cacheKey = "{$this->cachePrefix}:stats:{$customerId}";
-
-        return Cache::store($this->cacheStore)->remember(
-            $cacheKey,
-            $this->cacheTtl / 2,
-            fn () => $this->storage->getItemsCount($customerId)
-        );
+        return $this->storage->getItemsCount($customerId);
     }
 
     /**
@@ -307,13 +295,7 @@ class CacheCartStorage implements CartStorageInterface
      */
     public function getItemsQty(int|string $customerId): int
     {
-        $cacheKey = "{$this->cachePrefix}:stats:{$customerId}";
-
-        return Cache::store($this->cacheStore)->remember(
-            $cacheKey,
-            $this->cacheTtl / 2,
-            fn () => $this->storage->getItemsQty($customerId)
-        );
+        return $this->storage->getItemsQty($customerId);
     }
 
     /**
@@ -321,14 +303,14 @@ class CacheCartStorage implements CartStorageInterface
      */
     public function toggleItemsSelection(int|string $cartId, array $itemIds, bool $selected): bool
     {
-        $result = $this->storage->toggleItemsSelection($cartId, $itemIds, $selected);
-
-        if ($result) {
-            // 清除购物车项目缓存
-            $this->clearCartItemsCache($cartId);
+        foreach ($itemIds as $id) {
+            $item = $this->storage->getCartItem($id);
+            if (!$item || (string) $item->cart_id !== (string) $cartId) {
+                return false;
+            }
         }
 
-        return $result;
+        return $this->updateItems($cartId, array_map(fn ($id) => ['id' => $id, 'selected' => $selected], $itemIds));
     }
 
     /**

@@ -1,7 +1,7 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Facades\ShoppingCart;
-use MobileNowGroup\ShoppingCart\ShoppingCart as ShoppingCartService;
+use Fayne\ShoppingCart\Facades\ShoppingCart;
+use Fayne\ShoppingCart\ShoppingCart as ShoppingCartService;
 use Illuminate\Support\Facades\Facade;
 
 describe('ShoppingCart Facade', function () {

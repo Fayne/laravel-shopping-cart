@@ -1,6 +1,6 @@
 <?php
 
-use MobileNowGroup\ShoppingCart\Traits\CartCoupons;
+use Fayne\ShoppingCart\Traits\CartCoupons;
 
 describe('CartCoupons Trait', function () {
     beforeEach(function () {
