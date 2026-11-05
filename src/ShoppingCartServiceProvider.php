@@ -96,12 +96,12 @@ class ShoppingCartServiceProvider extends PackageServiceProvider
         // 发布配置文件
         $this->publishes([
             __DIR__ . '/../config/shopping-cart.php' => config_path('shopping-cart.php'),
-        ], 'config');
+        ], ['config', 'shopping-cart-config', 'cms-module-assets']);
 
         // 发布迁移文件
         $this->publishes([
             __DIR__ . '/../database/migrations' => database_path('migrations'),
-        ], 'migrations');
+        ], ['migrations', 'shopping-cart-migrations', 'cms-module-assets']);
 
         foreach (glob(__DIR__ . '/../database/migrations/*.php') as $migration) {
             $name = explode('_', basename($migration), 5)[4];

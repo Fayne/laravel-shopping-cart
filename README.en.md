@@ -24,17 +24,19 @@ This package manages cart state and checkout snapshots. It does not create host 
 
 ```bash
 composer require fayne/shopping-cart
-php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=config
+php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=shopping-cart-config
 php artisan migrate
 ```
 
 Laravel discovers the service provider and `ShoppingCart` Facade through Composer. Migrations are loaded by the provider. To manage migration files yourself, publish them explicitly: The bundled migrations are a fresh-install baseline. Databases with earlier package migrations require a separate upgrade plan.
 
 ```bash
-php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=migrations
+php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=shopping-cart-migrations
 ```
 
 For a private Composer repository, configure the repository in the host project before running `composer require fayne/shopping-cart`. Review the production integration requirements below before deployment.
+
+Migration publication uses `shopping-cart-migrations`; configuration uses `shopping-cart-config`. Both also join CMS Core's `cms-module-assets`, allowing `cms:install` to publish assets from discovered providers before migrating. Original migration filenames are preserved and existing host files are not overwritten. Publication alone does not execute migrations. Legacy `config`/`migrations` tags remain available.
 
 ## Configuration
 

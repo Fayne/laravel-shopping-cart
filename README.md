@@ -24,17 +24,19 @@
 
 ```bash
 composer require fayne/shopping-cart
-php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=config
+php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=shopping-cart-config
 php artisan migrate
 ```
 
 Laravel 会通过 Composer 自动发现服务提供者和 `ShoppingCart` Facade。迁移会由服务提供者自动加载；如需自行管理迁移文件，可显式发布： 包内迁移是全新安装基线。已经执行旧版包迁移的数据库需要单独的升级方案。
 
 ```bash
-php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=migrations
+php artisan vendor:publish --provider="Fayne\ShoppingCart\ShoppingCartServiceProvider" --tag=shopping-cart-migrations
 ```
 
 使用私有 Composer 仓库时，先在宿主项目配置该仓库，再执行 `composer require fayne/shopping-cart`。首次部署前请阅读下方的生产配置和[生产环境接入要求](#生产环境接入要求)。
+
+迁移使用 `shopping-cart-migrations` 标签，配置使用 `shopping-cart-config`。两者同时加入 CMS Core 的 `cms-module-assets`，供 `cms:install` 在迁移前发布已发现模块的资源。保留原迁移文件名，不覆盖宿主已有同名文件；仅发布不会执行迁移。原 `config`/`migrations` 标签仍可使用。
 
 ## 配置
 
